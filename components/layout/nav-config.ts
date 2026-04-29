@@ -1,4 +1,3 @@
-// Layout navigation config — role-based menu items
 import {
   LayoutDashboard,
   Users,
@@ -10,7 +9,6 @@ import {
   Package,
   ArrowDownToLine,
   ArrowUpFromLine,
-  BarChart3,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -106,11 +104,6 @@ export const navGroups: NavGroup[] = [
         title: 'Barang Keluar',
         href: '/dashboard/stock-out',
         icon: ArrowUpFromLine,
-      },
-      {
-        title: 'Stok Ledger',
-        href: '/dashboard/stock-ledger',
-        icon: BarChart3,
       },
     ],
   },
