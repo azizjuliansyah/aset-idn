@@ -3,14 +3,15 @@ import { ItemConditionClient } from '@/components/admin/item-condition/item-cond
 
 export const metadata: Metadata = { title: 'Kondisi Barang — Gudang IDN' }
 
+import { PageWrapper } from '@/components/shared/page-wrapper'
+
 export default function ItemConditionPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Kondisi Barang</h1>
-        <p className="text-muted-foreground text-sm mt-1">Kelola kondisi fisik barang di gudang</p>
-      </div>
+    <PageWrapper
+      title="Kondisi Barang"
+      description="Kelola kondisi fisik barang di gudang"
+    >
       <ItemConditionClient />
-    </div>
+    </PageWrapper>
   )
 }

@@ -3,14 +3,15 @@ import { UsersClient } from '@/components/admin/users/users-client'
 
 export const metadata: Metadata = { title: 'Manajemen User — Gudang IDN' }
 
+import { PageWrapper } from '@/components/shared/page-wrapper'
+
 export default function UsersPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Manajemen User</h1>
-        <p className="text-muted-foreground text-sm mt-1">Kelola akun pengguna sistem</p>
-      </div>
+    <PageWrapper
+      title="Manajemen User"
+      description="Kelola akun pengguna sistem"
+    >
       <UsersClient />
-    </div>
+    </PageWrapper>
   )
 }

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Eye, Info } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
 
 import { createClient } from '@/lib/supabase/client'
@@ -36,6 +36,7 @@ export function WarehouseClient() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editItem, setEditItem] = useState<Warehouse | null>(null)
   const [deleteItem, setDeleteItem] = useState<Warehouse | null>(null)
+  const [viewItem, setViewItem] = useState<Warehouse | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['warehouses', page, debouncedSearch],
@@ -77,17 +78,26 @@ export function WarehouseClient() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('warehouses').delete().in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Gudang terpilih dihapus'); qc.invalidateQueries({ queryKey: ['warehouses'] }) },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   return (
     <>
       <DataTable
         columns={[
           { key: 'name', header: 'Nama Gudang' },
-          { key: 'note', header: 'Catatan', render: (v) => (v as string) || '—' },
           { key: 'created_at', header: 'Dibuat', render: (v) => formatDate(v as string) },
           {
             key: 'actions', header: '', className: 'w-24 text-right',
             render: (_, row) => (
               <div className="flex gap-1 justify-end">
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => setViewItem(row)}><Eye size={13} /></Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(row)}><Pencil size={13} /></Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteItem(row)}><Trash2 size={13} /></Button>
               </div>
@@ -100,6 +110,7 @@ export function WarehouseClient() {
         pageSize={PAGE_SIZE}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
+        onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Cari gudang..."
@@ -137,6 +148,32 @@ export function WarehouseClient() {
         onConfirm={() => deleteMutation.mutate()}
         loading={deleteMutation.isPending}
       />
+
+      <Dialog open={!!viewItem} onOpenChange={(o) => !o && setViewItem(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2">
+            <Info size={18} className="text-primary" />
+            Detail Gudang
+          </DialogTitle></DialogHeader>
+          {viewItem && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Nama Gudang</p>
+                <p className="font-bold text-lg">{viewItem.name}</p>
+              </div>
+              <div className="space-y-2 border-t border-dashed pt-3">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Catatan / Alamat</p>
+                <div className="text-sm italic p-4 bg-muted/50 rounded-lg border border-dashed min-h-[100px] text-muted-foreground leading-relaxed">
+                  {viewItem.note || 'Tidak ada catatan untuk gudang ini.'}
+                </div>
+              </div>
+              <div className="pt-2 flex justify-between items-center text-[10px] text-muted-foreground uppercase font-medium">
+                <span>Dibuat: {formatDate(viewItem.created_at)}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

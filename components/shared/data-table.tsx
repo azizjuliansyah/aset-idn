@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface Column<T> {
@@ -34,7 +34,9 @@ interface DataTableProps<T> {
   onSearchChange?: (value: string) => void
   searchPlaceholder?: string
   actions?: React.ReactNode
+  filters?: React.ReactNode
   emptyText?: string
+  onBulkDelete?: (ids: string[]) => void
 }
 
 export function DataTable<T extends { id: string }>({
@@ -49,11 +51,19 @@ export function DataTable<T extends { id: string }>({
   onSearchChange,
   searchPlaceholder = 'Cari...',
   actions,
+  filters,
   emptyText = 'Tidak ada data',
+  onBulkDelete,
 }: DataTableProps<T>) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const totalPages = Math.ceil(totalCount / pageSize)
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
+
+  // Reset selection when data changes (search or page change)
+  useEffect(() => {
+    setSelectedIds([])
+  }, [data])
 
   function getCellValue(row: T, key: string): unknown {
     return key.split('.').reduce((obj: unknown, k) => {
@@ -78,7 +88,34 @@ export function DataTable<T extends { id: string }>({
               />
             </div>
           )}
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
+          {actions && (
+            <div className="flex items-center gap-2">
+              {onBulkDelete && selectedIds.length > 0 && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => {
+                    if (confirm(`Hapus ${selectedIds.length} data terpilih?`)) {
+                      onBulkDelete(selectedIds)
+                      setSelectedIds([])
+                    }
+                  }}
+                  className="h-9 px-3"
+                >
+                  <Trash2 size={14} className="mr-1.5" />
+                  Hapus ({selectedIds.length})
+                </Button>
+              )}
+              {actions}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Filters */}
+      {filters && (
+        <div className="pt-1">
+          {filters}
         </div>
       )}
 
@@ -87,8 +124,27 @@ export function DataTable<T extends { id: string }>({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
+              <TableHead className="w-12 text-center text-xs font-bold uppercase tracking-wide text-foreground">
+                {onBulkDelete && (
+                  <input 
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                    checked={data.length > 0 && selectedIds.length === data.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(data.map(d => d.id))
+                      } else {
+                        setSelectedIds([])
+                      }
+                    }}
+                  />
+                )}
+              </TableHead>
+              <TableHead className="w-12 text-center text-xs font-bold uppercase tracking-wide text-foreground">
+                No
+              </TableHead>
               {columns.map((col) => (
-                <TableHead key={String(col.key)} className={cn('text-xs font-semibold uppercase tracking-wide text-muted-foreground', col.className)}>
+                <TableHead key={String(col.key)} className={cn('text-xs font-bold uppercase tracking-wide text-foreground', col.className)}>
                   {col.header}
                 </TableHead>
               ))}
@@ -98,6 +154,8 @@ export function DataTable<T extends { id: string }>({
             {isLoading ? (
               Array.from({ length: pageSize }).map((_, i) => (
                 <TableRow key={i}>
+                  <TableCell className="text-center"><Skeleton className="h-4 w-4 mx-auto rounded" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="h-4 w-6 mx-auto rounded" /></TableCell>
                   {columns.map((col) => (
                     <TableCell key={String(col.key)}>
                       <Skeleton className="h-4 w-24 rounded" />
@@ -107,13 +165,32 @@ export function DataTable<T extends { id: string }>({
               ))
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="text-center py-12 text-muted-foreground text-sm">
+                <TableCell colSpan={columns.length + 2} className="text-center py-12 text-muted-foreground text-sm">
                   {emptyText}
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((row) => (
-                <TableRow key={row.id} className="hover:bg-muted/20 transition-colors">
+              data.map((row, idx) => (
+                <TableRow key={row.id} className={cn("hover:bg-muted/20 transition-colors", selectedIds.includes(row.id) && "bg-muted/30")}>
+                  <TableCell className="text-center">
+                    {onBulkDelete && (
+                      <input 
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                        checked={selectedIds.includes(row.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(prev => [...prev, row.id])
+                          } else {
+                            setSelectedIds(prev => prev.filter(id => id !== row.id))
+                          }
+                        }}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                    {from + idx}
+                  </TableCell>
                   {columns.map((col) => {
                     const value = getCellValue(row, String(col.key))
                     return (

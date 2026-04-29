@@ -49,18 +49,6 @@ export const navGroups: NavGroup[] = [
         roles: ['admin'],
       },
       {
-        title: 'Status Barang',
-        href: '/dashboard/admin/item-status',
-        icon: CheckCircle,
-        roles: ['admin'],
-      },
-      {
-        title: 'Kondisi Barang',
-        href: '/dashboard/admin/item-condition',
-        icon: Tag,
-        roles: ['admin'],
-      },
-      {
         title: 'Pengaturan',
         href: '/dashboard/admin/settings',
         icon: Settings,
@@ -69,7 +57,24 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    title: 'Master Data',
+    roles: ['user'],
+    items: [
+      {
+        title: 'Status Barang',
+        href: '/dashboard/admin/item-status',
+        icon: CheckCircle,
+      },
+      {
+        title: 'Kondisi Barang',
+        href: '/dashboard/admin/item-condition',
+        icon: Tag,
+      },
+    ],
+  },
+  {
     title: 'Gudang',
+    roles: ['user'],
     items: [
       {
         title: 'Gudang',
@@ -90,6 +95,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     title: 'Transaksi',
+    roles: ['user'],
     items: [
       {
         title: 'Barang Masuk',

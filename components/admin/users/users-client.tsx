@@ -46,17 +46,19 @@ export function UsersClient() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
+  const [roleFilter, setRoleFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editUser, setEditUser] = useState<Profile | null>(null)
   const [deleteUser, setDeleteUser] = useState<Profile | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['users', page, debouncedSearch],
+    queryKey: ['users', page, debouncedSearch, roleFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         pageSize: String(PAGE_SIZE),
         search: debouncedSearch,
+        role: roleFilter,
       })
       const res = await fetch(`/api/admin/users?${params}`)
       if (!res.ok) throw new Error('Gagal memuat data')
@@ -142,6 +144,51 @@ export function UsersClient() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? 'Gagal menghapus user terpilih')
+      }
+    },
+    onSuccess: () => {
+      toast.success('User terpilih dihapus')
+      qc.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const filterBar = (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Filter Role</Label>
+        <Select 
+          value={roleFilter} 
+          onValueChange={(v) => { if (v) setRoleFilter(v); setPage(1) }}
+          items={[
+            { value: 'all', label: 'Semua Role' },
+            { value: 'admin', label: 'Admin' },
+            { value: 'user', label: 'User' },
+          ]}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="Semua Role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Role</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="user">User</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+
   return (
     <>
       <DataTable
@@ -173,9 +220,11 @@ export function UsersClient() {
         pageSize={PAGE_SIZE}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
+        onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Cari user..."
+        filters={filterBar}
         actions={<Button size="sm" onClick={openCreate}><Plus size={14} className="mr-1.5" /> Tambah User</Button>}
         emptyText="Belum ada user"
       />
@@ -196,7 +245,14 @@ export function UsersClient() {
               </div>
               <div className="space-y-1.5">
                 <Label>Role *</Label>
-                <Select value={editForm.watch('role')} onValueChange={(v) => editForm.setValue('role', v as Role)}>
+                <Select 
+                  value={editForm.watch('role')} 
+                  onValueChange={(v) => editForm.setValue('role', v as Role)}
+                  items={[
+                    { value: 'user', label: 'User' },
+                    { value: 'admin', label: 'Admin' },
+                  ]}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">User</SelectItem>
@@ -230,7 +286,14 @@ export function UsersClient() {
               </div>
               <div className="space-y-1.5">
                 <Label>Role *</Label>
-                <Select value={createForm.watch('role')} onValueChange={(v) => createForm.setValue('role', v as Role)}>
+                <Select 
+                  value={createForm.watch('role')} 
+                  onValueChange={(v) => createForm.setValue('role', v as Role)}
+                  items={[
+                    { value: 'user', label: 'User' },
+                    { value: 'admin', label: 'Admin' },
+                  ]}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">User</SelectItem>

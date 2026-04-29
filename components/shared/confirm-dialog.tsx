@@ -40,12 +40,14 @@ export function ConfirmDialog({
                 <AlertTriangle size={18} className="text-destructive" />
               </div>
             )}
-            <div>
-              <DialogTitle>{title}</DialogTitle>
-              <DialogDescription className="mt-1">{description}</DialogDescription>
-            </div>
+            <DialogTitle>{title}</DialogTitle>
           </div>
         </DialogHeader>
+        <div className="py-2">
+          <DialogDescription className="text-foreground/80 leading-relaxed">
+            {description}
+          </DialogDescription>
+        </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Batal

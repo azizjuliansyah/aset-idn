@@ -6,11 +6,12 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Loader2, AlertTriangle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, AlertTriangle, Eye } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
+import { ItemDetailModal } from './item-detail-modal'
 
 import { createClient } from '@/lib/supabase/client'
-import type { Item, ItemCategory, ItemStatus, ItemCondition } from '@/types/database'
+import type { Item, ItemCategory, ItemStatus, ItemCondition, Warehouse } from '@/types/database'
 import { DataTable } from '@/components/shared/data-table'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { Button } from '@/components/ui/button'
@@ -20,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 
 const PAGE_SIZE = 10
 
@@ -40,6 +41,9 @@ type ItemWithJoins = Item & {
   item_category?: ItemCategory
   item_status?: ItemStatus
   item_condition?: ItemCondition
+  current_stock?: number
+  category_name?: string
+  condition_name?: string
 }
 
 export function ItemsClient() {
@@ -48,22 +52,30 @@ export function ItemsClient() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
+  const [warehouseId, setWarehouseId] = useState<string>('all')
+  const [categoryId, setCategoryId] = useState<string>('all')
+  const [conditionId, setConditionId] = useState<string>('all')
+  const [stockStatus, setStockStatus] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editItem, setEditItem] = useState<ItemWithJoins | null>(null)
   const [deleteItem, setDeleteItem] = useState<ItemWithJoins | null>(null)
+  const [viewItemId, setViewItemId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['items', page, debouncedSearch],
+    queryKey: ['items', page, debouncedSearch, warehouseId, categoryId, conditionId, stockStatus],
     queryFn: async () => {
-      let q = supabase
-        .from('items')
-        .select('*, item_category(name), item_status(name), item_condition(name)', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-      if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
-      const { data, count, error } = await q
+      const { data, error } = await supabase.rpc('get_items_with_stats', {
+        p_search: debouncedSearch,
+        p_warehouse_id: warehouseId === 'all' ? null : warehouseId,
+        p_category_id: categoryId === 'all' ? null : categoryId,
+        p_condition_id: conditionId === 'all' ? null : conditionId,
+        p_stock_status: stockStatus,
+        p_limit: PAGE_SIZE,
+        p_offset: (page - 1) * PAGE_SIZE,
+      })
       if (error) throw error
-      return { data: (data ?? []) as ItemWithJoins[], count: count ?? 0 }
+      const count = data?.[0]?.total_count ?? 0
+      return { data: (data ?? []) as ItemWithJoins[], count: Number(count) }
     },
   })
 
@@ -72,6 +84,14 @@ export function ItemsClient() {
     queryFn: async () => {
       const { data } = await supabase.from('item_category').select('id, name').order('name')
       return (data ?? []) as ItemCategory[]
+    },
+  })
+
+  const { data: warehouses } = useQuery({
+    queryKey: ['warehouses_all'],
+    queryFn: async () => {
+      const { data } = await supabase.from('warehouses').select('id, name').order('name')
+      return (data ?? []) as Warehouse[]
     },
   })
 
@@ -150,19 +170,141 @@ export function ItemsClient() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('items').delete().in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Barang terpilih dihapus'); qc.invalidateQueries({ queryKey: ['items'] }) },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const filterBar = (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gudang</Label>
+        <Select 
+          value={warehouseId} 
+          onValueChange={(v) => { if (v) { setWarehouseId(v); setPage(1) } }}
+          items={[
+            { value: 'all', label: 'Semua Gudang' },
+            ...(warehouses?.map((w) => ({ value: w.id, label: w.name })) ?? [])
+          ]}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="Semua Gudang" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Gudang</SelectItem>
+            {warehouses?.map((w) => (
+              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kategori</Label>
+        <Select 
+          value={categoryId} 
+          onValueChange={(v) => { if (v) { setCategoryId(v); setPage(1) } }}
+          items={[
+            { value: 'all', label: 'Semua Kategori' },
+            ...(categories?.map((c) => ({ value: c.id, label: c.name })) ?? [])
+          ]}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="Semua Kategori" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Kategori</SelectItem>
+            {categories?.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kondisi</Label>
+        <Select 
+          value={conditionId} 
+          onValueChange={(v) => { if (v) { setConditionId(v); setPage(1) } }}
+          items={[
+            { value: 'all', label: 'Semua Kondisi' },
+            ...(conditions?.map((c) => ({ value: c.id, label: c.name })) ?? [])
+          ]}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="Semua Kondisi" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Kondisi</SelectItem>
+            {conditions?.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status Stok</Label>
+        <Select 
+          value={stockStatus} 
+          onValueChange={(v) => { if (v) { setStockStatus(v); setPage(1) } }}
+          items={[
+            { value: 'all', label: 'Semua Status' },
+            { value: 'above_min', label: 'Di Atas Batas Minimum' },
+            { value: 'below_min', label: 'Di Bawah Batas Minimum' },
+            { value: 'out_of_stock', label: 'Tidak Tersedia' },
+          ]}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="Semua Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Status</SelectItem>
+            <SelectItem value="above_min">Di Atas Batas Minimum</SelectItem>
+            <SelectItem value="below_min">Di Bawah Batas Minimum</SelectItem>
+            <SelectItem value="out_of_stock">Tidak Tersedia</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+
   return (
     <>
+
       <DataTable
         columns={[
-          { key: 'name', header: 'Nama Barang' },
-          { key: 'item_category', header: 'Kategori', render: (_, row) => row.item_category?.name ?? '—' },
+          { 
+            key: 'name', 
+            header: 'Nama Barang',
+            render: (v, row) => (
+              <button 
+                onClick={() => setViewItemId(row.id)}
+                className="font-bold text-primary hover:underline text-left"
+              >
+                {v as string}
+              </button>
+            )
+          },
+          { key: 'category_name', header: 'Kategori', render: (v) => (v as string) ?? '—' },
           { key: 'price', header: 'Harga', render: (v) => formatCurrency(v as number) },
           {
-            key: 'status', header: 'Status',
-            render: (v) => (
-              <Badge variant={v === 'active' ? 'default' : 'secondary'} className="text-xs">
-                {v === 'active' ? 'Aktif' : 'Nonaktif'}
-              </Badge>
+            key: 'current_stock', header: 'Stok',
+            render: (v, row) => (
+              <div className="flex items-center gap-1.5">
+                <span className={cn(
+                  "font-bold",
+                  (v as number) === 0 ? "text-destructive" : 
+                  (v as number) <= row.minimum_stock ? "text-amber-600" : "text-green-600"
+                )}>
+                  {v as number}
+                </span>
+                {(v as number) <= row.minimum_stock && (v as number) > 0 && <AlertTriangle size={12} className="text-amber-500" />}
+              </div>
             ),
           },
           {
@@ -178,6 +320,7 @@ export function ItemsClient() {
             key: 'actions', header: '', className: 'w-24 text-right',
             render: (_, row) => (
               <div className="flex gap-1 justify-end">
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => setViewItemId(row.id)}><Eye size={13} /></Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(row)}><Pencil size={13} /></Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteItem(row)}><Trash2 size={13} /></Button>
               </div>
@@ -190,10 +333,12 @@ export function ItemsClient() {
         pageSize={PAGE_SIZE}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
+        onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Cari barang..."
         actions={<Button size="sm" onClick={openCreate}><Plus size={14} className="mr-1.5" /> Tambah Barang</Button>}
+        filters={filterBar}
         emptyText="Belum ada barang"
       />
 
@@ -212,7 +357,11 @@ export function ItemsClient() {
                 <Label>Kategori</Label>
                 <Controller name="item_category_id" control={form.control}
                   render={({ field }) => (
-                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                    <Select 
+                      value={field.value ?? ''} 
+                      onValueChange={field.onChange}
+                      items={categories?.map((c) => ({ value: c.id, label: c.name }))}
+                    >
                       <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
                       <SelectContent>
                         {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -225,7 +374,14 @@ export function ItemsClient() {
                 <Label>Status Aktif</Label>
                 <Controller name="status" control={form.control}
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select 
+                      value={field.value} 
+                      onValueChange={field.onChange}
+                      items={[
+                        { value: 'active', label: 'Aktif' },
+                        { value: 'inactive', label: 'Nonaktif' },
+                      ]}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="active">Aktif</SelectItem>
@@ -242,7 +398,11 @@ export function ItemsClient() {
                 <Label>Status Barang</Label>
                 <Controller name="item_status_id" control={form.control}
                   render={({ field }) => (
-                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                    <Select 
+                      value={field.value ?? ''} 
+                      onValueChange={field.onChange}
+                      items={statuses?.map((s) => ({ value: s.id, label: s.name }))}
+                    >
                       <SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger>
                       <SelectContent>
                         {statuses?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -255,7 +415,11 @@ export function ItemsClient() {
                 <Label>Kondisi Barang</Label>
                 <Controller name="item_condition_id" control={form.control}
                   render={({ field }) => (
-                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                    <Select 
+                      value={field.value ?? ''} 
+                      onValueChange={field.onChange}
+                      items={conditions?.map((c) => ({ value: c.id, label: c.name }))}
+                    >
                       <SelectTrigger><SelectValue placeholder="Pilih kondisi" /></SelectTrigger>
                       <SelectContent>
                         {conditions?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -298,6 +462,11 @@ export function ItemsClient() {
         description={`Hapus barang "${deleteItem?.name}"? Riwayat stok yang terhubung juga akan terhapus.`}
         onConfirm={() => deleteMutation.mutate()}
         loading={deleteMutation.isPending}
+      />
+
+      <ItemDetailModal 
+        itemId={viewItemId} 
+        onOpenChange={(open) => !open && setViewItemId(null)} 
       />
     </>
   )

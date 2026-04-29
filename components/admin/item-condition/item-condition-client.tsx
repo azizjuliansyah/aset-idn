@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Eye, Info } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
 
 import { createClient } from '@/lib/supabase/client'
@@ -37,6 +37,7 @@ export function ItemConditionClient() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editItem, setEditItem] = useState<ItemCondition | null>(null)
   const [deleteItem, setDeleteItem] = useState<ItemCondition | null>(null)
+  const [viewItem, setViewItem] = useState<ItemCondition | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['item_condition', page, debouncedSearch],
@@ -80,16 +81,25 @@ export function ItemConditionClient() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('item_condition').delete().in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Kondisi terpilih dihapus'); qc.invalidateQueries({ queryKey: ['item_condition'] }) },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   return (
     <>
       <DataTable
         columns={[
           { key: 'name', header: 'Nama' },
-          { key: 'note', header: 'Catatan', render: (v) => (v as string) || '—' },
           {
             key: 'actions', header: '', className: 'w-24 text-right',
             render: (_, row) => (
               <div className="flex gap-1 justify-end">
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => setViewItem(row)}><Eye size={13} /></Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(row)}><Pencil size={13} /></Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteItem(row)}><Trash2 size={13} /></Button>
               </div>
@@ -102,6 +112,7 @@ export function ItemConditionClient() {
         pageSize={PAGE_SIZE}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
+        onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Cari kondisi..."
@@ -139,6 +150,29 @@ export function ItemConditionClient() {
         onConfirm={() => deleteMutation.mutate()}
         loading={deleteMutation.isPending}
       />
+
+      <Dialog open={!!viewItem} onOpenChange={(o) => !o && setViewItem(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2">
+            <Info size={18} className="text-primary" />
+            Detail Kondisi
+          </DialogTitle></DialogHeader>
+          {viewItem && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Nama Kondisi</p>
+                <p className="font-bold text-lg">{viewItem.name}</p>
+              </div>
+              <div className="space-y-2 border-t border-dashed pt-3">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Catatan</p>
+                <div className="text-sm italic p-4 bg-muted/50 rounded-lg border border-dashed min-h-[100px] text-muted-foreground leading-relaxed">
+                  {viewItem.note || 'Tidak ada catatan untuk kondisi ini.'}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

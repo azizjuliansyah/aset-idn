@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2, Camera } from 'lucide-react'
+import { Loader2, Camera, User, ShieldCheck } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getInitials } from '@/lib/utils'
+import { getInitials, cn } from '@/lib/utils'
 
 const profileSchema = z.object({
   full_name: z.string().min(1, 'Nama wajib diisi'),
@@ -32,6 +32,7 @@ type PasswordValues = z.infer<typeof passwordSchema>
 export function ProfileClient() {
   const supabase = createClient()
   const qc = useQueryClient()
+  const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile')
 
   const { data: profile } = useQuery({
     queryKey: ['my_profile'],
@@ -119,101 +120,168 @@ export function ProfileClient() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
-      {/* Avatar */}
-      <div className="flex items-center gap-5 p-5 bg-card rounded-xl border border-border">
-        <div className="relative group">
-          <Avatar className="w-20 h-20 text-xl border-2 border-primary/20 transition-all group-hover:border-primary/40">
-            <AvatarImage src={profile?.avatar_url ?? undefined} className="object-cover" />
-            <AvatarFallback className="bg-primary/10 text-primary font-bold text-2xl">
-              {profile ? getInitials(profile.full_name) : '?'}
-            </AvatarFallback>
-          </Avatar>
-          <label 
-            htmlFor="avatar-upload" 
-            className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg cursor-pointer hover:bg-primary/90 transition-colors z-10"
-          >
-            {uploadAvatarMutation.isPending ? (
-              <Loader2 size={14} className="text-white animate-spin" />
-            ) : (
-              <Camera size={14} className="text-white" />
-            )}
-          </label>
-          <input
-            id="avatar-upload"
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={onFileChange}
-            disabled={uploadAvatarMutation.isPending}
-          />
-        </div>
-        <div>
-          <p className="text-lg font-semibold text-foreground">{profile?.full_name}</p>
-          <p className="text-sm text-muted-foreground capitalize">{profile?.role}</p>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header Profile Section */}
+      <div className="relative overflow-hidden rounded-xl border bg-card shadow-sm max-w-4xl">
+        <div className="h-24 bg-linear-to-r from-red-600 to-red-400 opacity-90" />
+        <div className="px-6 pb-6">
+          <div className="relative flex flex-col sm:flex-row sm:items-end gap-5 -mt-10">
+            <div className="relative group self-start">
+              <Avatar className="w-24 h-24 text-xl border-4 border-card bg-card transition-all group-hover:border-primary/20 shadow-xl">
+                <AvatarImage src={profile?.avatar_url ?? undefined} className="object-cover" />
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-3xl">
+                  {profile ? getInitials(profile.full_name) : '?'}
+                </AvatarFallback>
+              </Avatar>
+              <label 
+                htmlFor="avatar-upload" 
+                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg cursor-pointer hover:scale-105 active:scale-95 transition-all z-10 border-2 border-card"
+              >
+                {uploadAvatarMutation.isPending ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Camera size={14} />
+                )}
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onFileChange}
+                disabled={uploadAvatarMutation.isPending}
+              />
+            </div>
+            
+            <div className="flex-1 pb-1">
+              <h2 className="text-xl font-bold text-foreground">{profile?.full_name}</h2>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                  {profile?.role}
+                </span>
+                <span className="text-xs text-muted-foreground">ID: {profile?.id.slice(0, 8)}...</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="profile">
-        <TabsList className="w-full">
-          <TabsTrigger value="profile" className="flex-1">Edit Profil</TabsTrigger>
-          <TabsTrigger value="password" className="flex-1">Ubah Password</TabsTrigger>
-        </TabsList>
+      {/* Integrated Card with Tabs */}
+      <Card className="max-w-4xl overflow-hidden border-border/50">
+        <div className="flex flex-col sm:flex-row border-b bg-muted/30">
+          <button 
+            onClick={() => setActiveTab('profile')}
+            className={cn(
+              "flex items-center gap-2 px-6 py-4 text-sm font-medium transition-all relative",
+              activeTab === 'profile' 
+                ? "text-primary bg-background" 
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+          >
+            <User size={16} />
+            <span>Informasi Profil</span>
+            {activeTab === 'profile' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+          <button 
+            onClick={() => setActiveTab('password')}
+            className={cn(
+              "flex items-center gap-2 px-6 py-4 text-sm font-medium transition-all relative",
+              activeTab === 'password' 
+                ? "text-primary bg-background" 
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+          >
+            <ShieldCheck size={16} />
+            <span>Keamanan</span>
+            {activeTab === 'password' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+        </div>
 
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Informasi Profil</CardTitle>
-              <CardDescription>Perbarui nama tampilan Anda</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={profileForm.handleSubmit((v) => updateProfileMutation.mutate(v))} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="p-name">Nama Lengkap *</Label>
-                  <Input id="p-name" {...profileForm.register('full_name')} />
-                  {profileForm.formState.errors.full_name && (
-                    <p className="text-destructive text-xs">{profileForm.formState.errors.full_name.message}</p>
-                  )}
+        <CardContent className="p-0">
+          {activeTab === 'profile' && (
+            <div className="p-6 sm:p-8 animate-in fade-in duration-300">
+              <form onSubmit={profileForm.handleSubmit((v) => updateProfileMutation.mutate(v))} className="space-y-6 max-w-xl">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="p-name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nama Lengkap</Label>
+                    <Input 
+                      id="p-name" 
+                      placeholder="Masukkan nama lengkap"
+                      {...profileForm.register('full_name')} 
+                    />
+                    {profileForm.formState.errors.full_name && (
+                      <p className="text-destructive text-xs mt-1 font-medium">{profileForm.formState.errors.full_name.message}</p>
+                    )}
+                  </div>
+                  
+                  {/* Readonly Email if available - usually from auth but let's just show a dummy or role */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Role Akun</Label>
+                    <Input 
+                      value={profile?.role ?? ''} 
+                      disabled 
+                      className="bg-muted capitalize"
+                    />
+                  </div>
                 </div>
-                <Button type="submit" disabled={updateProfileMutation.isPending}>
-                  {updateProfileMutation.isPending ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Menyimpan...</> : 'Simpan'}
-                </Button>
+                
+                <div className="pt-4">
+                  <Button type="submit" disabled={updateProfileMutation.isPending} className="min-w-32 shadow-lg shadow-primary/20">
+                    {updateProfileMutation.isPending ? (
+                      <><Loader2 size={16} className="mr-2 animate-spin" />Menyimpan...</>
+                    ) : 'Simpan Perubahan'}
+                  </Button>
+                </div>
               </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          )}
 
-        <TabsContent value="password">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Ubah Password</CardTitle>
-              <CardDescription>Gunakan password yang kuat (minimal 8 karakter)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={passwordForm.handleSubmit((v) => updatePasswordMutation.mutate(v))} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="pw-new">Password Baru *</Label>
-                  <Input id="pw-new" type="password" {...passwordForm.register('password')} />
-                  {passwordForm.formState.errors.password && (
-                    <p className="text-destructive text-xs">{passwordForm.formState.errors.password.message}</p>
-                  )}
+          {activeTab === 'password' && (
+            <div className="p-6 sm:p-8 animate-in fade-in duration-300">
+              <form onSubmit={passwordForm.handleSubmit((v) => updatePasswordMutation.mutate(v))} className="space-y-6 max-w-xl">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pw-new" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password Baru</Label>
+                    <Input 
+                      id="pw-new" 
+                      type="password" 
+                      placeholder="Minimal 8 karakter"
+                      {...passwordForm.register('password')} 
+                    />
+                    {passwordForm.formState.errors.password && (
+                      <p className="text-destructive text-xs mt-1 font-medium">{passwordForm.formState.errors.password.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pw-confirm" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Konfirmasi Password</Label>
+                    <Input 
+                      id="pw-confirm" 
+                      type="password" 
+                      placeholder="Ulangi password baru"
+                      {...passwordForm.register('confirm')} 
+                    />
+                    {passwordForm.formState.errors.confirm && (
+                      <p className="text-destructive text-xs mt-1 font-medium">{passwordForm.formState.errors.confirm.message}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="pw-confirm">Konfirmasi Password *</Label>
-                  <Input id="pw-confirm" type="password" {...passwordForm.register('confirm')} />
-                  {passwordForm.formState.errors.confirm && (
-                    <p className="text-destructive text-xs">{passwordForm.formState.errors.confirm.message}</p>
-                  )}
+                
+                <div className="pt-4">
+                  <Button type="submit" disabled={updatePasswordMutation.isPending} className="min-w-32 shadow-lg shadow-primary/20">
+                    {updatePasswordMutation.isPending ? (
+                      <><Loader2 size={16} className="mr-2 animate-spin" />Mengubah...</>
+                    ) : 'Ubah Password'}
+                  </Button>
                 </div>
-                <Button type="submit" disabled={updatePasswordMutation.isPending}>
-                  {updatePasswordMutation.isPending ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Mengubah...</> : 'Ubah Password'}
-                </Button>
               </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

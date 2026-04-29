@@ -3,14 +3,15 @@ import { WarehouseClient } from '@/components/warehouse-app/warehouse/warehouse-
 
 export const metadata: Metadata = { title: 'Gudang — Gudang IDN' }
 
+import { PageWrapper } from '@/components/shared/page-wrapper'
+
 export default function WarehousePage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Gudang</h1>
-        <p className="text-muted-foreground text-sm mt-1">Kelola lokasi penyimpanan barang</p>
-      </div>
+    <PageWrapper
+      title="Gudang"
+      description="Kelola lokasi penyimpanan barang"
+    >
       <WarehouseClient />
-    </div>
+    </PageWrapper>
   )
 }

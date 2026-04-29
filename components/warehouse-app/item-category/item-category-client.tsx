@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatCurrency } from '@/lib/utils'
 
 const PAGE_SIZE = 10
 const schema = z.object({ name: z.string().min(1, 'Nama kategori wajib diisi') })
@@ -34,7 +34,7 @@ export function ItemCategoryClient() {
   const [deleteItem, setDeleteItem] = useState<ItemCategory | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['item_category', page, debouncedSearch],
+    queryKey: ['item_category', page, debouncedSearch, 'with_stats'],
     queryFn: async () => {
       let q = supabase.from('item_category').select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
@@ -42,7 +42,22 @@ export function ItemCategoryClient() {
       if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
       const { data, count, error } = await q
       if (error) throw error
-      return { data: (data ?? []) as ItemCategory[], count: count ?? 0 }
+      
+      const categories = (data ?? []) as (ItemCategory & { total_stock?: number; total_value?: number })[]
+      
+      if (categories.length > 0) {
+        const { data: stats } = await supabase.from('stock_ledger')
+          .select('category_name, current_stock, price')
+          .in('category_name', categories.map(c => c.name))
+        
+        categories.forEach(c => {
+          const catStats = stats?.filter(s => s.category_name === c.name) || []
+          c.total_stock = catStats.reduce((sum, s) => sum + (s.current_stock || 0), 0)
+          c.total_value = catStats.reduce((sum, s) => sum + ((s.current_stock || 0) * (s.price || 0)), 0)
+        })
+      }
+      
+      return { data: categories, count: count ?? 0 }
     },
   })
 
@@ -73,11 +88,22 @@ export function ItemCategoryClient() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('item_category').delete().in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Kategori terpilih dihapus'); qc.invalidateQueries({ queryKey: ['item_category'] }) },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   return (
     <>
       <DataTable
         columns={[
           { key: 'name', header: 'Nama Kategori' },
+          { key: 'total_stock', header: 'Total Stok', render: (_, row) => (row as any).total_stock ?? 0 },
+          { key: 'total_value', header: 'Total Nilai', render: (_, row) => formatCurrency((row as any).total_value ?? 0) },
           { key: 'created_at', header: 'Dibuat', render: (v) => formatDate(v as string) },
           {
             key: 'actions', header: '', className: 'w-24 text-right',
@@ -95,6 +121,7 @@ export function ItemCategoryClient() {
         pageSize={PAGE_SIZE}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
+        onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Cari kategori..."

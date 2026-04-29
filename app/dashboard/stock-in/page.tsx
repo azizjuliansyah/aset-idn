@@ -3,14 +3,15 @@ import { StockTransactionClient } from '@/components/warehouse-app/stock/stock-t
 
 export const metadata: Metadata = { title: 'Barang Masuk — Gudang IDN' }
 
+import { PageWrapper } from '@/components/shared/page-wrapper'
+
 export default function StockInPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Barang Masuk</h1>
-        <p className="text-muted-foreground text-sm mt-1">Catat penerimaan barang ke gudang</p>
-      </div>
+    <PageWrapper
+      title="Barang Masuk"
+      description="Catat penerimaan barang ke gudang"
+    >
       <StockTransactionClient type="in" />
-    </div>
+    </PageWrapper>
   )
 }
