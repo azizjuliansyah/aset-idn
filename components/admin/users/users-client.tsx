@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Loader2, ShieldCheck, User } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, ShieldCheck, User, Briefcase } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
 
 import type { Profile, Role } from '@/types/database'
@@ -30,12 +30,12 @@ const createSchema = z.object({
   full_name: z.string().min(1, 'Nama wajib diisi'),
   email: z.string().email('Email tidak valid'),
   password: z.string().min(8, 'Password minimal 8 karakter'),
-  role: z.enum(['admin', 'user']),
+  role: z.enum(['admin', 'user', 'general_affair']),
 })
 
 const editSchema = z.object({
   full_name: z.string().min(1, 'Nama wajib diisi'),
-  role: z.enum(['admin', 'user']),
+  role: z.enum(['admin', 'user', 'general_affair']),
 })
 
 type CreateValues = z.infer<typeof createSchema>
@@ -170,11 +170,6 @@ export function UsersClient() {
         <Select 
           value={roleFilter} 
           onValueChange={(v) => { if (v) setRoleFilter(v); setPage(1) }}
-          items={[
-            { value: 'all', label: 'Semua Role' },
-            { value: 'admin', label: 'Admin' },
-            { value: 'user', label: 'User' },
-          ]}
         >
           <SelectTrigger className="h-9">
             <SelectValue placeholder="Semua Role" />
@@ -182,6 +177,7 @@ export function UsersClient() {
           <SelectContent>
             <SelectItem value="all">Semua Role</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="general_affair">General Affair</SelectItem>
             <SelectItem value="user">User</SelectItem>
           </SelectContent>
         </Select>
@@ -197,9 +193,12 @@ export function UsersClient() {
           {
             key: 'role', header: 'Role',
             render: (v) => (
-              <Badge variant={v === 'admin' ? 'default' : 'secondary'} className="gap-1 text-xs">
-                {v === 'admin' ? <ShieldCheck size={11} /> : <User size={11} />}
-                {(v as string).charAt(0).toUpperCase() + (v as string).slice(1)}
+              <Badge
+                variant={v === 'admin' ? 'default' : v === 'general_affair' ? 'outline' : 'secondary'}
+                className="gap-1 text-xs"
+              >
+                {v === 'admin' ? <ShieldCheck size={11} /> : v === 'general_affair' ? <Briefcase size={11} /> : <User size={11} />}
+                {v === 'admin' ? 'Admin' : v === 'general_affair' ? 'General Affair' : 'User'}
               </Badge>
             ),
           },
@@ -248,14 +247,11 @@ export function UsersClient() {
                 <Select 
                   value={editForm.watch('role')} 
                   onValueChange={(v) => editForm.setValue('role', v as Role)}
-                  items={[
-                    { value: 'user', label: 'User' },
-                    { value: 'admin', label: 'Admin' },
-                  ]}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="general_affair">General Affair</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
@@ -289,14 +285,11 @@ export function UsersClient() {
                 <Select 
                   value={createForm.watch('role')} 
                   onValueChange={(v) => createForm.setValue('role', v as Role)}
-                  items={[
-                    { value: 'user', label: 'User' },
-                    { value: 'admin', label: 'Admin' },
-                  ]}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="general_affair">General Affair</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>

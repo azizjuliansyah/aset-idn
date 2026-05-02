@@ -1,5 +1,6 @@
 // types/database.ts
-export type Role = 'admin' | 'user'
+export type Role = 'admin' | 'user' | 'general_affair'
+export type LoanStatus = 'pending' | 'approved' | 'rejected' | 'returned' | 'cancelled'
 export type ItemStatus_Status = 'active' | 'inactive'
 
 export interface Profile {
@@ -111,6 +112,29 @@ export interface StockLedger {
   total_out: number
   current_stock: number
   is_low_stock: boolean
+}
+
+export interface ItemLoan {
+  id: string
+  item_id: string
+  warehouse_id: string
+  requested_by: string
+  actioned_by: string | null
+  quantity: number
+  purpose: string
+  loan_date: string
+  return_date: string | null
+  actual_return_date: string | null
+  status: LoanStatus
+  rejection_note: string | null
+  note: string | null
+  created_at: string
+  updated_at: string
+  // joined
+  item?: Item
+  warehouse?: Warehouse
+  requester?: Profile
+  actioner?: Profile
 }
 
 export interface PaginatedResponse<T> {

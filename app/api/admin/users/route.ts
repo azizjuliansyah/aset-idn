@@ -54,8 +54,8 @@ export async function POST(request: Request) {
 
   if (createError) return NextResponse.json({ error: createError.message }, { status: 400 })
 
-  // Update profile role (trigger creates profile with role from metadata)
-  if (newUser.user && role === 'admin') {
+  // Update profile role for non-default roles (trigger defaults to 'user')
+  if (newUser.user && role !== 'user') {
     await supabase.from('profiles').update({ role }).eq('id', newUser.user.id)
   }
 

@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Gudang IDN — Warehouse ERP',
   description: 'Sistem manajemen gudang untuk perusahaan Anda',
+  icons: {
+    icon: '/company-logo',
+  },
 }
 
 export default function RootLayout({

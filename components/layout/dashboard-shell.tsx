@@ -8,6 +8,7 @@ import type { Profile } from '@/types/database'
 interface DashboardShellProps {
   profile: Profile
   companyName?: string
+  logoUrl?: string
   pageTitle?: string
   children: React.ReactNode
 }
@@ -15,6 +16,7 @@ interface DashboardShellProps {
 export function DashboardShell({
   profile,
   companyName,
+  logoUrl,
   pageTitle,
   children,
 }: DashboardShellProps) {
@@ -25,6 +27,7 @@ export function DashboardShell({
       <Sidebar
         profile={profile}
         companyName={companyName}
+        logoUrl={logoUrl}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
       />

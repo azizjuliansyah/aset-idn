@@ -46,14 +46,30 @@ export function ItemCategoryClient() {
       const categories = (data ?? []) as (ItemCategory & { total_stock?: number; total_value?: number })[]
       
       if (categories.length > 0) {
-        const { data: stats } = await supabase.from('stock_ledger')
-          .select('category_name, current_stock, price')
-          .in('category_name', categories.map(c => c.name))
-        
+        const [statsRes, loansRes] = await Promise.all([
+          supabase.from('stock_ledger')
+            .select('category_name, current_stock, price')
+            .in('category_name', categories.map(c => c.name)),
+          supabase.from('item_loans')
+            .select('quantity, item:items!inner(item_category:item_category!inner(name))')
+            .eq('status', 'approved')
+            .in('item.item_category.name', categories.map(c => c.name))
+        ])
+
+        const stats = statsRes.data || []
+        const loans = loansRes.data || []
+
         categories.forEach(c => {
-          const catStats = stats?.filter(s => s.category_name === c.name) || []
-          c.total_stock = catStats.reduce((sum, s) => sum + (s.current_stock || 0), 0)
+          const catStats = stats.filter(s => s.category_name === c.name)
+          const catLoans = loans.filter((l: any) => l.item?.item_category?.name === c.name)
+          
+          const borrowed = catLoans.reduce((sum, l) => sum + (l.quantity || 0), 0)
+          const rawStock = catStats.reduce((sum, s) => sum + (s.current_stock || 0), 0)
+          
+          c.total_stock = rawStock - borrowed
           c.total_value = catStats.reduce((sum, s) => sum + ((s.current_stock || 0) * (s.price || 0)), 0)
+          // Value still uses physical stock (current_stock) or should it also use available? 
+          // Usually value is based on what we own, even if borrowed.
         })
       }
       

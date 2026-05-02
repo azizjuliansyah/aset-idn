@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
 import { formatCurrency, cn } from '@/lib/utils'
 
 const PAGE_SIZE = 10
@@ -79,7 +80,7 @@ export function ItemsClient() {
     },
   })
 
-  const { data: categories } = useQuery({
+  const { data: categories, isLoading: isLoadingCategories } = useQuery({
     queryKey: ['item_category_all'],
     queryFn: async () => {
       const { data } = await supabase.from('item_category').select('id, name').order('name')
@@ -95,7 +96,7 @@ export function ItemsClient() {
     },
   })
 
-  const { data: statuses } = useQuery({
+  const { data: statuses, isLoading: isLoadingStatuses } = useQuery({
     queryKey: ['item_status_all'],
     queryFn: async () => {
       const { data } = await supabase.from('item_status').select('id, name').order('name')
@@ -103,7 +104,7 @@ export function ItemsClient() {
     },
   })
 
-  const { data: conditions } = useQuery({
+  const { data: conditions, isLoading: isLoadingConditions } = useQuery({
     queryKey: ['item_condition_all'],
     queryFn: async () => {
       const { data } = await supabase.from('item_condition').select('id, name').order('name')
@@ -122,17 +123,30 @@ export function ItemsClient() {
     setDialogOpen(true)
   }
 
-  const openEdit = (item: ItemWithJoins) => {
-    setEditItem(item)
+  const openEdit = async (item: ItemWithJoins) => {
+    // Memuat data lengkap barang untuk memastikan ID foreign key tersedia
+    const { data: fullItem, error } = await supabase
+      .from('items')
+      .select('*')
+      .eq('id', item.id)
+      .single()
+    
+    if (error) {
+      console.error('Error fetching full item:', error)
+      toast.error('Gagal memuat data lengkap barang')
+    }
+
+    const dataToUse = fullItem || item
+    setEditItem(dataToUse as ItemWithJoins)
     form.reset({
-      name: item.name,
-      item_category_id: item.item_category_id ?? '',
-      item_status_id: item.item_status_id ?? '',
-      item_condition_id: item.item_condition_id ?? '',
-      price: item.price,
-      status: item.status,
-      note: item.note ?? '',
-      minimum_stock: item.minimum_stock,
+      name: dataToUse.name,
+      item_category_id: dataToUse.item_category_id ?? '',
+      item_status_id: dataToUse.item_status_id ?? '',
+      item_condition_id: dataToUse.item_condition_id ?? '',
+      price: dataToUse.price,
+      status: dataToUse.status,
+      note: dataToUse.note ?? '',
+      minimum_stock: dataToUse.minimum_stock,
     })
     setDialogOpen(true)
   }
@@ -186,10 +200,6 @@ export function ItemsClient() {
         <Select 
           value={warehouseId} 
           onValueChange={(v) => { if (v) { setWarehouseId(v); setPage(1) } }}
-          items={[
-            { value: 'all', label: 'Semua Gudang' },
-            ...(warehouses?.map((w) => ({ value: w.id, label: w.name })) ?? [])
-          ]}
         >
           <SelectTrigger className="h-9">
             <SelectValue placeholder="Semua Gudang" />
@@ -208,10 +218,6 @@ export function ItemsClient() {
         <Select 
           value={categoryId} 
           onValueChange={(v) => { if (v) { setCategoryId(v); setPage(1) } }}
-          items={[
-            { value: 'all', label: 'Semua Kategori' },
-            ...(categories?.map((c) => ({ value: c.id, label: c.name })) ?? [])
-          ]}
         >
           <SelectTrigger className="h-9">
             <SelectValue placeholder="Semua Kategori" />
@@ -230,10 +236,6 @@ export function ItemsClient() {
         <Select 
           value={conditionId} 
           onValueChange={(v) => { if (v) { setConditionId(v); setPage(1) } }}
-          items={[
-            { value: 'all', label: 'Semua Kondisi' },
-            ...(conditions?.map((c) => ({ value: c.id, label: c.name })) ?? [])
-          ]}
         >
           <SelectTrigger className="h-9">
             <SelectValue placeholder="Semua Kondisi" />
@@ -252,12 +254,6 @@ export function ItemsClient() {
         <Select 
           value={stockStatus} 
           onValueChange={(v) => { if (v) { setStockStatus(v); setPage(1) } }}
-          items={[
-            { value: 'all', label: 'Semua Status' },
-            { value: 'above_min', label: 'Di Atas Batas Minimum' },
-            { value: 'below_min', label: 'Di Bawah Batas Minimum' },
-            { value: 'out_of_stock', label: 'Tidak Tersedia' },
-          ]}
         >
           <SelectTrigger className="h-9">
             <SelectValue placeholder="Semua Status" />
@@ -357,16 +353,14 @@ export function ItemsClient() {
                 <Label>Kategori</Label>
                 <Controller name="item_category_id" control={form.control}
                   render={({ field }) => (
-                    <Select 
-                      value={field.value ?? ''} 
+                    <Combobox 
+                      value={field.value} 
                       onValueChange={field.onChange}
-                      items={categories?.map((c) => ({ value: c.id, label: c.name }))}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
-                      <SelectContent>
-                        {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                      options={categories?.map((c) => ({ value: c.id, label: c.name })) ?? []}
+                      placeholder="Pilih kategori"
+                      searchPlaceholder="Cari kategori..."
+                      disabled={isLoadingCategories && !categories}
+                    />
                   )}
                 />
               </div>
@@ -377,10 +371,6 @@ export function ItemsClient() {
                     <Select 
                       value={field.value} 
                       onValueChange={field.onChange}
-                      items={[
-                        { value: 'active', label: 'Aktif' },
-                        { value: 'inactive', label: 'Nonaktif' },
-                      ]}
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -399,11 +389,13 @@ export function ItemsClient() {
                 <Controller name="item_status_id" control={form.control}
                   render={({ field }) => (
                     <Select 
-                      value={field.value ?? ''} 
+                      value={field.value || undefined} 
                       onValueChange={field.onChange}
-                      items={statuses?.map((s) => ({ value: s.id, label: s.name }))}
+                      disabled={isLoadingStatuses && !statuses}
                     >
-                      <SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger>
+                      <SelectTrigger disabled={isLoadingStatuses && !statuses}>
+                        <SelectValue placeholder={(isLoadingStatuses && !statuses) ? "Memuat..." : "Pilih status"} />
+                      </SelectTrigger>
                       <SelectContent>
                         {statuses?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                       </SelectContent>
@@ -416,11 +408,13 @@ export function ItemsClient() {
                 <Controller name="item_condition_id" control={form.control}
                   render={({ field }) => (
                     <Select 
-                      value={field.value ?? ''} 
+                      value={field.value || undefined} 
                       onValueChange={field.onChange}
-                      items={conditions?.map((c) => ({ value: c.id, label: c.name }))}
+                      disabled={isLoadingConditions && !conditions}
                     >
-                      <SelectTrigger><SelectValue placeholder="Pilih kondisi" /></SelectTrigger>
+                      <SelectTrigger disabled={isLoadingConditions && !conditions}>
+                        <SelectValue placeholder={(isLoadingConditions && !conditions) ? "Memuat..." : "Pilih kondisi"} />
+                      </SelectTrigger>
                       <SelectContent>
                         {conditions?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                       </SelectContent>

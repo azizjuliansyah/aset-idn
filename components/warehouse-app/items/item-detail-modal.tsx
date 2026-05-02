@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { formatCurrency, formatDateTime, formatDate, cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, ArrowUpRight, ArrowDownLeft, Info, History, Package, Tag, DollarSign, Layers, Calendar, User, AlertTriangle } from 'lucide-react'
+import { Loader2, ArrowUpRight, ArrowDownLeft, Info, History, Package, Tag, DollarSign, Layers, Calendar, User, AlertTriangle, ShieldCheck, AlertCircle, CheckCircle } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface ItemDetailModalProps {
@@ -75,15 +75,45 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
     queryKey: ['item_stock_stats', itemId],
     enabled: !!itemId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('stock_ledger')
-        .select('warehouse_id, total_in, total_out, current_stock, warehouse_name')
-        .eq('item_id', itemId)
-        .order('warehouse_name')
-      if (error) throw error
-      return data
+      // Fetch both ledger and active loans
+      const [ledgerRes, loansRes] = await Promise.all([
+        supabase
+          .from('stock_ledger')
+          .select('warehouse_id, total_in, total_out, current_stock, warehouse_name')
+          .eq('item_id', itemId)
+          .order('warehouse_name'),
+        supabase
+          .from('item_loans')
+          .select('quantity, warehouse_id')
+          .eq('item_id', itemId)
+          .eq('status', 'approved')
+      ])
+
+      if (ledgerRes.error) throw ledgerRes.error
+      if (loansRes.error) throw loansRes.error
+
+      const ledger = ledgerRes.data || []
+      const loans = loansRes.data || []
+
+      // Map loans to warehouse
+      const loanStats: Record<string, number> = {}
+      loans.forEach(l => {
+        loanStats[l.warehouse_id] = (loanStats[l.warehouse_id] || 0) + l.quantity
+      })
+
+      // Combine stats
+      return ledger.map(stat => {
+        const borrowed = loanStats[stat.warehouse_id] || 0
+        return {
+          ...stat,
+          borrowed,
+          available_stock: stat.current_stock - borrowed
+        }
+      })
     }
   })
+
+  const totalBorrowed = stockStats?.reduce((sum, s) => sum + (s.borrowed || 0), 0) ?? 0
 
   return (
     <Dialog open={!!itemId} onOpenChange={onOpenChange}>
@@ -177,10 +207,11 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
                   </div>
 
                 <div className="pt-2">
-                  <div className="grid grid-cols-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b">
+                  <div className="grid grid-cols-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b pb-1">
                     <div>Masuk</div>
                     <div>Keluar</div>
-                    <div>Stok Saat Ini</div>
+                    <div>Dipinjam</div>
+                    <div>Tersedia</div>
                   </div>
                   {isStatsLoading ? (
                     <div className="flex justify-center p-4"><Loader2 className="animate-spin text-primary/30" size={16} /></div>
@@ -188,16 +219,34 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
                     <div className="space-y-0 text-sm">
                       {stockStats.map((stat: any, i: number) => (
                         <div key={i} className="py-2.5 border-b border-muted/50 last:border-0 group">
-                          <div className="grid grid-cols-3 items-center">
+                          <div className="grid grid-cols-4 items-center">
                             <div className="text-green-600 font-semibold">+{stat.total_in}</div>
                             <div className="text-red-600 font-semibold">-{stat.total_out}</div>
+                            <div className="text-amber-600 font-semibold">-{stat.borrowed}</div>
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-base">{stat.current_stock}</span>
-                              {stat.current_stock <= (item.minimum_stock ?? 0) && (
-                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 bg-red-100 text-red-700 hover:bg-red-100 border-red-200 font-medium tracking-wide">
-                                  <AlertTriangle size={10} className="mr-1" /> Rendah
-                                </Badge>
-                              )}
+                              <span className="font-bold text-base">{stat.available_stock}</span>
+                              {(() => {
+                                if (stat.available_stock === 0) return (
+                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 bg-red-100 text-red-700 hover:bg-red-100 border-red-200 font-medium tracking-wide">
+                                    <AlertCircle size={10} className="mr-1" /> Habis
+                                  </Badge>
+                                )
+                                if (stat.available_stock < (item.minimum_stock ?? 0)) return (
+                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200 font-medium tracking-wide border-orange-200/50">
+                                    <AlertTriangle size={10} className="mr-1" /> Rendah
+                                  </Badge>
+                                )
+                                if (stat.available_stock === (item.minimum_stock ?? 0)) return (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 font-medium tracking-wide">
+                                    <AlertTriangle size={10} className="mr-1" /> Menipis
+                                  </Badge>
+                                )
+                                return (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-green-100 text-green-700 hover:bg-green-100 border-green-200 font-medium tracking-wide">
+                                    <CheckCircle size={10} className="mr-1" /> Aman
+                                  </Badge>
+                                )
+                              })()}
                             </div>
                           </div>
                           {/* Warehouse name tooltip/subtext */}

@@ -4,9 +4,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error('[Middleware] Missing environment variables')
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
@@ -16,7 +21,11 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          supabaseResponse = NextResponse.next({ request })
+          supabaseResponse = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -25,14 +34,26 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch (e) {
+    console.error('[Middleware] Auth error:', e)
+  }
 
   const { pathname } = request.nextUrl
   const isAuthPage = pathname.startsWith('/login')
-  const isDashboard = !isAuthPage && pathname !== '/'
+  const isApiRoute = pathname.startsWith('/api')
+  const isDashboard = !isAuthPage && !isApiRoute && pathname !== '/'
 
   // Debug logging
-  console.log(`[Proxy] Path: ${pathname}, User: ${user ? 'Yes' : 'No'}`)
+  console.log(`[Proxy] Path: ${pathname}, Method: ${request.method}, User: ${user ? 'Yes' : 'No'}`)
+
+  // Skip redirect for API routes or OPTIONS requests to avoid breaking CORS/Preflight
+  if (isApiRoute || request.method === 'OPTIONS') {
+    return supabaseResponse
+  }
 
   if (!user && isDashboard) {
     console.log(`[Proxy] Redirecting to /login from ${pathname}`)

@@ -18,7 +18,9 @@ interface ConfirmDialogProps {
   description?: string
   onConfirm: () => void
   loading?: boolean
-  variant?: 'destructive' | 'default'
+  variant?: 'destructive' | 'default' | 'success'
+  confirmText?: string
+  loadingText?: string
 }
 
 export function ConfirmDialog({
@@ -29,7 +31,12 @@ export function ConfirmDialog({
   onConfirm,
   loading,
   variant = 'destructive',
+  confirmText,
+  loadingText,
 }: ConfirmDialogProps) {
+  const defaultConfirmText = variant === 'destructive' ? 'Hapus' : 'Konfirmasi'
+  const defaultLoadingText = variant === 'destructive' ? 'Menghapus...' : 'Memproses...'
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
@@ -53,11 +60,19 @@ export function ConfirmDialog({
             Batal
           </Button>
           <Button
-            variant={variant}
+            variant={variant === 'success' ? 'default' : variant}
             onClick={onConfirm}
             disabled={loading}
+            className={variant === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
           >
-            {loading ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Menghapus...</> : 'Hapus'}
+            {loading ? (
+              <>
+                <Loader2 size={14} className="mr-1.5 animate-spin" />
+                {loadingText || defaultLoadingText}
+              </>
+            ) : (
+              confirmText || defaultConfirmText
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

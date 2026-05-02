@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { formatDateTime, cn } from '@/lib/utils'
 
@@ -159,13 +160,26 @@ export function StockTransactionClient({ type }: StockInClientProps) {
     queryKey: ['item_stock', selectedItemId, selectedWarehouseId],
     queryFn: async () => {
       if (!selectedItemId || !selectedWarehouseId) return 0
-      const { data } = await supabase
-        .from('stock_ledger')
-        .select('current_stock')
-        .eq('item_id', selectedItemId)
-        .eq('warehouse_id', selectedWarehouseId)
-        .maybeSingle()
-      return data?.current_stock ?? 0
+      
+      const [ledgerRes, loansRes] = await Promise.all([
+        supabase
+          .from('stock_ledger')
+          .select('current_stock')
+          .eq('item_id', selectedItemId)
+          .eq('warehouse_id', selectedWarehouseId)
+          .maybeSingle(),
+        supabase
+          .from('item_loans')
+          .select('quantity')
+          .eq('item_id', selectedItemId)
+          .eq('warehouse_id', selectedWarehouseId)
+          .eq('status', 'approved')
+      ])
+
+      const current = ledgerRes.data?.current_stock ?? 0
+      const borrowed = loansRes.data?.reduce((sum, l) => sum + l.quantity, 0) ?? 0
+      
+      return current - borrowed
     },
     enabled: !!selectedItemId && !!selectedWarehouseId,
   })
@@ -258,10 +272,6 @@ export function StockTransactionClient({ type }: StockInClientProps) {
         <Select 
           value={warehouseId} 
           onValueChange={(v) => { if (v) { setWarehouseId(v); setPage(1) } }}
-          items={[
-            { value: 'all', label: 'Semua Gudang' },
-            ...(warehouses?.map((w) => ({ value: w.id, label: w.name })) ?? [])
-          ]}
         >
           <SelectTrigger className="h-9">
             <SelectValue placeholder="Semua Gudang" />
@@ -280,10 +290,6 @@ export function StockTransactionClient({ type }: StockInClientProps) {
         <Select 
           value={categoryId} 
           onValueChange={(v) => { if (v) { setCategoryId(v); setPage(1) } }}
-          items={[
-            { value: 'all', label: 'Semua Kategori' },
-            ...(categories?.map((c) => ({ value: c.id, label: c.name })) ?? [])
-          ]}
         >
           <SelectTrigger className="h-9">
             <SelectValue placeholder="Semua Kategori" />
@@ -418,16 +424,13 @@ export function StockTransactionClient({ type }: StockInClientProps) {
               <Label>Barang *</Label>
               <Controller name="item_id" control={form.control}
                 render={({ field }) => (
-                  <Select 
+                  <Combobox 
                     value={field.value} 
                     onValueChange={field.onChange}
-                    items={items?.map((i) => ({ value: i.id, label: i.name }))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Pilih barang" /></SelectTrigger>
-                    <SelectContent>
-                      {items?.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                    options={items?.map((i) => ({ value: i.id, label: i.name })) ?? []}
+                    placeholder="Pilih barang"
+                    searchPlaceholder="Cari barang..."
+                  />
                 )}
               />
               {form.formState.errors.item_id && <p className="text-destructive text-xs">{form.formState.errors.item_id.message}</p>}
@@ -439,7 +442,6 @@ export function StockTransactionClient({ type }: StockInClientProps) {
                   <Select 
                     value={field.value} 
                     onValueChange={field.onChange}
-                    items={warehouses?.map((w) => ({ value: w.id, label: w.name }))}
                   >
                     <SelectTrigger><SelectValue placeholder="Pilih gudang" /></SelectTrigger>
                     <SelectContent>
@@ -455,7 +457,7 @@ export function StockTransactionClient({ type }: StockInClientProps) {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="st-qty">Jumlah *</Label>
                   <span className="text-[10px] text-muted-foreground font-medium bg-muted/50 px-1.5 py-0.5 rounded">
-                    Stok: <span className={cn("font-bold", (currentStock ?? 0) <= 0 ? "text-destructive" : "text-foreground")}>
+                    Tersedia: <span className={cn("font-bold", (currentStock ?? 0) <= 0 ? "text-destructive" : "text-foreground")}>
                       {loadingStock ? '...' : currentStock ?? 0}
                     </span>
                   </span>

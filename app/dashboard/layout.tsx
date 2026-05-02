@@ -41,6 +41,7 @@ export default async function DashboardLayout({
     <DashboardShell
       profile={profile}
       companyName={company?.name}
+      logoUrl={company?.logo_url || undefined}
     >
       {children}
     </DashboardShell>

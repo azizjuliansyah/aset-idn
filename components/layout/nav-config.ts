@@ -9,25 +9,32 @@ import {
   Package,
   ArrowDownToLine,
   ArrowUpFromLine,
+  ClipboardList,
+  History,
+  ShieldCheck,
+  ClipboardCheck,
 } from 'lucide-react'
+
+export type AppRole = 'admin' | 'user' | 'general_affair'
 
 export interface NavItem {
   title: string
   href: string
   icon: React.ComponentType<{ size?: number; className?: string }>
-  roles?: ('admin' | 'user')[]
+  roles?: AppRole[]
   badge?: string
 }
 
 export interface NavGroup {
   title: string
   items: NavItem[]
-  roles?: ('admin' | 'user')[]
+  roles?: AppRole[]
 }
 
 export const navGroups: NavGroup[] = [
   {
     title: 'Utama',
+    roles: ['admin', 'general_affair'],
     items: [
       {
         title: 'Dashboard',
@@ -55,24 +62,8 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: 'Master Data',
-    roles: ['user'],
-    items: [
-      {
-        title: 'Status Barang',
-        href: '/dashboard/admin/item-status',
-        icon: CheckCircle,
-      },
-      {
-        title: 'Kondisi Barang',
-        href: '/dashboard/admin/item-condition',
-        icon: Tag,
-      },
-    ],
-  },
-  {
     title: 'Gudang',
-    roles: ['user'],
+    roles: ['general_affair'],
     items: [
       {
         title: 'Gudang',
@@ -93,7 +84,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     title: 'Transaksi',
-    roles: ['user'],
+    roles: ['general_affair'],
     items: [
       {
         title: 'Barang Masuk',
@@ -104,6 +95,54 @@ export const navGroups: NavGroup[] = [
         title: 'Barang Keluar',
         href: '/dashboard/stock-out',
         icon: ArrowUpFromLine,
+      },
+    ],
+  },
+  {
+    title: 'Peminjaman',
+    roles: ['user'], // Only user role can request items
+    items: [
+      {
+        title: 'Pinjam Barang',
+        href: '/dashboard/loans',
+        icon: ClipboardList,
+      },
+      {
+        title: 'Riwayat Pinjam',
+        href: '/dashboard/loans/history',
+        icon: History,
+      },
+    ],
+  },
+  {
+    title: 'Peminjaman (GA)',
+    roles: ['general_affair'],
+    items: [
+      {
+        title: 'Kelola Peminjaman',
+        href: '/dashboard/ga/loans',
+        icon: ShieldCheck,
+      },
+      {
+        title: 'Riwayat Peminjaman',
+        href: '/dashboard/ga/loans/history',
+        icon: ClipboardCheck,
+      },
+    ],
+  },
+  {
+    title: 'Master Data',
+    roles: ['general_affair'],
+    items: [
+      {
+        title: 'Status Barang',
+        href: '/dashboard/admin/item-status',
+        icon: CheckCircle,
+      },
+      {
+        title: 'Kondisi Barang',
+        href: '/dashboard/admin/item-condition',
+        icon: Tag,
       },
     ],
   },
