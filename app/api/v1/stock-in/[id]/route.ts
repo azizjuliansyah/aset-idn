@@ -11,10 +11,13 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { error, data } = await supabase
-    .from('warehouses')
+  const { data, error } = await supabase
+    .from('stock_in')
     .update({
-      name: body.name,
+      item_id: body.item_id,
+      warehouse_id: body.warehouse_id,
+      quantity: body.quantity,
+      date: body.date,
       note: body.note ?? null,
     })
     .eq('id', id)
@@ -35,7 +38,7 @@ export async function DELETE(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { error } = await supabase
-    .from('warehouses')
+    .from('stock_in')
     .delete()
     .eq('id', id)
 

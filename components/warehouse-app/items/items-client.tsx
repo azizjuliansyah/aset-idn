@@ -153,6 +153,7 @@ export function ItemsClient() {
 
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
+      console.log('[ItemsClient] Starting save mutation', { isEdit: !!editItem })
       const payload = {
         name: values.name,
         item_category_id: values.item_category_id || null,
@@ -163,22 +164,49 @@ export function ItemsClient() {
         note: values.note || null,
         minimum_stock: values.minimum_stock,
       }
-      if (editItem) {
-        const { error } = await supabase.from('items').update(payload).eq('id', editItem.id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('items').insert(payload)
-        if (error) throw error
+      try {
+        if (editItem) {
+          const res = await fetch(`/api/v1/items/${editItem.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+          if (!res.ok) {
+            const errData = await res.json()
+            throw new Error(errData.error || 'Gagal memperbarui barang')
+          }
+        } else {
+          const res = await fetch('/api/v1/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+          if (!res.ok) {
+            const errData = await res.json()
+            throw new Error(errData.error || 'Gagal menambahkan barang')
+          }
+        }
+      } catch (err: any) {
+        console.error('[ItemsClient] Save mutation failed:', err)
+        throw err
       }
     },
     onSuccess: () => { toast.success(editItem ? 'Barang diperbarui' : 'Barang ditambahkan'); qc.invalidateQueries({ queryKey: ['items'] }); setDialogOpen(false) },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: any) => {
+      console.error('[ItemsClient] Toast error:', err)
+      toast.error(err.message || 'Gagal menyimpan data')
+    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('items').delete().eq('id', deleteItem!.id)
-      if (error) throw error
+      const res = await fetch(`/api/v1/items/${deleteItem?.id}`, {
+        method: 'DELETE'
+      })
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Gagal menghapus barang')
+      }
     },
     onSuccess: () => { toast.success('Barang dihapus'); qc.invalidateQueries({ queryKey: ['items'] }); setDeleteItem(null) },
     onError: (err: Error) => toast.error(err.message),

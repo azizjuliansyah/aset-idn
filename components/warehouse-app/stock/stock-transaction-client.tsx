@@ -195,7 +195,7 @@ export function StockTransactionClient({ type }: StockInClientProps) {
         throw new Error(`Jumlah keluar (${values.quantity}) melebihi stok tersedia (${availableStock})`)
       }
 
-      const payload: any = {
+      const payload = {
         item_id: values.item_id,
         warehouse_id: values.warehouse_id,
         quantity: values.quantity,
@@ -203,16 +203,26 @@ export function StockTransactionClient({ type }: StockInClientProps) {
         note: values.note || null,
       }
 
-      if (!editItem) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) payload.created_by = user.id
-      }
       if (editItem) {
-        const { error } = await supabase.from(table).update(payload).eq('id', editItem.id)
-        if (error) throw error
+        const res = await fetch(`/api/v1/stock-${type}/${editItem.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || `Gagal memperbarui ${label.toLowerCase()}`)
+        }
       } else {
-        const { error } = await supabase.from(table).insert(payload)
-        if (error) throw error
+        const res = await fetch(`/api/v1/stock-${type}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || `Gagal menambahkan ${label.toLowerCase()}`)
+        }
       }
     },
     onSuccess: () => {
@@ -227,8 +237,13 @@ export function StockTransactionClient({ type }: StockInClientProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from(table).delete().eq('id', deleteItem!.id)
-      if (error) throw error
+      const res = await fetch(`/api/v1/stock-${type}/${deleteItem!.id}`, {
+        method: 'DELETE'
+      })
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || `Gagal menghapus ${label.toLowerCase()}`)
+      }
     },
     onSuccess: () => {
       toast.success(`${label} dihapus`)
@@ -242,8 +257,9 @@ export function StockTransactionClient({ type }: StockInClientProps) {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from(table).delete().in('id', ids)
-      if (error) throw error
+      await Promise.all(ids.map(id => 
+        fetch(`/api/v1/stock-${type}/${id}`, { method: 'DELETE' })
+      ))
     },
     onSuccess: () => {
       toast.success(`${label} terpilih dihapus`)

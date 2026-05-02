@@ -60,33 +60,64 @@ export function ItemConditionClient() {
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (editItem) {
-        const { error } = await supabase.from('item_condition').update({ name: values.name, note: values.note || null }).eq('id', editItem.id)
-        if (error) throw error
+        const res = await fetch(`/api/v1/item-condition/${editItem.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name, note: values.note || null }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Gagal memperbarui kondisi')
+        }
       } else {
-        const { error } = await supabase.from('item_condition').insert({ name: values.name, note: values.note || null })
-        if (error) throw error
+        const res = await fetch('/api/v1/item-condition', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name, note: values.note || null }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Gagal menambahkan kondisi')
+        }
       }
     },
-    onSuccess: () => { toast.success(editItem ? 'Kondisi diperbarui' : 'Kondisi ditambahkan'); qc.invalidateQueries({ queryKey: ['item_condition'] }); setDialogOpen(false) },
+    onSuccess: () => { 
+      toast.success(editItem ? 'Kondisi diperbarui' : 'Kondisi ditambahkan')
+      qc.invalidateQueries({ queryKey: ['item_condition'] })
+      setDialogOpen(false) 
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
       if (!deleteItem) return
-      const { error } = await supabase.from('item_condition').delete().eq('id', deleteItem.id)
-      if (error) throw error
+      const res = await fetch(`/api/v1/item-condition/${deleteItem.id}`, {
+        method: 'DELETE'
+      })
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Gagal menghapus kondisi')
+      }
     },
-    onSuccess: () => { toast.success('Kondisi dihapus'); qc.invalidateQueries({ queryKey: ['item_condition'] }); setDeleteItem(null) },
+    onSuccess: () => { 
+      toast.success('Kondisi dihapus')
+      qc.invalidateQueries({ queryKey: ['item_condition'] })
+      setDeleteItem(null) 
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from('item_condition').delete().in('id', ids)
-      if (error) throw error
+      await Promise.all(ids.map(id => 
+        fetch(`/api/v1/item-condition/${id}`, { method: 'DELETE' })
+      ))
     },
-    onSuccess: () => { toast.success('Kondisi terpilih dihapus'); qc.invalidateQueries({ queryKey: ['item_condition'] }) },
+    onSuccess: () => { 
+      toast.success('Kondisi terpilih dihapus')
+      qc.invalidateQueries({ queryKey: ['item_condition'] }) 
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 

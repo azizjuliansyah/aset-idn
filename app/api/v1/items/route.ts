@@ -32,6 +32,7 @@ export async function GET(request: Request) {
 
 // POST /api/v1/items
 export async function POST(request: Request) {
+  console.log('[API] POST /api/v1/items')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return authError()

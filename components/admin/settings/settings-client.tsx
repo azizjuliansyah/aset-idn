@@ -56,18 +56,22 @@ export function SettingsClient() {
 
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      const { error } = await supabase
-        .from('company_settings')
-        .update({
+      const res = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: settings!.id,
           name: values.name,
           address: values.address || null,
           phone: values.phone || null,
           email: values.email || null,
           logo_url: logoUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', settings!.id)
-      if (error) throw error
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Gagal menyimpan pengaturan')
+      }
     },
     onSuccess: () => {
       toast.success('Pengaturan disimpan')

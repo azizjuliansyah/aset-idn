@@ -139,8 +139,7 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
               name="warehouse_id"
               control={form.control}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}
-                  items={warehouses?.map((w) => ({ value: w.id, label: w.name }))}>
+                <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger><SelectValue placeholder="Pilih gudang" /></SelectTrigger>
                   <SelectContent>
                     {warehouses?.map((w) => (

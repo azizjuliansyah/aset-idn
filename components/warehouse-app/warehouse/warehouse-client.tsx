@@ -58,11 +58,25 @@ export function WarehouseClient() {
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (editItem) {
-        const { error } = await supabase.from('warehouses').update({ name: values.name, note: values.note || null }).eq('id', editItem.id)
-        if (error) throw error
+        const res = await fetch(`/api/v1/warehouses/${editItem.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name, note: values.note || null }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Gagal memperbarui gudang')
+        }
       } else {
-        const { error } = await supabase.from('warehouses').insert({ name: values.name, note: values.note || null })
-        if (error) throw error
+        const res = await fetch('/api/v1/warehouses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name, note: values.note || null }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Gagal menambahkan gudang')
+        }
       }
     },
     onSuccess: () => { toast.success(editItem ? 'Gudang diperbarui' : 'Gudang ditambahkan'); qc.invalidateQueries({ queryKey: ['warehouses'] }); setDialogOpen(false) },
@@ -71,8 +85,13 @@ export function WarehouseClient() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('warehouses').delete().eq('id', deleteItem!.id)
-      if (error) throw error
+      const res = await fetch(`/api/v1/warehouses/${deleteItem!.id}`, {
+        method: 'DELETE'
+      })
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Gagal menghapus gudang')
+      }
     },
     onSuccess: () => { toast.success('Gudang dihapus'); qc.invalidateQueries({ queryKey: ['warehouses'] }); setDeleteItem(null) },
     onError: (err: Error) => toast.error(err.message),
@@ -80,8 +99,12 @@ export function WarehouseClient() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from('warehouses').delete().in('id', ids)
-      if (error) throw error
+      // For bulk delete, we can still use Supabase or create a bulk delete route
+      // Let's use individual deletes for now or a bulk endpoint if needed.
+      // Individual deletes are safer for body preservation.
+      await Promise.all(ids.map(id => 
+        fetch(`/api/v1/warehouses/${id}`, { method: 'DELETE' })
+      ))
     },
     onSuccess: () => { toast.success('Gudang terpilih dihapus'); qc.invalidateQueries({ queryKey: ['warehouses'] }) },
     onError: (err: Error) => toast.error(err.message),

@@ -12,11 +12,8 @@ export async function PATCH(
 
   const body = await request.json()
   const { error, data } = await supabase
-    .from('warehouses')
-    .update({
-      name: body.name,
-      note: body.note ?? null,
-    })
+    .from('item_category')
+    .update({ name: body.name })
     .eq('id', id)
     .select()
     .single()
@@ -35,7 +32,7 @@ export async function DELETE(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { error } = await supabase
-    .from('warehouses')
+    .from('item_category')
     .delete()
     .eq('id', id)
 

@@ -84,11 +84,25 @@ export function ItemCategoryClient() {
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (editItem) {
-        const { error } = await supabase.from('item_category').update({ name: values.name }).eq('id', editItem.id)
-        if (error) throw error
+        const res = await fetch(`/api/v1/item-categories/${editItem.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Gagal memperbarui kategori')
+        }
       } else {
-        const { error } = await supabase.from('item_category').insert({ name: values.name })
-        if (error) throw error
+        const res = await fetch('/api/v1/item-categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Gagal menambahkan kategori')
+        }
       }
     },
     onSuccess: () => { toast.success(editItem ? 'Kategori diperbarui' : 'Kategori ditambahkan'); qc.invalidateQueries({ queryKey: ['item_category'] }); setDialogOpen(false) },
@@ -97,8 +111,13 @@ export function ItemCategoryClient() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('item_category').delete().eq('id', deleteItem!.id)
-      if (error) throw error
+      const res = await fetch(`/api/v1/item-categories/${deleteItem!.id}`, {
+        method: 'DELETE'
+      })
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Gagal menghapus kategori')
+      }
     },
     onSuccess: () => { toast.success('Kategori dihapus'); qc.invalidateQueries({ queryKey: ['item_category'] }); setDeleteItem(null) },
     onError: (err: Error) => toast.error(err.message),
@@ -106,8 +125,9 @@ export function ItemCategoryClient() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from('item_category').delete().in('id', ids)
-      if (error) throw error
+      await Promise.all(ids.map(id => 
+        fetch(`/api/v1/item-categories/${id}`, { method: 'DELETE' })
+      ))
     },
     onSuccess: () => { toast.success('Kategori terpilih dihapus'); qc.invalidateQueries({ queryKey: ['item_category'] }) },
     onError: (err: Error) => toast.error(err.message),

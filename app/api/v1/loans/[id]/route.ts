@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// PATCH /api/v1/loans/[id]
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -15,92 +14,80 @@ export async function PATCH(
   if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const { action, rejection_note, actual_return_date } = body
+  const { action, ...extra } = body
 
-  // Fetch current loan
-  const { data: loan, error: fetchError } = await supabase
+  if (action) {
+    let updateData: any = {}
+    
+    switch (action) {
+      case 'approve':
+        updateData = {
+          status: 'approved',
+          actioned_by: user.id,
+          actioned_at: new Date().toISOString()
+        }
+        break
+      case 'reject':
+        updateData = {
+          status: 'rejected',
+          actioned_by: user.id,
+          actioned_at: new Date().toISOString(),
+          rejection_note: extra.rejection_note || null
+        }
+        break
+      case 'return':
+        updateData = {
+          status: 'returned',
+          actual_return_date: extra.actual_return_date || new Date().toISOString()
+        }
+        break
+      case 'undo_return':
+        updateData = {
+          status: 'approved',
+          actual_return_date: null
+        }
+        break
+      case 'cancel':
+        updateData = {
+          status: 'cancelled'
+        }
+        break
+    }
+
+    const { error } = await supabase
+      .from('item_loans')
+      .update(updateData)
+      .eq('id', id)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ success: true })
+  }
+
+  // Regular update
+  const { error } = await supabase
     .from('item_loans')
-    .select('*')
+    .update(body)
     .eq('id', id)
-    .single()
 
-  if (fetchError || !loan) return NextResponse.json({ error: 'Peminjaman tidak ditemukan' }, { status: 404 })
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  return NextResponse.json({ success: true })
+}
 
-  // Action: cancel — user can cancel own pending
-  if (action === 'cancel') {
-    if (loan.requested_by !== user.id || loan.status !== 'pending') {
-      return NextResponse.json({ error: 'Tidak dapat membatalkan peminjaman ini' }, { status: 403 })
-    }
-    const { error } = await supabase
-      .from('item_loans')
-      .update({ status: 'cancelled' })
-      .eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ success: true })
-  }
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Actions: approve, reject, return, undo_return — GA or admin only
-  if (!['general_affair', 'admin'].includes(profile.role)) {
-    return NextResponse.json({ error: 'Tidak memiliki izin' }, { status: 403 })
-  }
+  const { error } = await supabase
+    .from('item_loans')
+    .delete()
+    .eq('id', id)
+    .eq('requested_by', user.id) // Only requester can delete their own request
 
-  if (action === 'approve') {
-    if (loan.status !== 'pending') {
-      return NextResponse.json({ error: 'Hanya peminjaman pending yang dapat disetujui' }, { status: 400 })
-    }
-    const { error } = await supabase
-      .from('item_loans')
-      .update({ status: 'approved', actioned_by: user.id })
-      .eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ success: true })
-  }
-
-  if (action === 'reject') {
-    if (loan.status !== 'pending') {
-      return NextResponse.json({ error: 'Hanya peminjaman pending yang dapat ditolak' }, { status: 400 })
-    }
-    const { error } = await supabase
-      .from('item_loans')
-      .update({
-        status: 'rejected',
-        actioned_by: user.id,
-        rejection_note: rejection_note || null,
-      })
-      .eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ success: true })
-  }
-
-  if (action === 'return') {
-    if (loan.status !== 'approved') {
-      return NextResponse.json({ error: 'Hanya peminjaman yang disetujui yang dapat ditandai dikembalikan' }, { status: 400 })
-    }
-    const { error } = await supabase
-      .from('item_loans')
-      .update({
-        status: 'returned',
-        actual_return_date: actual_return_date || new Date().toISOString().split('T')[0],
-      })
-      .eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ success: true })
-  }
-
-  if (action === 'undo_return') {
-    if (loan.status !== 'returned') {
-      return NextResponse.json({ error: 'Hanya peminjaman yang sudah kembali yang dapat di-undo' }, { status: 400 })
-    }
-    const { error } = await supabase
-      .from('item_loans')
-      .update({
-        status: 'approved',
-        actual_return_date: null,
-      })
-      .eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ success: true })
-  }
-
-  return NextResponse.json({ error: 'Aksi tidak valid' }, { status: 400 })
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  return NextResponse.json({ success: true })
 }

@@ -83,16 +83,25 @@ export function ItemStatusClient() {
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (editItem) {
-        const { error } = await supabase
-          .from('item_status')
-          .update({ name: values.name, note: values.note || null })
-          .eq('id', editItem.id)
-        if (error) throw error
+        const res = await fetch(`/api/v1/item-status/${editItem.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name, note: values.note || null }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Gagal memperbarui status')
+        }
       } else {
-        const { error } = await supabase
-          .from('item_status')
-          .insert({ name: values.name, note: values.note || null })
-        if (error) throw error
+        const res = await fetch('/api/v1/item-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name, note: values.note || null }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Gagal menambahkan status')
+        }
       }
     },
     onSuccess: () => {
@@ -106,8 +115,13 @@ export function ItemStatusClient() {
   const deleteMutation = useMutation({
     mutationFn: async () => {
       if (!deleteItem) return
-      const { error } = await supabase.from('item_status').delete().eq('id', deleteItem.id)
-      if (error) throw error
+      const res = await fetch(`/api/v1/item-status/${deleteItem.id}`, {
+        method: 'DELETE'
+      })
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Gagal menghapus status')
+      }
     },
     onSuccess: () => {
       toast.success('Status dihapus')
@@ -119,8 +133,9 @@ export function ItemStatusClient() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from('item_status').delete().in('id', ids)
-      if (error) throw error
+      await Promise.all(ids.map(id => 
+        fetch(`/api/v1/item-status/${id}`, { method: 'DELETE' })
+      ))
     },
     onSuccess: () => {
       toast.success('Status terpilih dihapus')
