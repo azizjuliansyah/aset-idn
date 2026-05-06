@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Eye, AlertTriangle, MoreHorizontal } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, AlertTriangle, MoreHorizontal, QrCode, Loader2 } from 'lucide-react'
 import { DataTable } from '@/components/shared/data-table'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,6 +18,7 @@ import { ItemsDialogs } from './sub-components/items-dialogs'
 import { useItemsManager, type ItemWithJoins } from '@/hooks/items/use-items-manager'
 import { formatCurrency, cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { generateItemQRCodePDF } from '@/lib/utils/qr-pdf-generator'
 
 export function ItemsClient() {
   const { state, handlers, queries, mutations } = useItemsManager()
@@ -25,6 +26,7 @@ export function ItemsClient() {
   const [editItem, setEditItem] = useState<ItemWithJoins | null>(null)
   const [deleteItem, setDeleteItem] = useState<ItemWithJoins | null>(null)
   const [viewItemId, setViewItemId] = useState<string | null>(null)
+  const [isPrinting, setIsPrinting] = useState(false)
   
   const supabase = createClient()
 
@@ -48,6 +50,18 @@ export function ItemsClient() {
 
     setEditItem((fullItem || item) as ItemWithJoins)
     setDialogOpen(true)
+  }
+  
+  const handlePrintQR = async (items: ItemWithJoins[]) => {
+    setIsPrinting(true)
+    try {
+      await generateItemQRCodePDF(items)
+    } catch (err) {
+      console.error('Error printing QR:', err)
+      toast.error('Gagal mencetak QR Code')
+    } finally {
+      setIsPrinting(false)
+    }
   }
 
   return (
@@ -108,6 +122,17 @@ export function ItemsClient() {
                     <DropdownMenuItem onClick={() => openEdit(row)}>
                       <Pencil size={14} className="mr-2 text-muted-foreground" /> Edit Barang
                     </DropdownMenuItem>
+                     <DropdownMenuItem 
+                      onClick={() => handlePrintQR([row])}
+                      disabled={isPrinting}
+                    >
+                      {isPrinting ? (
+                        <Loader2 size={14} className="mr-2 animate-spin" />
+                      ) : (
+                        <QrCode size={14} className="mr-2 text-muted-foreground" />
+                      )} 
+                      Print QR Code
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setDeleteItem(row)} className="text-destructive focus:text-destructive focus:bg-red-50">
                       <Trash2 size={14} className="mr-2" /> Hapus Barang
@@ -125,6 +150,22 @@ export function ItemsClient() {
         totalCount={queries.data?.count ?? 0}
         onPageChange={handlers.setPage}
         onBulkDelete={(ids) => mutations.bulkDelete.mutate(ids)}
+        bulkActions={(_, rows) => (
+           <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handlePrintQR(rows)}
+            disabled={isPrinting}
+            className="h-9 px-3"
+          >
+            {isPrinting ? (
+              <Loader2 size={14} className="mr-1.5 animate-spin" />
+            ) : (
+              <QrCode size={14} className="mr-1.5" />
+            )}
+            Print QR ({rows.length})
+          </Button>
+        )}
         searchValue={state.search}
         onSearchChange={(v) => { handlers.setSearch(v); handlers.setPage(1) }}
         searchPlaceholder="Cari barang..."

@@ -38,6 +38,7 @@ interface DataTableProps<T> {
   filters?: React.ReactNode
   emptyText?: string
   onBulkDelete?: (ids: string[]) => void
+  bulkActions?: (selectedIds: string[], selectedRows: T[]) => React.ReactNode
 }
 
 export function DataTable<T extends { id: string }>({
@@ -55,6 +56,7 @@ export function DataTable<T extends { id: string }>({
   filters,
   emptyText = 'Tidak ada data',
   onBulkDelete,
+  bulkActions,
 }: DataTableProps<T>) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false)
@@ -92,22 +94,25 @@ export function DataTable<T extends { id: string }>({
           ) : (
             <div />
           )}
-          {(actions || onBulkDelete) && (
             <div className="flex items-center gap-2">
-              {onBulkDelete && selectedIds.length > 0 && (
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  onClick={() => setIsBulkDeleteDialogOpen(true)}
-                  className="h-9 px-3"
-                >
-                  <Trash2 size={14} className="mr-1.5" />
-                  Hapus ({selectedIds.length})
-                </Button>
+              {selectedIds.length > 0 && (
+                <>
+                  {bulkActions?.(selectedIds, data.filter(d => selectedIds.includes(d.id)))}
+                  {onBulkDelete && (
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={() => setIsBulkDeleteDialogOpen(true)}
+                      className="h-9 px-3"
+                    >
+                      <Trash2 size={14} className="mr-1.5" />
+                      Hapus ({selectedIds.length})
+                    </Button>
+                  )}
+                </>
               )}
               {actions}
             </div>
-          )}
         </div>
       )}
 

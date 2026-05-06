@@ -21,6 +21,7 @@ import { formatDateTime, cn } from '@/lib/utils'
 import { useActiveItems } from '@/hooks/queries/use-items'
 import { useWarehouses } from '@/hooks/queries/use-warehouses'
 import type { StockInWithJoins } from '@/hooks/stock/use-stock-transactions'
+import { QRScanner } from '@/components/shared/qr-scanner'
 import { stockTransactionSchema, type StockTransactionFormValues as FormValues } from '@/lib/validations/stock'
 
 interface StockTransactionDialogsProps {
@@ -66,6 +67,16 @@ export function StockTransactionDialogs({
       form.reset({ item_id: '', warehouse_id: '', quantity: 1, date: now(), note: '' })
     }
   }, [editItem, open, form])
+
+  const handleScan = (decodedText: string) => {
+    const item = items?.find(i => i.id === decodedText)
+    if (item) {
+      form.setValue('item_id', item.id)
+      toast.success(`Barang terdeteksi: ${item.name}`)
+    } else {
+      toast.error('QR Code tidak valid atau barang tidak ditemukan')
+    }
+  }
 
   const selectedItemId = form.watch('item_id')
   const selectedWarehouseId = form.watch('warehouse_id')
@@ -142,13 +153,17 @@ export function StockTransactionDialogs({
               <Label>Barang *</Label>
               <Controller name="item_id" control={form.control}
                 render={({ field }) => (
-                  <Combobox 
-                    value={field.value} 
-                    onValueChange={field.onChange}
-                    options={items?.map((i) => ({ value: i.id, label: i.name })) ?? []}
-                    placeholder="Pilih barang"
-                    searchPlaceholder="Cari barang..."
-                  />
+                  <div className="flex items-center gap-2">
+                    <Combobox 
+                      value={field.value} 
+                      onValueChange={field.onChange}
+                      options={items?.map((i) => ({ value: i.id, label: i.name })) ?? []}
+                      placeholder="Pilih barang"
+                      searchPlaceholder="Cari barang..."
+                      className="flex-1"
+                    />
+                    <QRScanner onScan={handleScan} />
+                  </div>
                 )}
               />
               {form.formState.errors.item_id && <p className="text-destructive text-xs">{form.formState.errors.item_id.message}</p>}
