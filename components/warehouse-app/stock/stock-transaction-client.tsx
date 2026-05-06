@@ -1,12 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Eye } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, MoreHorizontal } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
 
 import { DataTable } from '@/components/shared/data-table'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { formatDateTime } from '@/lib/utils'
 
 import { useStockTransactions, type StockInWithJoins } from '@/hooks/stock/use-stock-transactions'
@@ -68,12 +75,28 @@ export function StockTransactionClient({ type }: StockClientProps) {
           { key: 'creator', header: 'PIC', render: (_, row) => row.creator?.full_name ?? '—' },
           { key: 'date', header: 'Tanggal', render: (v) => formatDateTime(v as string) },
           {
-            key: 'actions', header: '', className: 'w-24 text-right',
+            key: 'actions', header: '', className: 'w-16 text-right',
             render: (_, row) => (
-              <div className="flex gap-1 justify-end">
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => setViewItem(row)}><Eye size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(row)}><Pencil size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteItem(row)}><Trash2 size={13} /></Button>
+              <div className="flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger 
+                    render={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" />}
+                  >
+                    <MoreHorizontal size={16} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setViewItem(row)}>
+                      <Eye size={14} className="mr-2 text-muted-foreground" /> Detail Transaksi
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openEdit(row)}>
+                      <Pencil size={14} className="mr-2 text-muted-foreground" /> Edit Transaksi
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setDeleteItem(row)} className="text-destructive focus:text-destructive focus:bg-red-50">
+                      <Trash2 size={14} className="mr-2" /> Hapus Transaksi
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ),
           },
@@ -87,7 +110,7 @@ export function StockTransactionClient({ type }: StockClientProps) {
         onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1) }}
-        searchPlaceholder="Cari barang atau catatan..."
+        searchPlaceholder="Cari barang..."
         filters={
           <StockTransactionFilter 
             warehouseId={warehouseId} setWarehouseId={(v) => { setWarehouseId(v); setPage(1) }}

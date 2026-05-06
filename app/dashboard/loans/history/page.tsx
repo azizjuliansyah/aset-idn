@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { UserLoansClient } from '@/components/warehouse-app/loans/user-loans-client'
+import { PageWrapper } from '@/components/shared/page-wrapper'
 
 export const metadata: Metadata = {
   title: 'Riwayat Pinjam | Gudang IDN',
@@ -8,14 +9,11 @@ export const metadata: Metadata = {
 
 export default function LoanHistoryPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Riwayat Peminjaman</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Daftar seluruh riwayat peminjaman barang yang pernah Anda lakukan
-        </p>
-      </div>
+    <PageWrapper
+      title="Riwayat Peminjaman"
+      description="Daftar seluruh riwayat peminjaman barang yang pernah Anda lakukan"
+    >
       <UserLoansClient isHistory={true} />
-    </div>
+    </PageWrapper>
   )
 }

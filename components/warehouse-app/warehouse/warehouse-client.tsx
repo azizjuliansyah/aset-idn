@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Loader2, Eye, Info } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Eye, Info, MoreHorizontal } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
 
 import { createClient } from '@/lib/supabase/client'
@@ -17,6 +17,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { formatDate } from '@/lib/utils'
 
@@ -117,12 +124,28 @@ export function WarehouseClient() {
           { key: 'name', header: 'Nama Gudang' },
           { key: 'created_at', header: 'Dibuat', render: (v) => formatDate(v as string) },
           {
-            key: 'actions', header: '', className: 'w-24 text-right',
+            key: 'actions', header: '', className: 'w-16 text-right',
             render: (_, row) => (
-              <div className="flex gap-1 justify-end">
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => setViewItem(row)}><Eye size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(row)}><Pencil size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteItem(row)}><Trash2 size={13} /></Button>
+              <div className="flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger 
+                    render={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" />}
+                  >
+                    <MoreHorizontal size={16} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setViewItem(row)}>
+                      <Eye size={14} className="mr-2 text-muted-foreground" /> Detail Gudang
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openEdit(row)}>
+                      <Pencil size={14} className="mr-2 text-muted-foreground" /> Edit Gudang
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setDeleteItem(row)} className="text-destructive focus:text-destructive focus:bg-red-50">
+                      <Trash2 size={14} className="mr-2" /> Hapus Gudang
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ),
           },

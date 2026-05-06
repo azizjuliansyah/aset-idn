@@ -54,7 +54,30 @@ export async function PATCH(
         break
     }
 
-    const { error } = await supabase
+    // Verify permission before bypassing RLS
+    const { data: loan, error: loanErr } = await supabase.from('item_loans').select('requested_by, status').eq('id', id).single()
+    if (loanErr || !loan) return NextResponse.json({ error: 'Data peminjaman tidak ditemukan' }, { status: 404 })
+    
+    const isAdminOrGA = profile.role === 'admin' || profile.role === 'general_affair'
+    
+    if (action === 'cancel') {
+      if (loan.requested_by !== user.id && !isAdminOrGA) {
+        return NextResponse.json({ error: 'Tidak berhak membatalkan peminjaman' }, { status: 403 })
+      }
+      if (loan.status !== 'pending') {
+         return NextResponse.json({ error: 'Peminjaman tidak dapat dibatalkan' }, { status: 400 })
+      }
+    } else {
+      if (!isAdminOrGA) {
+        return NextResponse.json({ error: 'Tidak memiliki izin' }, { status: 403 })
+      }
+    }
+
+    // Use admin client to bypass RLS "WITH CHECK" policy
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const adminClient = createAdminClient()
+
+    const { error } = await adminClient
       .from('item_loans')
       .update(updateData)
       .eq('id', id)
@@ -82,11 +105,16 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { error } = await supabase
-    .from('item_loans')
-    .delete()
-    .eq('id', id)
-    .eq('requested_by', user.id) // Only requester can delete their own request
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const isAdminOrGA = profile?.role === 'admin' || profile?.role === 'general_affair'
+
+  let q = supabase.from('item_loans').delete().eq('id', id)
+  
+  if (!isAdminOrGA) {
+    q = q.eq('requested_by', user.id) // Only requester can delete their own request if not admin/GA
+  }
+
+  const { error } = await q
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ success: true })

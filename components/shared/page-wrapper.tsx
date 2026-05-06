@@ -10,6 +10,7 @@ interface PageWrapperProps {
   children: React.ReactNode
   className?: string
   contentClassName?: string
+  wrapWithCard?: boolean
 }
 
 export function PageWrapper({
@@ -18,6 +19,7 @@ export function PageWrapper({
   children,
   className,
   contentClassName,
+  wrapWithCard = true,
 }: PageWrapperProps) {
   return (
     <div className={cn("space-y-6", className)}>
@@ -28,11 +30,17 @@ export function PageWrapper({
         </div>
       )}
       
-      <Card className="border border-border/50 shadow-sm bg-card overflow-hidden">
-        <CardContent className={cn("p-6 md:p-8", contentClassName)}>
+      {wrapWithCard ? (
+        <Card className="border border-border/50 p-4 shadow-sm bg-card overflow-hidden">
+          <CardContent className={cn("p-1 md:p-2", contentClassName)}>
+            {children}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className={contentClassName}>
           {children}
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   )
 }

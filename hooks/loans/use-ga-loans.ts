@@ -21,6 +21,15 @@ export function useGaLoans(isHistory: boolean) {
   
   const [statusFilter, setStatusFilter] = useState('all')
   const [actionedByFilter, setActionedByFilter] = useState('all')
+  const [warehouseId, setWarehouseId] = useState('all')
+  const [datePreset, setDatePreset] = useState('all') // Represents loan_date filter
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
+  
+  const [returnDatePreset, setReturnDatePreset] = useState('all')
+  const [returnCustomStartDate, setReturnCustomStartDate] = useState('')
+  const [returnCustomEndDate, setReturnCustomEndDate] = useState('')
+  const [dueFilter, setDueFilter] = useState('all')
 
   const { data: handlers } = useQuery({
     queryKey: ['profiles', 'handlers'],
@@ -33,7 +42,7 @@ export function useGaLoans(isHistory: boolean) {
   })
 
   const { data, isLoading } = useQuery({
-    queryKey: ['loans_ga', page, debouncedSearch, statusFilter, actionedByFilter, isHistory],
+    queryKey: ['loans_ga', page, debouncedSearch, statusFilter, actionedByFilter, isHistory, warehouseId, datePreset, customStartDate, customEndDate, returnDatePreset, returnCustomStartDate, returnCustomEndDate, dueFilter],
     queryFn: async () => {
       let finalStatus = statusFilter
       if (statusFilter === 'all') {
@@ -46,7 +55,44 @@ export function useGaLoans(isHistory: boolean) {
         search: debouncedSearch,
         status: finalStatus,
         actioned_by: actionedByFilter,
+        warehouse_id: warehouseId,
+        due_filter: dueFilter,
       })
+
+      if (datePreset !== 'all' || returnDatePreset !== 'all') {
+        const { endOfDay, startOfDay, subDays, parseISO } = await import('date-fns')
+        
+        if (datePreset !== 'all') {
+          let start: Date | null = null
+          let end: Date = endOfDay(new Date())
+
+          if (datePreset === 'custom') {
+            if (customStartDate) start = startOfDay(parseISO(customStartDate))
+            if (customEndDate) end = endOfDay(parseISO(customEndDate))
+          } else {
+            start = startOfDay(subDays(new Date(), parseInt(datePreset)))
+          }
+
+          if (start) params.append('date_from', start.toISOString())
+          params.append('date_to', end.toISOString())
+        }
+
+        if (returnDatePreset !== 'all') {
+          let rStart: Date | null = null
+          let rEnd: Date = endOfDay(new Date())
+
+          if (returnDatePreset === 'custom') {
+            if (returnCustomStartDate) rStart = startOfDay(parseISO(returnCustomStartDate))
+            if (returnCustomEndDate) rEnd = endOfDay(parseISO(returnCustomEndDate))
+          } else {
+            rStart = startOfDay(subDays(new Date(), parseInt(returnDatePreset)))
+          }
+
+          if (rStart) params.append('return_date_from', rStart.toISOString())
+          params.append('return_date_to', rEnd.toISOString())
+        }
+      }
+
       const res = await fetch(`/api/v1/loans?${params}`)
       if (!res.ok) throw new Error('Gagal memuat data')
       return await res.json() as { data: LoanWithJoins[]; count: number }
@@ -78,12 +124,54 @@ export function useGaLoans(isHistory: boolean) {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const deleteLoan = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/v1/loans/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? 'Gagal menghapus peminjaman')
+      }
+    },
+    onSuccess: () => {
+      toast.success('Peminjaman berhasil dihapus')
+      qc.invalidateQueries({ queryKey: ['loans_ga'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const deleteBulkLoans = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await fetch(`/api/v1/loans`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? 'Gagal menghapus data secara massal')
+      }
+    },
+    onSuccess: (_, variables) => {
+      toast.success(`${variables.length} data peminjaman berhasil dihapus`)
+      qc.invalidateQueries({ queryKey: ['loans_ga'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   return {
     state: {
       page,
       search,
       statusFilter,
       actionedByFilter,
+      warehouseId,
+      datePreset,
+      customStartDate,
+      customEndDate,
+      returnDatePreset,
+      returnCustomStartDate,
+      returnCustomEndDate,
+      dueFilter,
       PAGE_SIZE,
     },
     handlers: {
@@ -91,6 +179,14 @@ export function useGaLoans(isHistory: boolean) {
       setSearch,
       setStatusFilter,
       setActionedByFilter,
+      setWarehouseId,
+      setDatePreset,
+      setCustomStartDate,
+      setCustomEndDate,
+      setReturnDatePreset,
+      setReturnCustomStartDate,
+      setReturnCustomEndDate,
+      setDueFilter,
     },
     queries: {
       data,
@@ -99,6 +195,8 @@ export function useGaLoans(isHistory: boolean) {
     },
     mutations: {
       performAction,
+      deleteLoan,
+      deleteBulkLoans,
     }
   }
 }

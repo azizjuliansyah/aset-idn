@@ -16,14 +16,20 @@ export async function GET(request: Request) {
   const warehouseId = searchParams.get('warehouse_id') ?? ''
   const dateFrom = searchParams.get('date_from') ?? ''
   const dateTo = searchParams.get('date_to') ?? ''
+  const search = searchParams.get('search') ?? ''
   const from = (page - 1) * pageSize
+
+  const selectQuery = search
+    ? '*, item:items!inner(id,name), warehouse:warehouses(id,name)'
+    : '*, item:items(id,name), warehouse:warehouses(id,name)'
 
   let q = supabase
     .from('stock_in')
-    .select('*, item:items(id,name), warehouse:warehouses(id,name)', { count: 'exact' })
+    .select(selectQuery, { count: 'exact' })
     .order('date', { ascending: false })
     .range(from, from + pageSize - 1)
 
+  if (search) q = q.ilike('items.name', `%${search}%`)
   if (itemId) q = q.eq('item_id', itemId)
   if (warehouseId) q = q.eq('warehouse_id', warehouseId)
   if (dateFrom) q = q.gte('date', dateFrom)

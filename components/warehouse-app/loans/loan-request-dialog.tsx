@@ -27,7 +27,7 @@ const schema = z.object({
   warehouse_id: z.string().min(1, 'Pilih gudang'),
   quantity: z.number().min(1, 'Jumlah minimal 1'),
   purpose: z.string().min(3, 'Tujuan wajib diisi'),
-  loan_date: z.string().min(1, 'Tanggal pinjam wajib diisi'),
+  loan_date: z.string().min(1, 'Waktu pinjam wajib diisi'),
   return_date: z.string().optional(),
   note: z.string().optional(),
 })
@@ -72,7 +72,7 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
       warehouse_id: '',
       quantity: 1,
       purpose: '',
-      loan_date: new Date().toISOString().split('T')[0],
+      loan_date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
       return_date: '',
       note: '',
     },
@@ -185,12 +185,12 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="loan-date">Tanggal Pinjam *</Label>
-              <Input id="loan-date" type="date" {...form.register('loan_date')} />
+              <Label htmlFor="loan-date">Waktu Pinjam *</Label>
+              <Input id="loan-date" type="datetime-local" {...form.register('loan_date')} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="return-date">Rencana Kembali</Label>
-              <Input id="return-date" type="date" {...form.register('return_date')} />
+              <Label htmlFor="return-date">Batas Waktu Kembali</Label>
+              <Input id="return-date" type="datetime-local" {...form.register('return_date')} />
             </div>
           </div>
 

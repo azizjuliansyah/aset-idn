@@ -120,22 +120,22 @@ export function ProfileClient() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header Profile Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-card shadow-sm max-w-4xl">
-        <div className="h-24 bg-linear-to-r from-red-600 to-red-400 opacity-90" />
-        <div className="px-6 pb-6">
-          <div className="relative flex flex-col sm:flex-row sm:items-end gap-5 -mt-10">
-            <div className="relative group self-start">
-              <Avatar className="w-24 h-24 text-xl border-4 border-card bg-card transition-all group-hover:border-primary/20 shadow-xl">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
+      {/* Left Column: Live Preview Profile */}
+      <div className="lg:col-span-4">
+        <div className="relative overflow-hidden rounded-xl border bg-card shadow-sm flex flex-col items-center text-center">
+          <div className="h-32 w-full bg-linear-to-r from-red-600 to-red-400 opacity-90" />
+          <div className="px-6 pb-8 flex-1 flex flex-col items-center w-full">
+            <div className="relative group -mt-16 mb-4">
+              <Avatar className="w-32 h-32 text-xl border-4 border-card bg-card transition-all group-hover:border-primary/20 shadow-xl">
                 <AvatarImage src={profile?.avatar_url ?? undefined} className="object-cover" />
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-3xl">
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-4xl">
                   {profile ? getInitials(profile.full_name) : '?'}
                 </AvatarFallback>
               </Avatar>
               <label 
                 htmlFor="avatar-upload" 
-                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg cursor-pointer hover:scale-105 active:scale-95 transition-all z-10 border-2 border-card"
+                className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg cursor-pointer hover:scale-105 active:scale-95 transition-all z-10 border-[3px] border-card"
               >
                 {uploadAvatarMutation.isPending ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -153,22 +153,24 @@ export function ProfileClient() {
               />
             </div>
             
-            <div className="flex-1 pb-1">
-              <h2 className="text-xl font-bold text-foreground">{profile?.full_name}</h2>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                  {profile?.role}
-                </span>
-                <span className="text-xs text-muted-foreground">ID: {profile?.id.slice(0, 8)}...</span>
-              </div>
+            <h2 className="text-2xl font-bold text-foreground">{profile?.full_name}</h2>
+            <div className="flex flex-col items-center gap-3 mt-2">
+              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5">
+                {profile?.role === 'admin' ? <ShieldCheck size={14} /> : <User size={14} />}
+                {profile?.role === 'admin' ? 'Administrator' : profile?.role === 'general_affair' ? 'General Affair' : profile?.role}
+              </span>
+              <span className="text-xs text-muted-foreground font-mono bg-muted px-2.5 py-1 rounded-md border border-border">
+                ID: {profile?.id.split('-')[0] ?? profile?.id.slice(0, 8)}...
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Integrated Card with Tabs */}
-      <Card className="max-w-4xl overflow-hidden border-border/50">
-        <div className="flex flex-col sm:flex-row border-b bg-muted/30">
+      {/* Right Column: Integrated Card with Tabs */}
+      <div className="lg:col-span-8">
+        <Card className="h-full overflow-hidden border-border/50 shadow-sm">
+          <div className="flex flex-col sm:flex-row border-b bg-muted/30">
           <button 
             onClick={() => setActiveTab('profile')}
             className={cn(
@@ -281,7 +283,8 @@ export function ProfileClient() {
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }

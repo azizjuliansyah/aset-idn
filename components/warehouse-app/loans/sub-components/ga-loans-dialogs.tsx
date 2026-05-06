@@ -20,8 +20,12 @@ interface GaLoansDialogsProps {
   setReturnTarget: (loan: LoanWithJoins | null) => void
   undoTarget: LoanWithJoins | null
   setUndoTarget: (loan: LoanWithJoins | null) => void
+  deleteTarget: LoanWithJoins | null
+  setDeleteTarget: (loan: LoanWithJoins | null) => void
   onAction: (id: string, action: string, extra?: any) => void
+  onDelete: (id: string) => void
   isPending: boolean
+  isDeleting: boolean
 }
 
 export function GaLoansDialogs({
@@ -35,8 +39,12 @@ export function GaLoansDialogs({
   setReturnTarget,
   undoTarget,
   setUndoTarget,
+  deleteTarget,
+  setDeleteTarget,
   onAction,
+  onDelete,
   isPending,
+  isDeleting,
 }: GaLoansDialogsProps) {
   const [rejectionNote, setRejectionNote] = useState('')
   const [actualReturnDate, setActualReturnDate] = useState(new Date().toISOString().split('T')[0])
@@ -71,6 +79,18 @@ export function GaLoansDialogs({
         description={`Apakah Anda yakin ingin membatalkan status "Sudah Kembali" untuk peminjaman ${undoTarget?.item?.name}?`}
         onConfirm={() => onAction(undoTarget!.id, 'undo_return')}
         loading={isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Hapus Peminjaman"
+        confirmText="Ya, Hapus"
+        loadingText="Menghapus..."
+        variant="destructive"
+        description={`Apakah Anda yakin ingin menghapus data peminjaman "${deleteTarget?.item?.name}" oleh ${deleteTarget?.requester?.full_name || 'User'}? Tindakan ini tidak dapat dibatalkan.`}
+        onConfirm={() => onDelete(deleteTarget!.id)}
+        loading={isDeleting}
       />
 
       <Dialog open={!!returnTarget} onOpenChange={(o) => !o && setReturnTarget(null)}>

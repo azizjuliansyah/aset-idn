@@ -58,7 +58,7 @@ export function useStockTransactions(type: 'in' | 'out') {
       }
 
       if (search) {
-        q = q.or(`item.name.ilike.%${search}%,note.ilike.%${search}%`)
+        q = q.ilike('items.name', `%${search}%`)
       }
 
       const { data, count, error } = await q

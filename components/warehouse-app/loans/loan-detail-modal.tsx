@@ -20,8 +20,8 @@ import {
   ClipboardList,
   FileText,
   UserCheck
-} from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+ } from 'lucide-react'
+import { formatDateTime, formatDate } from '@/lib/utils'
 import type { ItemLoan } from '@/types/database'
 import { LoanStatusBadge } from './loan-status-badge'
 
@@ -117,14 +117,14 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
                 <div className="space-y-4 bg-muted/10 p-5 rounded-2xl border border-dashed border-muted-foreground/20">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs">Tanggal Pinjam</span>
-                      <span className="font-bold mt-0.5">{formatDate(loan.loan_date)}</span>
+                      <span className="text-muted-foreground text-xs">Waktu Pinjam</span>
+                      <span className="font-bold mt-0.5">{formatDateTime(loan.loan_date)}</span>
                     </div>
                     <div className="h-px flex-1 mx-4 bg-muted-foreground/10" />
                     <div className="flex flex-col text-right">
-                      <span className="text-muted-foreground text-xs">Rencana Kembali</span>
+                      <span className="text-muted-foreground text-xs">Batas Waktu Kembali</span>
                       <span className="font-bold mt-0.5 text-amber-600">
-                        {loan.return_date ? formatDate(loan.return_date) : 'Flexible'}
+                        {loan.return_date ? formatDateTime(loan.return_date) : 'Flexible'}
                       </span>
                     </div>
                   </div>
@@ -132,10 +132,10 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
                   {loan.actual_return_date && (
                     <div className="pt-4 border-t border-muted-foreground/10 flex items-center justify-between">
                       <span className="text-sm font-bold text-green-600 flex items-center gap-2">
-                        <CheckCircle2 size={16} /> Sudah Dikembalikan
+                        <CheckCircle2 size={16} /> Waktu Dikembalikan
                       </span>
                       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-bold">
-                        {formatDate(loan.actual_return_date)}
+                        {formatDateTime(loan.actual_return_date)}
                       </Badge>
                     </div>
                   )}

@@ -1,15 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, XCircle, RotateCcw, Undo2, Eye } from 'lucide-react'
+import { CheckCircle2, XCircle, RotateCcw, Undo2, Eye, Trash2, MoreHorizontal } from 'lucide-react'
 import { DataTable } from '@/components/shared/data-table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { LoanStatusBadge } from './loan-status-badge'
 import { GaLoansFilter } from './sub-components/ga-loans-filter'
 import { GaLoansDialogs } from './sub-components/ga-loans-dialogs'
 import { useGaLoans, type LoanWithJoins } from '@/hooks/loans/use-ga-loans'
-import { formatDate } from '@/lib/utils'
+import { formatDateTime } from '@/lib/utils'
 
 interface GaLoansClientProps {
   isHistory?: boolean
@@ -23,6 +30,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
   const [rejectTarget, setRejectTarget] = useState<LoanWithJoins | null>(null)
   const [returnTarget, setReturnTarget] = useState<LoanWithJoins | null>(null)
   const [undoTarget, setUndoTarget] = useState<LoanWithJoins | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<LoanWithJoins | null>(null)
 
   const handleAction = (id: string, action: string, extra?: any) => {
     mutations.performAction.mutate({ id, action, extra }, {
@@ -46,7 +54,39 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
           { key: 'item', header: 'Barang', render: (_, row) => row.item?.name ?? '—' },
           { key: 'warehouse', header: 'Gudang', render: (_, row) => row.warehouse?.name ?? '—' },
           { key: 'quantity', header: 'Jml', render: (v) => <span className="font-semibold">{v as number}</span> },
-          { key: 'loan_date', header: 'Tgl Pinjam', render: (v) => formatDate(v as string) },
+          { key: 'loan_date', header: 'Waktu Pinjam', render: (v) => formatDateTime(v as string) },
+          { 
+            key: 'return_date', 
+            header: isHistory ? 'Waktu Dikembalikan' : 'Batas Kembali',
+            render: (_, item: LoanWithJoins) => {
+              if (isHistory) {
+                return item.actual_return_date ? formatDateTime(item.actual_return_date) : '-'
+              }
+              
+              const returnDate = item.return_date ? new Date(item.return_date) : null
+              const now = new Date()
+              const threeDaysLater = new Date()
+              threeDaysLater.setDate(now.getDate() + 3)
+
+              let dotColor = 'bg-emerald-500' 
+              if (returnDate) {
+                if (returnDate < now) {
+                  dotColor = 'bg-destructive animate-pulse'
+                } else if (returnDate <= threeDaysLater) {
+                  dotColor = 'bg-amber-500'
+                }
+              }
+
+              return (
+                <div className="flex items-center gap-2">
+                  {item.status === 'approved' && (
+                    <div className={`size-2 rounded-full ${dotColor}`} />
+                  )}
+                  <span>{item.return_date ? formatDateTime(item.return_date) : '-'}</span>
+                </div>
+              )
+            }
+          },
           {
             key: 'status', header: 'Status',
             render: (_, row) => {
@@ -72,24 +112,60 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
             },
           },
           {
-            key: 'actions', header: 'Aksi', className: 'w-44 text-right',
+            key: 'actions', header: '', className: 'w-16 text-right',
             render: (_, row) => (
-              <div className="flex gap-1 justify-end">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setDetailLoan(row)}><Eye size={16} /></Button>
-                {row.status === 'pending' && (
-                  <>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => setApproveTarget(row)}><CheckCircle2 size={16} /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setRejectTarget(row)}><XCircle size={16} /></Button>
-                  </>
-                )}
-                {row.status === 'approved' && (
-                  <Button variant="ghost" size="sm" className="h-8 text-blue-600 gap-1.5 px-2" onClick={() => setReturnTarget(row)}>
-                    <RotateCcw size={14} /><span className="text-xs font-semibold">Kembalikan</span>
-                  </Button>
-                )}
-                {row.status === 'returned' && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setUndoTarget(row)}><Undo2 size={14} /></Button>
-                )}
+              <div className="flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger 
+                    render={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" />}
+                  >
+                    <MoreHorizontal size={16} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setDetailLoan(row)}>
+                      <Eye size={14} className="mr-2 text-muted-foreground" /> Detail Peminjaman
+                    </DropdownMenuItem>
+                    
+                    {row.status === 'pending' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setApproveTarget(row)} className="text-green-600 focus:text-green-600 focus:bg-green-50">
+                          <CheckCircle2 size={14} className="mr-2" /> Setujui Peminjaman
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setRejectTarget(row)} className="text-destructive focus:text-destructive focus:bg-red-50">
+                          <XCircle size={14} className="mr-2" /> Tolak Peminjaman
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    
+                    {row.status === 'approved' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setReturnTarget(row)} className="text-blue-600 focus:text-blue-600 focus:bg-blue-50">
+                          <RotateCcw size={14} className="mr-2" /> Tandai Dikembalikan
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    
+                    {row.status === 'returned' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setUndoTarget(row)}>
+                          <Undo2 size={14} className="mr-2 text-muted-foreground" /> Batalkan Kembali
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    
+                    {!isHistory && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setDeleteTarget(row)} className="text-destructive focus:text-destructive focus:bg-red-50">
+                          <Trash2 size={14} className="mr-2" /> Hapus Peminjaman
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ),
           },
@@ -102,7 +178,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         onPageChange={handlers.setPage}
         searchValue={state.search}
         onSearchChange={(v) => { handlers.setSearch(v); handlers.setPage(1) }}
-        searchPlaceholder="Cari tujuan peminjaman..."
+        searchPlaceholder="Cari nama peminjam..."
         filters={
           <GaLoansFilter 
             isHistory={isHistory}
@@ -111,9 +187,26 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
             actionedByFilter={state.actionedByFilter}
             setActionedByFilter={(v) => { handlers.setActionedByFilter(v); handlers.setPage(1) }}
             handlers={queries.handlers}
+            warehouseId={state.warehouseId}
+            setWarehouseId={(v) => { handlers.setWarehouseId(v); handlers.setPage(1) }}
+            datePreset={state.datePreset}
+            setDatePreset={(v) => { handlers.setDatePreset(v); handlers.setPage(1) }}
+            customStartDate={state.customStartDate}
+            setCustomStartDate={(v) => { handlers.setCustomStartDate(v); handlers.setPage(1) }}
+            customEndDate={state.customEndDate}
+            setCustomEndDate={(v) => { handlers.setCustomEndDate(v); handlers.setPage(1) }}
+            returnDatePreset={state.returnDatePreset}
+            setReturnDatePreset={(v) => { handlers.setReturnDatePreset(v); handlers.setPage(1) }}
+            returnCustomStartDate={state.returnCustomStartDate}
+            setReturnCustomStartDate={(v) => { handlers.setReturnCustomStartDate(v); handlers.setPage(1) }}
+            returnCustomEndDate={state.returnCustomEndDate}
+            setReturnCustomEndDate={(v) => { handlers.setReturnCustomEndDate(v); handlers.setPage(1) }}
+            dueFilter={state.dueFilter}
+            setDueFilter={(v) => { handlers.setDueFilter(v); handlers.setPage(1) }}
           />
         }
         emptyText={isHistory ? "Belum ada riwayat peminjaman" : "Tidak ada peminjaman yang perlu ditangani"}
+        onBulkDelete={!isHistory ? (ids) => mutations.deleteBulkLoans.mutate(ids) : undefined}
       />
 
       <GaLoansDialogs 
@@ -127,8 +220,12 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         setReturnTarget={setReturnTarget}
         undoTarget={undoTarget}
         setUndoTarget={setUndoTarget}
+        deleteTarget={deleteTarget}
+        setDeleteTarget={setDeleteTarget}
         onAction={handleAction}
+        onDelete={(id) => mutations.deleteLoan.mutate(id, { onSuccess: () => setDeleteTarget(null) })}
         isPending={mutations.performAction.isPending}
+        isDeleting={mutations.deleteLoan.isPending}
       />
     </>
   )

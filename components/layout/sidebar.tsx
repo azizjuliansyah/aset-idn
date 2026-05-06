@@ -14,10 +14,11 @@ interface SidebarProps {
   companyName?: string
   logoUrl?: string
   mobileOpen?: boolean
+  desktopOpen?: boolean
   onMobileClose?: () => void
 }
 
-export function Sidebar({ profile, companyName, logoUrl, mobileOpen, onMobileClose }: SidebarProps) {
+export function Sidebar({ profile, companyName, logoUrl, mobileOpen, desktopOpen = true, onMobileClose }: SidebarProps) {
   const pathname = usePathname()
 
   const isActive = (href: string) => {
@@ -63,9 +64,10 @@ export function Sidebar({ profile, companyName, logoUrl, mobileOpen, onMobileClo
       <aside
         className={cn(
           'fixed top-0 left-0 z-50 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col',
-          'transition-transform duration-300 ease-in-out',
-          'lg:relative lg:translate-x-0',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          'transition-all duration-300 ease-in-out',
+          'lg:relative',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+          desktopOpen ? 'lg:translate-x-0 lg:ml-0' : 'lg:-translate-x-full lg:-ml-64'
         )}
       >
         {/* Header */}
@@ -133,19 +135,6 @@ export function Sidebar({ profile, companyName, logoUrl, mobileOpen, onMobileClo
           ))}
         </nav>
 
-        {/* Role badge */}
-        <div className="px-4 py-3 border-t border-sidebar-border flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-            <span className="text-sidebar-foreground/50 text-xs truncate">
-              {profile.role === 'admin'
-                ? '🔑 Administrator'
-                : profile.role === 'general_affair'
-                ? '🏢 General Affair'
-                : '👤 User'}
-            </span>
-          </div>
-        </div>
       </aside>
     </>
   )

@@ -3,10 +3,10 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import type { Item, StockLedger } from '@/types/database'
 
-interface ItemWithJoins extends Item {
-  item_category?: { name: string }
-  item_status?: { name: string }
-  item_condition?: { name: string }
+interface ItemWithJoins extends Omit<Item, 'item_category' | 'item_status' | 'item_condition'> {
+  item_category?: { name: string } | null
+  item_status?: { name: string } | null
+  item_condition?: { name: string } | null
 }
 
 interface ItemInfoCardProps {

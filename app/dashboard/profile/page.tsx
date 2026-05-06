@@ -11,6 +11,7 @@ export default function ProfilePage() {
       title="Profil Saya"
       description="Kelola informasi akun Anda"
       contentClassName="p-0"
+      wrapWithCard={false}
     >
       <ProfileClient />
     </PageWrapper>

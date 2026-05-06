@@ -11,7 +11,7 @@ interface RecentTransactionsProps {
 
 export function RecentTransactions({ transactions, mounted }: RecentTransactionsProps) {
   return (
-    <Card>
+    <Card className='py-6'>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Activity size={16} className="text-primary" />

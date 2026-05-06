@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 
 export interface Column<T> {
   key: keyof T | string
@@ -56,6 +57,7 @@ export function DataTable<T extends { id: string }>({
   onBulkDelete,
 }: DataTableProps<T>) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false)
   const totalPages = Math.ceil(totalCount / pageSize)
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
@@ -75,9 +77,9 @@ export function DataTable<T extends { id: string }>({
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      {(onSearchChange || actions) && (
+      {(onSearchChange || actions || onBulkDelete) && (
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          {onSearchChange && (
+          {onSearchChange ? (
             <div className="relative w-full sm:w-72">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -87,19 +89,16 @@ export function DataTable<T extends { id: string }>({
                 className="pl-9 h-9"
               />
             </div>
+          ) : (
+            <div />
           )}
-          {actions && (
+          {(actions || onBulkDelete) && (
             <div className="flex items-center gap-2">
               {onBulkDelete && selectedIds.length > 0 && (
                 <Button 
                   variant="destructive" 
                   size="sm" 
-                  onClick={() => {
-                    if (confirm(`Hapus ${selectedIds.length} data terpilih?`)) {
-                      onBulkDelete(selectedIds)
-                      setSelectedIds([])
-                    }
-                  }}
+                  onClick={() => setIsBulkDeleteDialogOpen(true)}
                   className="h-9 px-3"
                 >
                   <Trash2 size={14} className="mr-1.5" />
@@ -248,6 +247,21 @@ export function DataTable<T extends { id: string }>({
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Bulk Delete Confirm Dialog */}
+      {onBulkDelete && (
+        <ConfirmDialog
+          open={isBulkDeleteDialogOpen}
+          onOpenChange={setIsBulkDeleteDialogOpen}
+          title="Konfirmasi Hapus Massal"
+          description={`Apakah Anda yakin ingin menghapus ${selectedIds.length} data terpilih? Tindakan ini tidak dapat dibatalkan.`}
+          onConfirm={() => {
+            onBulkDelete(selectedIds)
+            setSelectedIds([])
+            setIsBulkDeleteDialogOpen(false)
+          }}
+        />
       )}
     </div>
   )

@@ -25,7 +25,7 @@ interface StockChartProps {
 
 export function StockChart({ data }: StockChartProps) {
   return (
-    <Card className="w-full border-none shadow-xl bg-card/50 backdrop-blur-sm">
+    <Card className="w-full border-none py-6 bg-card/50 backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-8">
         <div className="space-y-1">
           <div className="flex items-center gap-2">

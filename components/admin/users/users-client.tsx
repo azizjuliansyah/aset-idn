@@ -1,12 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, ShieldCheck, User, Briefcase } from 'lucide-react'
+import { Plus, Pencil, Trash2, ShieldCheck, User, Briefcase, MoreHorizontal } from 'lucide-react'
 import { DataTable } from '@/components/shared/data-table'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { UsersDialogs } from './sub-components/users-dialogs'
 import { useUsersManager } from '@/hooks/admin/use-users-manager'
 import { formatDate } from '@/lib/utils'
@@ -47,11 +54,25 @@ export function UsersClient() {
           },
           { key: 'created_at', header: 'Bergabung', render: (v) => formatDate(v as string) },
           {
-            key: 'actions', header: '', className: 'w-24 text-right',
+            key: 'actions', header: '', className: 'w-16 text-right',
             render: (_, row) => (
-              <div className="flex gap-1 justify-end">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(row)}><Pencil size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteUser(row)}><Trash2 size={13} /></Button>
+              <div className="flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger 
+                    render={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" />}
+                  >
+                    <MoreHorizontal size={16} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => openEdit(row)}>
+                      <Pencil size={14} className="mr-2 text-muted-foreground" /> Edit User
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setDeleteUser(row)} className="text-destructive focus:text-destructive focus:bg-red-50">
+                      <Trash2 size={14} className="mr-2" /> Hapus User
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ),
           },

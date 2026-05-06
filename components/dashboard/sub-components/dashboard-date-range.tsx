@@ -1,8 +1,10 @@
-import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react'
+import { Calendar as CalendarIcon, ChevronDown, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { differenceInDays, parseISO } from 'date-fns'
+import { toast } from 'sonner'
 
 interface DashboardDateRangeProps {
   datePreset: string
@@ -21,6 +23,22 @@ export function DashboardDateRange({
   customEndDate,
   setCustomEndDate,
 }: DashboardDateRangeProps) {
+  const handleDateChange = (start: string, end: string, isStart: boolean) => {
+    if (start && end) {
+      const days = differenceInDays(parseISO(end), parseISO(start))
+      if (days > 60) {
+        toast.warning('Rentang tanggal maksimal adalah 60 hari untuk performa terbaik.')
+        return
+      }
+      if (days < 0) {
+        toast.error('Tanggal mulai tidak boleh lebih besar dari tanggal selesai.')
+        return
+      }
+    }
+    
+    if (isStart) setCustomStartDate(start)
+    else setCustomEndDate(end)
+  }
   const options = [
     { label: 'Semua Tanggal', value: 'all' },
     { label: '1 Hari Yang Lalu', value: '1' },
@@ -71,7 +89,7 @@ export function DashboardDateRange({
                 <Input
                   type="date"
                   value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  onChange={(e) => handleDateChange(e.target.value, customEndDate, true)}
                   className="h-8 text-xs"
                 />
               </div>
@@ -80,10 +98,18 @@ export function DashboardDateRange({
                 <Input
                   type="date"
                   value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  onChange={(e) => handleDateChange(customStartDate, e.target.value, false)}
                   className="h-8 text-xs"
                 />
               </div>
+              {customStartDate && customEndDate && (
+                <div className="flex items-center gap-1.5 pt-1">
+                  <AlertCircle size={10} className="text-amber-600" />
+                  <span className="text-[9px] text-muted-foreground italic">
+                    Rentang terpilih: {differenceInDays(parseISO(customEndDate), parseISO(customStartDate))} hari
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -21,6 +21,7 @@ export function DashboardShell({
   children,
 }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [desktopOpen, setDesktopOpen] = useState(true)
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -29,6 +30,7 @@ export function DashboardShell({
         companyName={companyName}
         logoUrl={logoUrl}
         mobileOpen={mobileOpen}
+        desktopOpen={desktopOpen}
         onMobileClose={() => setMobileOpen(false)}
       />
 
@@ -37,9 +39,10 @@ export function DashboardShell({
           profile={profile}
           pageTitle={pageTitle}
           onMobileMenuToggle={() => setMobileOpen(true)}
+          onDesktopMenuToggle={() => setDesktopOpen(!desktopOpen)}
         />
         <main className="flex-1 overflow-y-auto bg-muted/30 p-4 md:p-8">
-          <div className="max-w-7xl mx-0">
+          <div className="w-full max-w-[1600px] mx-auto">
             {children}
           </div>
         </main>
