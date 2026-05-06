@@ -142,7 +142,6 @@ export function QRScanner({ onScan }: QRScannerProps) {
           
           <Button 
             variant="outline" 
-            fullWidth
             onClick={() => setOpen(false)}
             className="w-full"
           >
