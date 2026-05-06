@@ -80,7 +80,7 @@ export function UsersDialogs({
           </DialogHeader>
 
           {editUser ? (
-            <form onSubmit={editForm.handleSubmit(onEdit)} className="space-y-4">
+            <form onSubmit={editForm.handleSubmit(onEdit)} className="space-y-4 min-w-0">
               <div className="space-y-1.5">
                 <Label htmlFor="u-name">Nama Lengkap *</Label>
                 <Input id="u-name" {...editForm.register('full_name')} />
@@ -108,7 +108,7 @@ export function UsersDialogs({
               </DialogFooter>
             </form>
           ) : (
-            <form onSubmit={createForm.handleSubmit(onCreate)} className="space-y-4">
+            <form onSubmit={createForm.handleSubmit(onCreate)} className="space-y-4 min-w-0">
               <div className="space-y-1.5">
                 <Label htmlFor="cu-name">Nama Lengkap *</Label>
                 <Input id="cu-name" {...createForm.register('full_name')} />

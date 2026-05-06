@@ -189,7 +189,7 @@ export function ItemCategoryClient() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle>{editItem ? 'Edit Kategori' : 'Tambah Kategori'}</DialogTitle></DialogHeader>
-          <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4">
+          <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4 min-w-0">
             <div className="space-y-1.5">
               <Label htmlFor="cat-name">Nama Kategori *</Label>
               <Input id="cat-name" placeholder="Elektronik" {...form.register('name')} />

@@ -148,7 +148,7 @@ export function StockTransactionDialogs({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>{editItem ? `Edit ${label}` : `Tambah ${label}`}</DialogTitle></DialogHeader>
-          <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4">
+          <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4 min-w-0">
             <div className="space-y-1.5">
               <Label>Barang *</Label>
               <Controller name="item_id" control={form.control}
@@ -185,7 +185,7 @@ export function StockTransactionDialogs({
               />
               {form.formState.errors.warehouse_id && <p className="text-destructive text-xs">{form.formState.errors.warehouse_id.message}</p>}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="st-qty">Jumlah *</Label>
@@ -227,7 +227,7 @@ export function StockTransactionDialogs({
           </DialogTitle></DialogHeader>
           {viewItem && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Barang</p>
                   <p className="font-bold text-base">{viewItem.item?.name ?? '—'}</p>

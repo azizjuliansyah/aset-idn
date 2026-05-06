@@ -94,7 +94,7 @@ export function DataTable<T extends { id: string }>({
           ) : (
             <div />
           )}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {selectedIds.length > 0 && (
                 <>
                   {bulkActions?.(selectedIds, data.filter(d => selectedIds.includes(d.id)))}

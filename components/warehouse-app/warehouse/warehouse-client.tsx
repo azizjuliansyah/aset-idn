@@ -167,7 +167,7 @@ export function WarehouseClient() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>{editItem ? 'Edit Gudang' : 'Tambah Gudang'}</DialogTitle></DialogHeader>
-          <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4">
+          <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4 min-w-0">
             <div className="space-y-1.5">
               <Label htmlFor="w-name">Nama Gudang *</Label>
               <Input id="w-name" placeholder="Gudang Utama" {...form.register('name')} />

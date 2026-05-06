@@ -75,7 +75,7 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
           {/* Main Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {/* Left Column: Stakeholders & Items */}
-            <div className="space-y-8">
+            <div className="space-y-8 min-w-0">
               <section className="space-y-4">
                 <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                   <User size={14} className="text-primary" /> Informasi Peminjam
@@ -109,7 +109,7 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
             </div>
 
             {/* Right Column: Timeline & Handled By */}
-            <div className="space-y-8">
+            <div className="space-y-8 min-w-0">
               <section className="space-y-4">
                 <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                   <Calendar size={14} className="text-primary" /> Timeline Peminjaman

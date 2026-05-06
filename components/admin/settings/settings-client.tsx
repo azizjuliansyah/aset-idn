@@ -117,7 +117,7 @@ export function SettingsClient() {
   }
 
   return (
-    <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))}>
+    <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="min-w-0">
       <div className="grid gap-6 max-w-2xl">
         {/* Logo */}
         <Card>

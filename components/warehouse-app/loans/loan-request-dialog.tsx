@@ -129,7 +129,7 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
+        <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-4 min-w-0">
           {/* Item */}
           <div className="space-y-1.5">
             <Label>Barang *</Label>
@@ -213,7 +213,7 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="loan-date">Waktu Pinjam *</Label>
               <Input id="loan-date" type="datetime-local" {...form.register('loan_date')} />

@@ -177,7 +177,7 @@ export function ItemConditionClient() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>{editItem ? 'Edit Kondisi Barang' : 'Tambah Kondisi Barang'}</DialogTitle></DialogHeader>
-          <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4">
+          <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4 min-w-0">
             <div className="space-y-1.5">
               <Label htmlFor="ic-name">Nama *</Label>
               <Input id="ic-name" placeholder="Contoh: Baik" {...form.register('name')} />

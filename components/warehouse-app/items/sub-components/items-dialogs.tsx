@@ -70,14 +70,14 @@ export function ItemsDialogs({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editItem ? 'Edit Barang' : 'Tambah Barang'}</DialogTitle></DialogHeader>
-          <form onSubmit={form.handleSubmit(onSave)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSave)} className="space-y-4 min-w-0">
             <div className="space-y-1.5">
               <Label htmlFor="i-name">Nama Barang *</Label>
               <Input id="i-name" {...form.register('name')} />
               {form.formState.errors.name && <p className="text-destructive text-xs">{form.formState.errors.name.message}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Kategori</Label>
                 <Controller name="item_category_id" control={form.control}
@@ -109,7 +109,7 @@ export function ItemsDialogs({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Status Barang</Label>
                 <Controller name="item_status_id" control={form.control}
@@ -138,7 +138,7 @@ export function ItemsDialogs({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="i-price">Harga (Rp)</Label>
                 <Input id="i-price" type="number" min={0} {...form.register('price', { valueAsNumber: true })} />
