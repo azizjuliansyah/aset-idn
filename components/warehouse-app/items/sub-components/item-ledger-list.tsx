@@ -17,7 +17,7 @@ interface ItemLedgerListProps {
 
 export function ItemLedgerList({ ledger, isLoading }: ItemLedgerListProps) {
   return (
-    <div className="flex-1 flex flex-col p-5 bg-background">
+    <div className="flex-1 flex flex-col p-5 bg-background min-h-[400px] lg:min-h-0 border-t lg:border-t-0">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-muted text-muted-foreground">

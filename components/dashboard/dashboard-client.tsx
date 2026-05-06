@@ -23,14 +23,14 @@ export function DashboardClient() {
         isLoading={queries.stats.isLoading} 
       />
 
-      <div className="space-y-4">
+      <div className="space-y-4 min-w-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card/30 p-4 rounded-md border border-border/50">
           <div className="flex items-center gap-2 px-2">
             <div className="w-2 h-8 bg-red-600 rounded-full" />
             <h2 className="text-lg font-bold">Analisis Stok</h2>
           </div>
           
-          <div className="flex items-center gap-3 self-end sm:self-auto">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <DashboardDateRange 
               datePreset={state.datePreset}
               setDatePreset={handlers.setDatePreset}

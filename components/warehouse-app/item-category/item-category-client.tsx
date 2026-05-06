@@ -187,7 +187,7 @@ export function ItemCategoryClient() {
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle>{editItem ? 'Edit Kategori' : 'Tambah Kategori'}</DialogTitle></DialogHeader>
           <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4">
             <div className="space-y-1.5">

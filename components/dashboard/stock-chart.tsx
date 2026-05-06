@@ -25,33 +25,33 @@ interface StockChartProps {
 
 export function StockChart({ data }: StockChartProps) {
   return (
-    <Card className="w-full border-none py-6 bg-card/50 backdrop-blur-sm">
-      <CardHeader className="flex flex-row items-center justify-between pb-8">
+    <Card className="w-full border-none py-4 sm:py-6 bg-card/50 backdrop-blur-sm">
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 sm:pb-8 gap-4 sm:gap-0">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10">
               <TrendingUp className="w-4 h-4 text-primary" />
             </div>
-            <CardTitle className="text-xl font-bold tracking-tight">Tren Stok Barang</CardTitle>
+            <CardTitle className="text-lg sm:text-xl font-bold tracking-tight">Tren Stok Barang</CardTitle>
           </div>
-          <CardDescription className="text-muted-foreground ml-10">
+          <CardDescription className="text-xs sm:text-sm text-muted-foreground ml-10">
             Perbandingan barang masuk dan keluar dalam rentang waktu yang dipilih
           </CardDescription>
         </div>
         
-        <div className="flex gap-6 items-center px-4">
+        <div className="flex flex-wrap gap-4 sm:gap-6 items-center px-2 sm:px-4 ml-10 sm:ml-0">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-600" />
-            <span className="text-sm font-medium text-muted-foreground">Barang Masuk</span>
+            <span className="text-xs sm:text-sm font-medium text-muted-foreground">Barang Masuk</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-red-600" />
-            <span className="text-sm font-medium text-muted-foreground">Barang Keluar</span>
+            <span className="text-xs sm:text-sm font-medium text-muted-foreground">Barang Keluar</span>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-[350px] w-full relative">
+      <CardContent className="px-2 sm:px-6">
+        <div className="h-[250px] sm:h-[350px] w-full relative">
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <LineChart
               data={data}
@@ -74,11 +74,13 @@ export function StockChart({ data }: StockChartProps) {
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                 dy={10}
+                minTickGap={15}
               />
               <YAxis 
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                width={30}
               />
               <Tooltip 
                 cursor={false}

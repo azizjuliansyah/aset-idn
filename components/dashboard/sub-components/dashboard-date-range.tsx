@@ -52,7 +52,7 @@ export function DashboardDateRange({
   return (
     <Popover>
       <PopoverTrigger render={
-        <Button variant="outline" className="h-9 w-64 justify-between font-normal px-3 bg-background/50 backdrop-blur-sm border-border/50">
+        <Button variant="outline" className="h-9 w-full sm:w-64 justify-between font-normal px-3 bg-background/50 backdrop-blur-sm border-border/50">
           <div className="flex items-center gap-2 overflow-hidden">
             <CalendarIcon size={14} className="text-muted-foreground shrink-0" />
             <span className="truncate text-xs font-medium">

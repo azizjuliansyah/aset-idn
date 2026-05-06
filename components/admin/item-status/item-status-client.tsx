@@ -205,7 +205,7 @@ export function ItemStatusClient() {
 
       {/* Form Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editItem ? 'Edit Status Barang' : 'Tambah Status Barang'}</DialogTitle>
           </DialogHeader>
@@ -241,7 +241,7 @@ export function ItemStatusClient() {
       />
 
       <Dialog open={!!viewItem} onOpenChange={(o) => !o && setViewItem(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle className="flex items-center gap-2">
             <Info size={18} className="text-primary" />
             Detail Status

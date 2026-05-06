@@ -110,17 +110,17 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
 
   return (
     <Dialog open={!!itemId} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-w-[95vw] w-full max-h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
         <div className="p-6 pb-4 border-b bg-muted/30 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-medium tracking-tight text-foreground/80 uppercase">
             <Package size={18} className="text-primary/70" />
-            Detail Informasi Inventaris
+            Detail Inventaris
           </DialogTitle>
         </div>
 
-        <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+        <div className="flex-1 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row">
           {/* Left Side: Info */}
-          <div className="w-full lg:w-[42%] p-8 space-y-6 border-r bg-muted/5 overflow-y-auto">
+          <div className="w-full lg:w-[42%] p-5 sm:p-8 space-y-6 lg:border-r bg-muted/5 lg:overflow-y-auto flex-shrink-0">
             {isItemLoading ? (
               <div className="flex flex-col items-center justify-center h-64 gap-3">
                 <Loader2 className="animate-spin text-primary/30" size={32} />

@@ -146,7 +146,7 @@ export function StockTransactionDialogs({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>{editItem ? `Edit ${label}` : `Tambah ${label}`}</DialogTitle></DialogHeader>
           <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4">
             <div className="space-y-1.5">
@@ -220,7 +220,7 @@ export function StockTransactionDialogs({
       </Dialog>
 
       <Dialog open={!!viewItem} onOpenChange={(o) => !o && onCloseView()}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle className="flex items-center gap-2">
             <Info size={18} className="text-primary" />
             Detail Transaksi

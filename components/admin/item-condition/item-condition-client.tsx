@@ -175,7 +175,7 @@ export function ItemConditionClient() {
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>{editItem ? 'Edit Kondisi Barang' : 'Tambah Kondisi Barang'}</DialogTitle></DialogHeader>
           <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4">
             <div className="space-y-1.5">
@@ -206,7 +206,7 @@ export function ItemConditionClient() {
       />
 
       <Dialog open={!!viewItem} onOpenChange={(o) => !o && setViewItem(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle className="flex items-center gap-2">
             <Info size={18} className="text-primary" />
             Detail Kondisi

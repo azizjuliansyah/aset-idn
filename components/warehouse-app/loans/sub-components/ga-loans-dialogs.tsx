@@ -94,7 +94,7 @@ export function GaLoansDialogs({
       />
 
       <Dialog open={!!returnTarget} onOpenChange={(o) => !o && setReturnTarget(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RotateCcw size={18} className="text-blue-600" />
@@ -133,7 +133,7 @@ export function GaLoansDialogs({
       </Dialog>
 
       <Dialog open={!!rejectTarget} onOpenChange={(o) => !o && setRejectTarget(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive"><XCircle size={18} />Tolak Peminjaman</DialogTitle>
           </DialogHeader>

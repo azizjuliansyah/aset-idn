@@ -68,7 +68,7 @@ export function ItemsDialogs({
   return (
     <>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editItem ? 'Edit Barang' : 'Tambah Barang'}</DialogTitle></DialogHeader>
           <form onSubmit={form.handleSubmit(onSave)} className="space-y-4">
             <div className="space-y-1.5">

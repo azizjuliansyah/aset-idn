@@ -74,7 +74,7 @@ export function UsersDialogs({
   return (
     <>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editUser ? 'Edit User' : 'Tambah User Baru'}</DialogTitle>
           </DialogHeader>
