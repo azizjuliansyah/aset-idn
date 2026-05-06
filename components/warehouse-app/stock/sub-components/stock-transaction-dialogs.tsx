@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
 import { apiService } from '@/lib/api-service'
-import { formatDateTime, cn } from '@/lib/utils'
+import { formatDateTime, cn, getJakartaTimestamp } from '@/lib/utils'
 import { useActiveItems } from '@/hooks/queries/use-items'
 import { useWarehouses } from '@/hooks/queries/use-warehouses'
 import type { StockInWithJoins } from '@/hooks/stock/use-stock-transactions'
@@ -47,7 +47,7 @@ export function StockTransactionDialogs({
   const { data: items } = useActiveItems()
   const { data: warehouses } = useWarehouses()
 
-  const now = () => new Date().toISOString().slice(0, 16)
+  const now = () => getJakartaTimestamp()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(stockTransactionSchema),
@@ -60,7 +60,7 @@ export function StockTransactionDialogs({
         item_id: editItem.item_id,
         warehouse_id: editItem.warehouse_id,
         quantity: editItem.quantity,
-        date: new Date(editItem.date).toISOString().slice(0, 16),
+        date: getJakartaTimestamp(new Date(editItem.date)),
         note: editItem.note ?? '',
       })
     } else if (open) {

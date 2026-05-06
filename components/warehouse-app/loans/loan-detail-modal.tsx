@@ -199,7 +199,7 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
             Sistem Manajemen Peminjaman Gudang IDN
           </p>
           <Badge variant="outline" className="font-mono text-[9px] opacity-40 uppercase tracking-tighter">
-            Created: {new Date(loan.created_at!).toLocaleString('id-ID')}
+            Created: {formatDateTime(loan.created_at!)}
           </Badge>
         </div>
       </DialogContent>

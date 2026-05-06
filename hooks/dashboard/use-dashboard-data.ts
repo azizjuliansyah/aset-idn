@@ -75,18 +75,18 @@ export function useDashboardData() {
       let current = new Date(from)
       const end = new Date(to)
       while (current <= end) {
-        const d = current.toISOString().split('T')[0]
+        const d = current.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
         aggregated[d] = { masuk: 0, keluar: 0 }
         current.setDate(current.getDate() + 1)
       }
 
       si.data?.forEach(item => {
-        const d = item.date.split('T')[0]
+        const d = new Date(item.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
         if (aggregated[d]) aggregated[d].masuk += item.quantity
       })
 
       so.data?.forEach(item => {
-        const d = item.date.split('T')[0]
+        const d = new Date(item.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
         if (aggregated[d]) aggregated[d].keluar += item.quantity
       })
 

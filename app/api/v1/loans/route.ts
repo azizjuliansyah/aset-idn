@@ -70,16 +70,18 @@ export async function GET(request: Request) {
   }
 
   if (dueFilter !== 'all') {
-    const now = new Date()
+    const nowJakarta = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
     q = q.eq('status', 'approved') // Only active loans
 
     if (dueFilter === 'approaching') {
       const threeDaysLater = new Date()
-      threeDaysLater.setDate(now.getDate() + 3)
-      q = q.gte('return_date', now.toISOString())
-           .lte('return_date', threeDaysLater.toISOString())
+      threeDaysLater.setDate(threeDaysLater.getDate() + 3)
+      const threeDaysLaterJakarta = threeDaysLater.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
+      
+      q = q.gte('return_date', nowJakarta)
+           .lte('return_date', threeDaysLaterJakarta)
     } else if (dueFilter === 'overdue') {
-      q = q.lt('return_date', now.toISOString())
+      q = q.lt('return_date', nowJakarta)
     }
   }
 
@@ -117,6 +119,23 @@ export async function POST(request: Request) {
 
   if (!item_id || !warehouse_id || !quantity || !purpose || !loan_date) {
     return NextResponse.json({ error: 'Field wajib tidak lengkap' }, { status: 400 })
+  }
+
+  // Cek ketersediaan stok
+  const { data: stock, error: stockErr } = await supabase
+    .from('stock_ledger')
+    .select('current_stock')
+    .eq('item_id', item_id)
+    .eq('warehouse_id', warehouse_id)
+    .single()
+
+  if (stockErr && stockErr.code !== 'PGRST116') {
+    return NextResponse.json({ error: 'Gagal memvalidasi stok' }, { status: 500 })
+  }
+
+  const currentStock = stock?.current_stock ?? 0
+  if (quantity > currentStock) {
+    return NextResponse.json({ error: 'Stok tidak mencukupi' }, { status: 400 })
   }
 
   const { error } = await supabase.from('item_loans').insert({

@@ -21,6 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
+import { getJakartaTimestamp } from '@/lib/utils'
 
 const schema = z.object({
   item_id: z.string().min(1, 'Pilih barang'),
@@ -72,10 +73,29 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
       warehouse_id: '',
       quantity: 1,
       purpose: '',
-      loan_date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+      loan_date: getJakartaTimestamp(),
       return_date: '',
       note: '',
     },
+  })
+
+  const itemId = form.watch('item_id')
+  const warehouseId = form.watch('warehouse_id')
+  const quantity = form.watch('quantity')
+
+  const { data: stockCheck, isFetching: isCheckingStock } = useQuery({
+    queryKey: ['check_stock', itemId, warehouseId, quantity],
+    queryFn: async () => {
+      if (!itemId || !warehouseId || !quantity || quantity < 1) return null
+      const res = await fetch('/api/v1/stock/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId, warehouse_id: warehouseId, quantity }),
+      })
+      if (!res.ok) throw new Error('Gagal mengecek stok')
+      return res.json() as Promise<{ isAvailable: boolean }>
+    },
+    enabled: !!itemId && !!warehouseId && !!quantity && quantity > 0,
   })
 
   const mutation = useMutation({
@@ -163,8 +183,18 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
               min={1}
               {...form.register('quantity', { valueAsNumber: true })}
             />
+            {isCheckingStock && (
+              <p className="text-muted-foreground text-xs flex items-center gap-1 mt-1">
+                <Loader2 size={12} className="animate-spin" /> Mengecek ketersediaan stok...
+              </p>
+            )}
+            {stockCheck?.isAvailable === false && !isCheckingStock && (
+              <p className="text-destructive text-xs font-medium mt-1">
+                Stok di gudang ini tidak mencukupi untuk jumlah yang diminta.
+              </p>
+            )}
             {form.formState.errors.quantity && (
-              <p className="text-destructive text-xs">{form.formState.errors.quantity.message}</p>
+              <p className="text-destructive text-xs mt-1">{form.formState.errors.quantity.message}</p>
             )}
           </div>
 
@@ -204,9 +234,12 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending
-                ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Mengirim...</>
+            <Button 
+              type="submit" 
+              disabled={mutation.isPending || isCheckingStock || stockCheck?.isAvailable === false}
+            >
+              {mutation.isPending || isCheckingStock
+                ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Memproses...</>
                 : 'Kirim Request'}
             </Button>
           </DialogFooter>
