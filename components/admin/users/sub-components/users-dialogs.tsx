@@ -20,6 +20,7 @@ const createSchema = z.object({
 
 const editSchema = z.object({
   full_name: z.string().min(1, 'Nama wajib diisi'),
+  phone: z.string().optional(),
   role: z.enum(['admin', 'user', 'general_affair']),
 })
 
@@ -60,12 +61,12 @@ export function UsersDialogs({
 
   const editForm = useForm<EditValues>({
     resolver: zodResolver(editSchema),
-    defaultValues: { full_name: '', role: 'user' },
+    defaultValues: { full_name: '', phone: '', role: 'user' },
   })
 
   useEffect(() => {
     if (editUser) {
-      editForm.reset({ full_name: editUser.full_name, role: editUser.role })
+      editForm.reset({ full_name: editUser.full_name, phone: editUser.phone || '', role: editUser.role })
     } else if (dialogOpen) {
       createForm.reset({ full_name: '', email: '', password: '', role: 'user' })
     }
@@ -85,6 +86,11 @@ export function UsersDialogs({
                 <Label htmlFor="u-name">Nama Lengkap *</Label>
                 <Input id="u-name" {...editForm.register('full_name')} />
                 {editForm.formState.errors.full_name && <p className="text-destructive text-xs">{editForm.formState.errors.full_name.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="u-phone">No. Telepon (WA)</Label>
+                <Input id="u-phone" placeholder="Contoh: 8123456789" {...editForm.register('phone')} />
+                {editForm.formState.errors.phone && <p className="text-destructive text-xs">{editForm.formState.errors.phone.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>Role *</Label>

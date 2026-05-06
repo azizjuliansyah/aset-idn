@@ -158,6 +158,18 @@ export function useGaLoans(isHistory: boolean) {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const remindLoan = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/v1/loans/${id}/remind`, { method: 'POST' })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? 'Gagal mengirim pengingat WhatsApp')
+      }
+    },
+    onSuccess: () => toast.success('Pengingat WhatsApp berhasil dikirim'),
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   return {
     state: {
       page,
@@ -197,6 +209,7 @@ export function useGaLoans(isHistory: boolean) {
       performAction,
       deleteLoan,
       deleteBulkLoans,
+      remindLoan,
     }
   }
 }

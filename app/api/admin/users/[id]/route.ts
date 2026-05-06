@@ -14,18 +14,18 @@ export async function PATCH(
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const { full_name, role } = body
+  const { full_name, role, phone } = body
 
   // Update Auth Metadata if needed
   const adminClient = await createAdminClient()
   await adminClient.auth.admin.updateUserById(id, {
-    user_metadata: { full_name, role }
+    user_metadata: { full_name, role, phone }
   })
 
   // Update Profiles table
   const { error } = await supabase
     .from('profiles')
-    .update({ full_name, role })
+    .update({ full_name, role, phone: phone || null })
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

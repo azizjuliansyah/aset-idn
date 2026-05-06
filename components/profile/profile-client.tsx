@@ -20,6 +20,7 @@ import { getInitials, cn } from '@/lib/utils'
 
 const profileSchema = z.object({
   full_name: z.string().min(1, 'Nama wajib diisi'),
+  phone: z.string().regex(/^8[0-9]{6,12}$/, 'Nomor harus diawali angka 8 (contoh: 812...)').optional().or(z.literal('')),
 })
 const passwordSchema = z.object({
   password: z.string().min(8, 'Password minimal 8 karakter'),
@@ -47,7 +48,7 @@ export function ProfileClient() {
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
-    values: profile ? { full_name: profile.full_name } : undefined,
+    values: profile ? { full_name: profile.full_name, phone: profile.phone ?? '' } : undefined,
   })
 
   const passwordForm = useForm<PasswordValues>({
@@ -59,7 +60,11 @@ export function ProfileClient() {
     mutationFn: async (values: ProfileValues) => {
       const { data: { user } } = await supabase.auth.getUser()
       const { error } = await supabase.from('profiles')
-        .update({ full_name: values.full_name, updated_at: new Date().toISOString() })
+        .update({ 
+          full_name: values.full_name, 
+          phone: values.phone || null,
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', user!.id)
       if (error) throw error
     },
@@ -217,6 +222,25 @@ export function ProfileClient() {
                     />
                     {profileForm.formState.errors.full_name && (
                       <p className="text-destructive text-xs mt-1 font-medium">{profileForm.formState.errors.full_name.message}</p>
+                    )}
+                  </div>
+                  
+                  {/* Phone Input with +62 prefix */}
+                  <div className="space-y-2">
+                    <Label htmlFor="p-phone" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nomor WhatsApp</Label>
+                    <div className="flex rounded-md shadow-sm">
+                      <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                        +62
+                      </span>
+                      <Input 
+                        id="p-phone" 
+                        placeholder="8123456789"
+                        className="rounded-l-none"
+                        {...profileForm.register('phone')} 
+                      />
+                    </div>
+                    {profileForm.formState.errors.phone && (
+                      <p className="text-destructive text-xs mt-1 font-medium">{profileForm.formState.errors.phone.message}</p>
                     )}
                   </div>
                   

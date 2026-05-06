@@ -23,15 +23,13 @@ export async function PATCH(
       case 'approve':
         updateData = {
           status: 'approved',
-          actioned_by: user.id,
-          actioned_at: new Date().toISOString()
+          actioned_by: user.id
         }
         break
       case 'reject':
         updateData = {
           status: 'rejected',
           actioned_by: user.id,
-          actioned_at: new Date().toISOString(),
           rejection_note: extra.rejection_note || null
         }
         break

@@ -22,10 +22,14 @@ interface GaLoansDialogsProps {
   setUndoTarget: (loan: LoanWithJoins | null) => void
   deleteTarget: LoanWithJoins | null
   setDeleteTarget: (loan: LoanWithJoins | null) => void
+  remindTarget: LoanWithJoins | null
+  setRemindTarget: (loan: LoanWithJoins | null) => void
   onAction: (id: string, action: string, extra?: any) => void
   onDelete: (id: string) => void
+  onRemind: (id: string) => void
   isPending: boolean
   isDeleting: boolean
+  isReminding: boolean
 }
 
 export function GaLoansDialogs({
@@ -41,10 +45,14 @@ export function GaLoansDialogs({
   setUndoTarget,
   deleteTarget,
   setDeleteTarget,
+  remindTarget,
+  setRemindTarget,
   onAction,
   onDelete,
+  onRemind,
   isPending,
   isDeleting,
+  isReminding,
 }: GaLoansDialogsProps) {
   const [rejectionNote, setRejectionNote] = useState('')
   const [actualReturnDate, setActualReturnDate] = useState(new Date().toISOString().split('T')[0])
@@ -91,6 +99,18 @@ export function GaLoansDialogs({
         description={`Apakah Anda yakin ingin menghapus data peminjaman "${deleteTarget?.item?.name}" oleh ${deleteTarget?.requester?.full_name || 'User'}? Tindakan ini tidak dapat dibatalkan.`}
         onConfirm={() => onDelete(deleteTarget!.id)}
         loading={isDeleting}
+      />
+
+      <ConfirmDialog
+        open={!!remindTarget}
+        onOpenChange={(o) => !o && setRemindTarget(null)}
+        title="Kirim Pengingat WhatsApp"
+        confirmText="Kirim Pengingat"
+        loadingText="Mengirim..."
+        variant="default"
+        description={`Kirim pesan pengingat pengembalian barang "${remindTarget?.item?.name}" via WhatsApp ke ${remindTarget?.requester?.full_name || 'User'}?`}
+        onConfirm={() => onRemind(remindTarget!.id)}
+        loading={isReminding}
       />
 
       <Dialog open={!!returnTarget} onOpenChange={(o) => !o && setReturnTarget(null)}>

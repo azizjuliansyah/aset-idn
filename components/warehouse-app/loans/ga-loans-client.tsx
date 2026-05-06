@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, XCircle, RotateCcw, Undo2, Eye, Trash2, MoreHorizontal } from 'lucide-react'
+import { CheckCircle2, XCircle, RotateCcw, Undo2, Eye, Trash2, MoreHorizontal, MessageSquareWarning } from 'lucide-react'
 import { DataTable } from '@/components/shared/data-table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -31,6 +31,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
   const [returnTarget, setReturnTarget] = useState<LoanWithJoins | null>(null)
   const [undoTarget, setUndoTarget] = useState<LoanWithJoins | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<LoanWithJoins | null>(null)
+  const [remindTarget, setRemindTarget] = useState<LoanWithJoins | null>(null)
 
   const handleAction = (id: string, action: string, extra?: any) => {
     mutations.performAction.mutate({ id, action, extra }, {
@@ -141,6 +142,9 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
                     {row.status === 'approved' && (
                       <>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setRemindTarget(row)} className="text-amber-600 focus:text-amber-600 focus:bg-amber-50">
+                          <MessageSquareWarning size={14} className="mr-2" /> Ingatkan Pengembalian
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setReturnTarget(row)} className="text-blue-600 focus:text-blue-600 focus:bg-blue-50">
                           <RotateCcw size={14} className="mr-2" /> Tandai Dikembalikan
                         </DropdownMenuItem>
@@ -222,10 +226,14 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         setUndoTarget={setUndoTarget}
         deleteTarget={deleteTarget}
         setDeleteTarget={setDeleteTarget}
+        remindTarget={remindTarget}
+        setRemindTarget={setRemindTarget}
         onAction={handleAction}
         onDelete={(id) => mutations.deleteLoan.mutate(id, { onSuccess: () => setDeleteTarget(null) })}
+        onRemind={(id) => mutations.remindLoan.mutate(id, { onSuccess: () => setRemindTarget(null) })}
         isPending={mutations.performAction.isPending}
         isDeleting={mutations.deleteLoan.isPending}
+        isReminding={mutations.remindLoan.isPending}
       />
     </>
   )

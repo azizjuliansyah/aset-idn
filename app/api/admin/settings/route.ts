@@ -16,6 +16,8 @@ export async function PATCH(request: Request) {
     .from('company_settings')
     .update({
       ...updateData,
+      is_wa_enabled: updateData.is_wa_enabled ?? false,
+      wa_message_format: updateData.wa_message_format ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

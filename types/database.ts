@@ -7,6 +7,7 @@ export interface Profile {
   id: string
   full_name: string
   avatar_url: string | null
+  phone: string | null
   role: Role
   created_at: string
   updated_at: string
@@ -19,6 +20,8 @@ export interface CompanySettings {
   address: string | null
   phone: string | null
   email: string | null
+  is_wa_enabled: boolean
+  wa_message_format: string | null
   updated_at: string
 }
 
