@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, XCircle, RotateCcw, Undo2, Eye, Trash2, MoreHorizontal, MessageSquareWarning } from 'lucide-react'
+import { CheckCircle2, XCircle, RotateCcw, Undo2, Eye, Trash2, MoreHorizontal, MessageSquareWarning, Plus } from 'lucide-react'
 import { DataTable } from '@/components/shared/data-table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +16,7 @@ import { LoanStatusBadge } from './loan-status-badge'
 import { GaLoansFilter } from './sub-components/ga-loans-filter'
 import { GaLoansDialogs } from './sub-components/ga-loans-dialogs'
 import { useGaLoans, type LoanWithJoins } from '@/hooks/loans/use-ga-loans'
+import { LoanRequestDialog } from './loan-request-dialog'
 import { formatDateTime } from '@/lib/utils'
 
 interface GaLoansClientProps {
@@ -32,6 +33,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
   const [undoTarget, setUndoTarget] = useState<LoanWithJoins | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<LoanWithJoins | null>(null)
   const [remindTarget, setRemindTarget] = useState<LoanWithJoins | null>(null)
+  const [requestOpen, setRequestOpen] = useState(false)
 
   const handleAction = (id: string, action: string, extra?: any) => {
     mutations.performAction.mutate({ id, action, extra }, {
@@ -50,11 +52,41 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         columns={[
           {
             key: 'requester', header: 'Peminjam',
-            render: (_, row) => <span className="font-medium">{row.requester?.full_name ?? '—'}</span>,
+            render: (_, row) => (
+              <div className="flex flex-col">
+                <span className="font-medium">{row.atas_nama || row.requester?.full_name || '—'}</span>
+                {row.is_by_ga && row.atas_nama && (
+                  <span className="text-[10px] text-muted-foreground italic">(Oleh: {row.requester?.full_name})</span>
+                )}
+              </div>
+            ),
           },
-          { key: 'item', header: 'Barang', render: (_, row) => row.item?.name ?? '—' },
-          { key: 'warehouse', header: 'Gudang', render: (_, row) => row.warehouse?.name ?? '—' },
-          { key: 'quantity', header: 'Jml', render: (v) => <span className="font-semibold">{v as number}</span> },
+          { 
+            key: 'items', 
+            header: 'Barang', 
+            render: (_, row) => (
+              <div className="flex flex-col gap-0.5">
+                {row.items?.slice(0, 2).map((item, i) => (
+                  <div key={i} className="text-sm truncate max-w-[200px]">
+                    {item.item?.name}
+                  </div>
+                ))}
+                {(row.items?.length ?? 0) > 2 && (
+                  <div className="text-[10px] text-muted-foreground">
+                    +{(row.items?.length ?? 0) - 2} barang lainnya
+                  </div>
+                )}
+              </div>
+            )
+          },
+          { 
+            key: 'quantity', 
+            header: 'Total Jml', 
+            render: (_, row) => {
+              const total = row.items?.reduce((acc, item) => acc + (item.quantity || 0), 0) ?? 0
+              return <span className="font-semibold">{total}</span>
+            } 
+          },
           { key: 'loan_date', header: 'Waktu Pinjam', render: (v) => formatDateTime(v as string) },
           { 
             key: 'return_date', 
@@ -183,6 +215,11 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         searchValue={state.search}
         onSearchChange={(v) => { handlers.setSearch(v); handlers.setPage(1) }}
         searchPlaceholder="Cari nama peminjam..."
+        actions={!isHistory && (
+          <Button onClick={() => setRequestOpen(true)} className="h-9 gap-1.5" size="sm">
+            <Plus size={16} /> Pinjam Barang
+          </Button>
+        )}
         filters={
           <GaLoansFilter 
             isHistory={isHistory}
@@ -235,6 +272,8 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         isDeleting={mutations.deleteLoan.isPending}
         isReminding={mutations.remindLoan.isPending}
       />
+
+      <LoanRequestDialog open={requestOpen} onOpenChange={setRequestOpen} />
     </>
   )
 }

@@ -164,9 +164,7 @@ export function ProfileClient() {
                 {profile?.role === 'admin' ? <ShieldCheck size={14} /> : <User size={14} />}
                 {profile?.role === 'admin' ? 'Administrator' : profile?.role === 'general_affair' ? 'General Affair' : profile?.role}
               </span>
-              <span className="text-xs text-muted-foreground font-mono bg-muted px-2.5 py-1 rounded-md border border-border">
-                ID: {profile?.id.split('-')[0] ?? profile?.id.slice(0, 8)}...
-              </span>
+
             </div>
           </div>
         </div>

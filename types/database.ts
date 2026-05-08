@@ -52,6 +52,7 @@ export interface Warehouse {
   note: string | null
   created_by: string | null
   created_at: string
+  is_default: boolean
 }
 
 export interface Item {
@@ -117,27 +118,38 @@ export interface StockLedger {
   is_low_stock: boolean
 }
 
-export interface ItemLoan {
+export interface LoanRequest {
   id: string
-  item_id: string
-  warehouse_id: string
   requested_by: string
   actioned_by: string | null
-  quantity: number
+  status: LoanStatus
   purpose: string
   loan_date: string
   return_date: string | null
   actual_return_date: string | null
-  status: LoanStatus
   rejection_note: string | null
   note: string | null
+  created_by: string | null
+  atas_nama: string | null
+  is_by_ga: boolean
   created_at: string
   updated_at: string
   // joined
-  item?: Item
-  warehouse?: Warehouse
+  items?: (LoanItem & { item: Item; warehouse: Warehouse | null })[]
   requester?: Profile
   actioner?: Profile
+}
+
+export interface LoanItem {
+  id: string
+  loan_request_id: string
+  item_id: string
+  warehouse_id: string | null
+  quantity: number
+  status: 'pending' | 'approved' | 'rejected'
+  // joined
+  item?: Item
+  warehouse?: Warehouse
 }
 
 export interface PaginatedResponse<T> {
@@ -146,4 +158,21 @@ export interface PaginatedResponse<T> {
   page: number
   pageSize: number
   totalPages: number
+}
+
+export type LoanWithJoins = Omit<LoanRequest, 'items' | 'requester' | 'actioner'> & {
+  items: (LoanItem & { 
+    item: Item; 
+    warehouse: Warehouse | null;
+    returned_quantity: number;
+    returns?: { 
+      id: string; 
+      quantity: number; 
+      note: string; 
+      returned_at: string; 
+      actioned_by: string;
+    }[]
+  })[]
+  requester: Profile
+  actioner: Profile | null
 }

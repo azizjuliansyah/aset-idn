@@ -3,15 +3,15 @@ import { UserLoansClient } from '@/components/warehouse-app/loans/user-loans-cli
 import { PageWrapper } from '@/components/shared/page-wrapper'
 
 export const metadata: Metadata = {
-  title: 'Riwayat Pinjam | Gudang IDN',
-  description: 'Lihat riwayat peminjaman barang Anda',
+  title: 'Kelola Pinjam | Gudang IDN',
+  description: 'Lihat kelola peminjaman barang Anda',
 }
 
 export default function LoanHistoryPage() {
   return (
     <PageWrapper
-      title="Riwayat Peminjaman"
-      description="Daftar seluruh riwayat peminjaman barang yang pernah Anda lakukan"
+      title="Kelola Peminjaman"
+      description="Daftar seluruh kelola peminjaman barang yang pernah Anda lakukan"
     >
       <UserLoansClient isHistory={true} />
     </PageWrapper>

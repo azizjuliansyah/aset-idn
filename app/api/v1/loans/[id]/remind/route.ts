@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { ItemLoan, CompanySettings, Profile, Item } from '@/types/database'
+import type { CompanySettings, Profile, Item } from '@/types/database'
 
 export async function POST(
   request: Request,
@@ -27,8 +27,8 @@ export async function POST(
 
     // 2. Get Loan Details with Relations
     const { data: loan, error: loanError } = await supabase
-      .from('item_loans')
-      .select('*, requester:requested_by(full_name, phone), item:item_id(name)')
+      .from('loan_requests')
+      .select('*, requester:requested_by(full_name, phone), items:loan_items(item:item_id(name))')
       .eq('id', id)
       .single()
 
@@ -41,7 +41,8 @@ export async function POST(
     }
 
     const requester = loan.requester as any
-    const item = loan.item as any
+    const items = loan.items as any[]
+    const itemNames = items?.map((i: any) => i.item?.name).filter(Boolean).join(', ') || 'Barang'
 
     if (!requester?.phone) {
       return NextResponse.json({ error: 'Peminjam belum mengatur nomor WhatsApp di profilnya' }, { status: 400 })
@@ -73,7 +74,7 @@ export async function POST(
 
     const message = rawFormat
       .replace(/{{nama_peminjam}}/g, requester.full_name || '')
-      .replace(/{{nama_barang}}/g, item.name || '')
+      .replace(/{{nama_barang}}/g, itemNames)
       .replace(/{{waktu_pinjam}}/g, loanDate)
       .replace(/{{batas_pengembalian}}/g, returnDate)
 

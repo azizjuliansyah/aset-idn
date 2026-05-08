@@ -1,15 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useState, useEffect, useMemo } from 'react'
+import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2, ClipboardList } from 'lucide-react'
+import { Loader2, ClipboardList, Plus, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
-import type { Item, Warehouse } from '@/types/database'
+import type { Item, Warehouse, Profile } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,12 +21,20 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
-import { getJakartaTimestamp } from '@/lib/utils'
+import { cn, getJakartaTimestamp } from '@/lib/utils'
+
+interface Props {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
 
 const schema = z.object({
-  item_id: z.string().min(1, 'Pilih barang'),
-  warehouse_id: z.string().min(1, 'Pilih gudang'),
-  quantity: z.number().min(1, 'Jumlah minimal 1'),
+  atas_nama: z.string().optional(),
+  items: z.array(z.object({
+    item_id: z.string().min(1, 'Pilih barang'),
+    quantity: z.number().min(1, 'Jumlah minimal 1'),
+    warehouse_id: z.string().optional(),
+  })).min(1, 'Pilih minimal 1 barang'),
   purpose: z.string().min(3, 'Tujuan wajib diisi'),
   loan_date: z.string().min(1, 'Waktu pinjam wajib diisi'),
   return_date: z.string().optional(),
@@ -34,11 +42,6 @@ const schema = z.object({
 })
 
 type FormValues = z.infer<typeof schema>
-
-interface Props {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
 
 export function LoanRequestDialog({ open, onOpenChange }: Props) {
   const supabase = createClient()
@@ -60,18 +63,99 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
   const { data: warehouses } = useQuery({
     queryKey: ['warehouses_for_loan'],
     queryFn: async () => {
-      const { data } = await supabase.from('warehouses').select('id, name').order('name')
-      return (data ?? []) as Pick<Warehouse, 'id' | 'name'>[]
+      const { data } = await supabase.from('warehouses').select('id, name, is_default').order('name')
+      return (data ?? []) as Pick<Warehouse, 'id' | 'name' | 'is_default'>[]
     },
     enabled: open,
   })
 
+  const { data: myProfile } = useQuery({
+    queryKey: ['my_profile_for_loan'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return null
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      return data as Profile
+    },
+    enabled: open,
+  })
+
+  const { data: stockBalances } = useQuery({
+    queryKey: ['stock_balances'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_all_stock_balances')
+      if (error) throw error
+      return data as { item_id: string; warehouse_id: string; balance: number | string }[]
+    },
+    enabled: open,
+  })
+
+  const isGAOrAdmin = myProfile?.role === 'general_affair' || myProfile?.role === 'admin'
+
+  const dynamicSchema = useMemo(() => z.object({
+    atas_nama: z.string().optional(),
+    items: z.array(z.object({
+      item_id: z.string().min(1, 'Pilih barang'),
+      quantity: z.number().min(1, 'Jumlah minimal 1'),
+      warehouse_id: z.string().optional(),
+    })).min(1, 'Pilih minimal 1 barang'),
+    purpose: z.string().min(3, 'Tujuan wajib diisi'),
+    loan_date: z.string().min(1, 'Waktu pinjam wajib diisi'),
+    return_date: z.string().optional(),
+    note: z.string().optional(),
+  }).superRefine((data, ctx) => {
+    if (isGAOrAdmin && !data.atas_nama) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Atas nama wajib diisi',
+        path: ['atas_nama'],
+      });
+    }
+
+    data.items.forEach((item, index) => {
+      // 1. Warehouse required for GA
+      if (isGAOrAdmin && !item.warehouse_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Pilih gudang',
+          path: ['items', index, 'warehouse_id'],
+        });
+      }
+
+      // 2. Stock check
+      if (item.item_id && stockBalances) {
+        if (isGAOrAdmin && item.warehouse_id) {
+          const stock = Number(stockBalances.find(s => s.item_id === item.item_id && s.warehouse_id === item.warehouse_id)?.balance ?? 0)
+          if (item.quantity > stock) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Stok tidak cukup (Tersedia: ${stock})`,
+              path: ['items', index, 'quantity'],
+            });
+          }
+        } else if (!isGAOrAdmin) {
+          const totalStock = stockBalances
+            .filter(s => s.item_id === item.item_id)
+            .reduce((acc, s) => acc + Number(s.balance), 0)
+          
+          if (item.quantity > totalStock) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Stok tidak cukup (Total: ${totalStock})`,
+              path: ['items', index, 'quantity'],
+            });
+          }
+        }
+      }
+    });
+  }), [isGAOrAdmin, stockBalances])
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(dynamicSchema),
+    mode: 'onChange',
     defaultValues: {
-      item_id: '',
-      warehouse_id: '',
-      quantity: 1,
+      atas_nama: '',
+      items: [{ item_id: '', quantity: 1, warehouse_id: '' }],
       purpose: '',
       loan_date: getJakartaTimestamp(),
       return_date: '',
@@ -79,24 +163,34 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
     },
   })
 
-  const itemId = form.watch('item_id')
-  const warehouseId = form.watch('warehouse_id')
-  const quantity = form.watch('quantity')
+  // Set default warehouse for the first item when warehouses are loaded
+  useEffect(() => {
+    if (open && warehouses && warehouses.length > 0) {
+      const currentItems = form.getValues('items')
+      if (currentItems.length === 1 && currentItems[0].warehouse_id === '') {
+        const defaultWhId = warehouses.find(w => w.is_default)?.id || warehouses[0].id
+        form.setValue('items.0.warehouse_id', defaultWhId)
+      }
+    }
+  }, [open, warehouses, form])
 
-  const { data: stockCheck, isFetching: isCheckingStock } = useQuery({
-    queryKey: ['check_stock', itemId, warehouseId, quantity],
-    queryFn: async () => {
-      if (!itemId || !warehouseId || !quantity || quantity < 1) return null
-      const res = await fetch('/api/v1/stock/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: itemId, warehouse_id: warehouseId, quantity }),
-      })
-      if (!res.ok) throw new Error('Gagal mengecek stok')
-      return res.json() as Promise<{ isAvailable: boolean }>
-    },
-    enabled: !!itemId && !!warehouseId && !!quantity && quantity > 0,
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'items',
   })
+
+  // Set default warehouse when warehouses data is loaded or items added
+  useEffect(() => {
+    if (warehouses && warehouses.length > 0) {
+      const defaultWhId = warehouses.find(w => w.is_default)?.id || warehouses[0].id
+      const currentItems = form.getValues('items')
+      currentItems.forEach((item, idx) => {
+        if (!item.warehouse_id) {
+          form.setValue(`items.${idx}.warehouse_id`, defaultWhId)
+        }
+      })
+    }
+  }, [warehouses, fields.length, form])
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
@@ -113,6 +207,7 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
     onSuccess: () => {
       toast.success('Request peminjaman berhasil dibuat')
       qc.invalidateQueries({ queryKey: ['loans'] })
+      qc.invalidateQueries({ queryKey: ['loans_ga'] })
       onOpenChange(false)
       form.reset()
     },
@@ -130,73 +225,148 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-4 min-w-0">
-          {/* Item */}
-          <div className="space-y-1.5">
-            <Label>Barang *</Label>
-            <Controller
-              name="item_id"
-              control={form.control}
-              render={({ field }) => (
-                <Combobox 
-                  value={field.value} 
-                  onValueChange={field.onChange}
-                  options={items?.map((i) => ({ value: i.id, label: i.name })) ?? []}
-                  placeholder="Pilih barang"
-                  searchPlaceholder="Cari barang..."
-                  disabled={!items}
-                />
+          {isGAOrAdmin && (
+            <div className="space-y-1.5">
+              <Label htmlFor="atas_nama">Atas Nama (Peminjam) *</Label>
+              <Input 
+                id="atas_nama"
+                placeholder="Masukkan nama peminjam..."
+                {...form.register('atas_nama')}
+              />
+              <p className="text-[10px] text-red-600/70">Pinjaman akan otomatis disetujui jika dibuat oleh GA/Admin.</p>
+              {form.formState.errors.atas_nama && (
+                <p className="text-destructive text-xs">{form.formState.errors.atas_nama.message}</p>
               )}
-            />
-            {form.formState.errors.item_id && (
-              <p className="text-destructive text-xs">{form.formState.errors.item_id.message}</p>
-            )}
+            </div>
+          )}
+
+          {/* Items List */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Daftar Barang *</Label>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                className="h-7 text-[10px] gap-1"
+                onClick={() => {
+                  const defaultWhId = warehouses?.find(w => w.is_default)?.id || warehouses?.[0]?.id || ''
+                  append({ 
+                    item_id: '', 
+                    quantity: 1, 
+                    warehouse_id: defaultWhId 
+                  })
+                }}
+              >
+                <Plus size={12} /> Tambah Barang
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex gap-2 items-start bg-muted/30 p-3 rounded-lg border border-dashed">
+                  <div className="flex-1 space-y-2">
+                    <div className="space-y-1">
+                      <Controller
+                        name={`items.${index}.item_id`}
+                        control={form.control}
+                        render={({ field }) => (
+                          <Combobox 
+                            value={field.value} 
+                            onValueChange={field.onChange}
+                            options={items?.map((i) => ({ value: i.id, label: i.name })) ?? []}
+                            placeholder="Pilih barang"
+                            searchPlaceholder="Cari barang..."
+                            disabled={!items}
+                          />
+                        )}
+                      />
+                      {form.formState.errors.items?.[index]?.item_id && (
+                        <p className="text-destructive text-[10px]">{form.formState.errors.items[index]?.item_id?.message}</p>
+                      )}
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[10px] font-semibold">Jumlah</Label>
+                          {(() => {
+                            const itemId = form.watch(`items.${index}.item_id`)
+                            const whId = form.watch(`items.${index}.warehouse_id`)
+                            if (itemId && stockBalances) {
+                              let s = 0
+                              if (isGAOrAdmin && whId) {
+                                s = Number(stockBalances.find(st => st.item_id === itemId && st.warehouse_id === whId)?.balance ?? 0)
+                              } else if (!isGAOrAdmin) {
+                                s = stockBalances.filter(st => st.item_id === itemId).reduce((acc, st) => acc + Number(st.balance), 0)
+                              }
+                              return (
+                                <span className="text-[9px] text-muted-foreground font-medium bg-muted/50 px-1 py-0.5 rounded leading-none">
+                                  Tersedia: <span className={cn("font-bold", s <= 0 ? "text-destructive" : "text-foreground")}>{s}</span>
+                                </span>
+                              )
+                            }
+                            return null
+                          })()}
+                        </div>
+                        <Input
+                          type="number"
+                          min={1}
+                          className="h-8 text-xs"
+                          {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                        />
+                        {form.formState.errors.items?.[index]?.quantity && (
+                          <p className="text-destructive text-[10px]">{form.formState.errors.items[index]?.quantity?.message}</p>
+                        )}
+                      </div>
+
+                      {isGAOrAdmin && (
+                        <div className="flex-[2] space-y-1">
+                          <Label className="text-[10px] font-semibold">Gudang *</Label>
+                          <Controller
+                            name={`items.${index}.warehouse_id`}
+                            control={form.control}
+                            render={({ field }) => (
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Pilih gudang" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {warehouses?.map((w) => (
+                                    <SelectItem key={w.id} value={w.id} className="text-xs">
+                                      {w.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                          {form.formState.errors.items?.[index]?.warehouse_id && (
+                            <p className="text-destructive text-[10px]">{form.formState.errors.items[index]?.warehouse_id?.message}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {fields.length > 1 && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50 mt-0"
+                      onClick={() => remove(index)}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {form.formState.errors.items?.root && (
+                <p className="text-destructive text-xs">{form.formState.errors.items.root.message}</p>
+              )}
+            </div>
           </div>
 
-          {/* Warehouse */}
-          <div className="space-y-1.5">
-            <Label>Gudang *</Label>
-            <Controller
-              name="warehouse_id"
-              control={form.control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger><SelectValue placeholder="Pilih gudang" /></SelectTrigger>
-                  <SelectContent>
-                    {warehouses?.map((w) => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {form.formState.errors.warehouse_id && (
-              <p className="text-destructive text-xs">{form.formState.errors.warehouse_id.message}</p>
-            )}
-          </div>
-
-          {/* Quantity */}
-          <div className="space-y-1.5">
-            <Label htmlFor="loan-qty">Jumlah *</Label>
-            <Input
-              id="loan-qty"
-              type="number"
-              min={1}
-              {...form.register('quantity', { valueAsNumber: true })}
-            />
-            {isCheckingStock && (
-              <p className="text-muted-foreground text-xs flex items-center gap-1 mt-1">
-                <Loader2 size={12} className="animate-spin" /> Mengecek ketersediaan stok...
-              </p>
-            )}
-            {stockCheck?.isAvailable === false && !isCheckingStock && (
-              <p className="text-destructive text-xs font-medium mt-1">
-                Stok di gudang ini tidak mencukupi untuk jumlah yang diminta.
-              </p>
-            )}
-            {form.formState.errors.quantity && (
-              <p className="text-destructive text-xs mt-1">{form.formState.errors.quantity.message}</p>
-            )}
-          </div>
+          <div className="h-px bg-border my-4" />
 
           {/* Purpose */}
           <div className="space-y-1.5">
@@ -236,9 +406,9 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
             </Button>
             <Button 
               type="submit" 
-              disabled={mutation.isPending || isCheckingStock || stockCheck?.isAvailable === false}
+              disabled={mutation.isPending}
             >
-              {mutation.isPending || isCheckingStock
+              {mutation.isPending
                 ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Memproses...</>
                 : 'Kirim Request'}
             </Button>

@@ -10,7 +10,7 @@ export function useWarehouses() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('warehouses')
-        .select('id, name')
+        .select('id, name, is_default')
         .order('name')
       
       if (error) throw error

@@ -16,6 +16,7 @@ export async function PATCH(
     .update({
       name: body.name,
       note: body.note ?? null,
+      is_default: body.is_default ?? false,
     })
     .eq('id', id)
     .select()

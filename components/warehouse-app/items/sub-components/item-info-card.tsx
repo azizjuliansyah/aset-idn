@@ -1,4 +1,4 @@
-import { Package, DollarSign, Layers, Calendar, Tag, Info, AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Package, DollarSign, Layers, Calendar, Tag, Info, AlertCircle, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import type { Item, StockLedger } from '@/types/database'
@@ -23,7 +23,7 @@ export function ItemInfoCard({ item, stockStats, isStatsLoading }: ItemInfoCardP
       <div className="space-y-2">
         <div className="space-y-2">
           <h3 className="text-2xl font-normal leading-none tracking-tight text-foreground">{item.name}</h3>
-          <p className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest">ID: {item.id}</p>
+
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="bg-background font-medium text-[10px] uppercase tracking-wider px-2 py-0.5 border-muted-foreground/20 text-muted-foreground">
@@ -98,48 +98,57 @@ export function ItemInfoCard({ item, stockStats, isStatsLoading }: ItemInfoCardP
           <div>Dipinjam</div>
           <div>Tersedia</div>
         </div>
-        {!isStatsLoading && stockStats && stockStats.length > 0 ? (
-          <div className="space-y-0 text-sm">
-            {stockStats.map((stat: any, i: number) => (
-              <div key={i} className="py-2.5 border-b border-muted/50 last:border-0 group">
-                <div className="grid grid-cols-4 items-center">
-                  <div className="text-green-600 font-semibold">+{stat.total_in}</div>
-                  <div className="text-red-600 font-semibold">-{stat.total_out}</div>
-                  <div className="text-amber-600 font-semibold">-{stat.borrowed}</div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-base">{stat.available_stock}</span>
-                    {(() => {
-                      if (stat.available_stock === 0) return (
-                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 bg-red-100 text-red-700 hover:bg-red-100 border-red-200 font-medium tracking-wide">
-                          <AlertCircle size={10} className="mr-1" /> Habis
-                        </Badge>
-                      )
-                      if (stat.available_stock < (item.minimum_stock ?? 0)) return (
-                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200 font-medium tracking-wide">
-                          <AlertTriangle size={10} className="mr-1" /> Rendah
-                        </Badge>
-                      )
-                      if (stat.available_stock === (item.minimum_stock ?? 0)) return (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 font-medium tracking-wide">
-                          <AlertTriangle size={10} className="mr-1" /> Menipis
-                        </Badge>
-                      )
-                      return (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-green-100 text-green-700 hover:bg-green-100 border-green-200 font-medium tracking-wide">
-                          <CheckCircle size={10} className="mr-1" /> Aman
-                        </Badge>
-                      )
-                    })()}
+        {!isStatsLoading ? (
+          stockStats && stockStats.length > 0 ? (
+            <div className="space-y-0 text-sm">
+              {stockStats.map((stat: any, i: number) => (
+                <div key={i} className="py-2.5 border-b border-muted/50 last:border-0 group">
+                  <div className="grid grid-cols-4 items-center">
+                    <div className="text-green-600 font-semibold">+{stat.total_in}</div>
+                    <div className="text-red-600 font-semibold">-{stat.display_total_out}</div>
+                    <div className="text-amber-600 font-semibold">-{stat.borrowed}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-base">{stat.available_stock}</span>
+                      {(() => {
+                        if (stat.available_stock === 0) return (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 bg-red-100 text-red-700 hover:bg-red-100 border-red-200 font-medium tracking-wide">
+                            <AlertCircle size={10} className="mr-1" /> Habis
+                          </Badge>
+                        )
+                        if (stat.available_stock < (item.minimum_stock ?? 0)) return (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200 font-medium tracking-wide">
+                            <AlertTriangle size={10} className="mr-1" /> Rendah
+                          </Badge>
+                        )
+                        if (stat.available_stock === (item.minimum_stock ?? 0)) return (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 font-medium tracking-wide">
+                            <AlertTriangle size={10} className="mr-1" /> Menipis
+                          </Badge>
+                        )
+                        return (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-green-100 text-green-700 hover:bg-green-100 border-green-200 font-medium tracking-wide">
+                            <CheckCircle size={10} className="mr-1" /> Aman
+                          </Badge>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                  <div className="text-[9px] text-muted-foreground/50 uppercase tracking-widest">
+                    {stat.warehouse_name}
                   </div>
                 </div>
-                <div className="text-[9px] text-muted-foreground/50 uppercase tracking-widest">
-                  {stat.warehouse_name}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground py-3 text-center bg-muted/20 rounded border border-dashed mt-2 italic">
+              Belum ada data stok di gudang manapun
+            </div>
+          )
         ) : (
-          <div className="text-xs text-muted-foreground py-3 text-center bg-muted/20 rounded border border-dashed mt-2">Belum ada data stok</div>
+          <div className="py-8 flex flex-col items-center justify-center gap-2">
+            <Loader2 size={20} className="animate-spin text-primary/20" />
+            <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/30">Memuat Data Stok...</p>
+          </div>
         )}
       </div>
     </div>

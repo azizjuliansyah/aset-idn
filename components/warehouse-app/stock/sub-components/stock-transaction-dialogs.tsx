@@ -64,9 +64,16 @@ export function StockTransactionDialogs({
         note: editItem.note ?? '',
       })
     } else if (open) {
-      form.reset({ item_id: '', warehouse_id: '', quantity: 1, date: now(), note: '' })
+      const defaultWhId = warehouses?.find(w => w.is_default)?.id || warehouses?.[0]?.id || ''
+      form.reset({ 
+        item_id: '', 
+        warehouse_id: defaultWhId, 
+        quantity: 1, 
+        date: now(), 
+        note: '' 
+      })
     }
-  }, [editItem, open, form])
+  }, [editItem, open, form, warehouses])
 
   const handleScan = (decodedText: string) => {
     const item = items?.find(i => i.id === decodedText)

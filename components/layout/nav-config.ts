@@ -119,12 +119,12 @@ export const navGroups: NavGroup[] = [
     roles: ['general_affair'],
     items: [
       {
-        title: 'Kelola Peminjaman',
+        title: 'Pengajuan Peminjaman',
         href: '/dashboard/ga/loans',
         icon: ShieldCheck,
       },
       {
-        title: 'Riwayat Peminjaman',
+        title: 'Kelola Peminjaman',
         href: '/dashboard/ga/loans/history',
         icon: ClipboardCheck,
       },

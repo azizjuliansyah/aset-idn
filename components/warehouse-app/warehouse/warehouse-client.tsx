@@ -6,8 +6,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Loader2, Eye, Info, MoreHorizontal } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Eye, Info, MoreHorizontal, Check } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
+import { Switch } from '@/components/ui/switch'
 
 import { createClient } from '@/lib/supabase/client'
 import type { Warehouse } from '@/types/database'
@@ -31,6 +32,7 @@ const PAGE_SIZE = 10
 const schema = z.object({
   name: z.string().min(1, 'Nama gudang wajib diisi'),
   note: z.string().optional(),
+  is_default: z.boolean().optional(),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -58,9 +60,9 @@ export function WarehouseClient() {
     },
   })
 
-  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { name: '', note: '' } })
-  const openCreate = () => { setEditItem(null); form.reset({ name: '', note: '' }); setDialogOpen(true) }
-  const openEdit = (item: Warehouse) => { setEditItem(item); form.reset({ name: item.name, note: item.note ?? '' }); setDialogOpen(true) }
+  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { name: '', note: '', is_default: false } })
+  const openCreate = () => { setEditItem(null); form.reset({ name: '', note: '', is_default: false }); setDialogOpen(true) }
+  const openEdit = (item: Warehouse) => { setEditItem(item); form.reset({ name: item.name, note: item.note ?? '', is_default: item.is_default }); setDialogOpen(true) }
 
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
@@ -68,7 +70,7 @@ export function WarehouseClient() {
         const res = await fetch(`/api/v1/warehouses/${editItem.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: values.name, note: values.note || null }),
+          body: JSON.stringify({ name: values.name, note: values.note || null, is_default: values.is_default }),
         })
         if (!res.ok) {
           const errData = await res.json()
@@ -78,7 +80,7 @@ export function WarehouseClient() {
         const res = await fetch('/api/v1/warehouses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: values.name, note: values.note || null }),
+          body: JSON.stringify({ name: values.name, note: values.note || null, is_default: values.is_default }),
         })
         if (!res.ok) {
           const errData = await res.json()
@@ -117,11 +119,38 @@ export function WarehouseClient() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const setDefaultMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('warehouses').update({ is_default: true }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => { 
+      toast.success('Gudang default diperbarui')
+      qc.invalidateQueries({ queryKey: ['warehouses'] })
+      qc.invalidateQueries({ queryKey: ['warehouses_all'] })
+      qc.invalidateQueries({ queryKey: ['warehouses_for_loan'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   return (
     <>
       <DataTable
         columns={[
-          { key: 'name', header: 'Nama Gudang' },
+          { 
+            key: 'name', 
+            header: 'Nama Gudang',
+            render: (v, row) => (
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{v as string}</span>
+                {row.is_default && (
+                  <div className="flex items-center gap-1 bg-yellow-400/10 text-yellow-600 dark:text-yellow-500 px-1.5 py-0.5 rounded border border-yellow-400/20 text-[9px] font-bold uppercase tracking-tight">
+                    Default
+                  </div>
+                )}
+              </div>
+            )
+          },
           { key: 'created_at', header: 'Dibuat', render: (v) => formatDate(v as string) },
           {
             key: 'actions', header: '', className: 'w-16 text-right',
@@ -140,6 +169,11 @@ export function WarehouseClient() {
                     <DropdownMenuItem onClick={() => openEdit(row)}>
                       <Pencil size={14} className="mr-2 text-muted-foreground" /> Edit Gudang
                     </DropdownMenuItem>
+                    {!row.is_default && (
+                      <DropdownMenuItem onClick={() => setDefaultMutation.mutate(row.id)} disabled={setDefaultMutation.isPending}>
+                        <Check size={14} className="mr-2 text-muted-foreground" /> Jadikan Default
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setDeleteItem(row)} className="text-destructive focus:text-destructive focus:bg-red-50">
                       <Trash2 size={14} className="mr-2" /> Hapus Gudang
@@ -176,6 +210,19 @@ export function WarehouseClient() {
             <div className="space-y-1.5">
               <Label htmlFor="w-note">Catatan</Label>
               <Textarea id="w-note" rows={3} {...form.register('note')} />
+            </div>
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-dashed border-yellow-500/30">
+              <Switch 
+                id="w-default" 
+                checked={form.watch('is_default')} 
+                onCheckedChange={(v) => form.setValue('is_default', v)} 
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="w-default" className="text-xs font-semibold cursor-pointer flex items-center gap-1">
+                  Gudang Utama (Default)
+                </Label>
+                <p className="text-[10px] text-muted-foreground">Pilih gudang ini secara otomatis di semua formulir.</p>
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Batal</Button>

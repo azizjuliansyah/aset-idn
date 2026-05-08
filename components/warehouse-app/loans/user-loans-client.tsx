@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Eye, Plus, RotateCcw, CheckCircle2, X, MoreHorizontal, Calendar as CalendarIcon, ChevronDown, AlarmClock, AlertCircle } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
 
-import type { ItemLoan } from '@/types/database'
+import type { LoanRequest, LoanItem, Item, Warehouse, Profile, LoanWithJoins } from '@/types/database'
 import { DataTable } from '@/components/shared/data-table'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { Button } from '@/components/ui/button'
@@ -32,12 +32,7 @@ import { formatDateTime } from '@/lib/utils'
 
 const PAGE_SIZE = 10
 
-type LoanWithJoins = ItemLoan & {
-  item?: { id: string; name: string }
-  warehouse?: { id: string; name: string }
-  actioner?: { id: string; full_name: string }
-  requester?: { id: string; full_name: string }
-}
+
 
 interface UserLoansClientProps {
   isHistory?: boolean
@@ -50,15 +45,9 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
   const debouncedSearch = useDebounce(search, 400)
   
   const [statusFilter, setStatusFilter] = useState('all')
-  const [warehouseId, setWarehouseId] = useState('all')
   const [datePreset, setDatePreset] = useState('all')
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
-  
-  const [returnDatePreset, setReturnDatePreset] = useState('all')
-  const [returnCustomStartDate, setReturnCustomStartDate] = useState('')
-  const [returnCustomEndDate, setReturnCustomEndDate] = useState('')
-  const [dueFilter, setDueFilter] = useState('all')
 
   const [detailLoan, setDetailLoan] = useState<LoanWithJoins | null>(null)
   const [requestOpen, setRequestOpen] = useState(false)
@@ -67,7 +56,7 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
   const { data: warehouses } = useWarehouses()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['loans', page, debouncedSearch, statusFilter, isHistory, warehouseId, datePreset, customStartDate, customEndDate, returnDatePreset, returnCustomStartDate, returnCustomEndDate, dueFilter],
+    queryKey: ['loans', page, debouncedSearch, statusFilter, isHistory, datePreset, customStartDate, customEndDate],
     queryFn: async () => {
       let finalStatus = statusFilter
       if (statusFilter === 'all') {
@@ -79,42 +68,22 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
         pageSize: String(PAGE_SIZE),
         search: debouncedSearch,
         status: finalStatus,
-        warehouse_id: warehouseId,
-        due_filter: dueFilter,
       })
 
-      if (datePreset !== 'all' || returnDatePreset !== 'all') {
+      if (datePreset !== 'all') {
         const { endOfDay, startOfDay, subDays, parseISO } = await import('date-fns')
-        
-        if (datePreset !== 'all') {
-          let start: Date | null = null
-          let end: Date = endOfDay(new Date())
+        let start: Date | null = null
+        let end: Date = endOfDay(new Date())
 
-          if (datePreset === 'custom') {
-            if (customStartDate) start = startOfDay(parseISO(customStartDate))
-            if (customEndDate) end = endOfDay(parseISO(customEndDate))
-          } else {
-            start = startOfDay(subDays(new Date(), parseInt(datePreset)))
-          }
-
-          if (start) params.append('date_from', start.toISOString())
-          params.append('date_to', end.toISOString())
+        if (datePreset === 'custom') {
+          if (customStartDate) start = startOfDay(parseISO(customStartDate))
+          if (customEndDate) end = endOfDay(parseISO(customEndDate))
+        } else {
+          start = startOfDay(subDays(new Date(), parseInt(datePreset)))
         }
 
-        if (returnDatePreset !== 'all') {
-          let rStart: Date | null = null
-          let rEnd: Date = endOfDay(new Date())
-
-          if (returnDatePreset === 'custom') {
-            if (returnCustomStartDate) rStart = startOfDay(parseISO(returnCustomStartDate))
-            if (returnCustomEndDate) rEnd = endOfDay(parseISO(returnCustomEndDate))
-          } else {
-            rStart = startOfDay(subDays(new Date(), parseInt(returnDatePreset)))
-          }
-
-          if (rStart) params.append('return_date_from', rStart.toISOString())
-          params.append('return_date_to', rEnd.toISOString())
-        }
+        if (start) params.append('date_from', start.toISOString())
+        params.append('date_to', end.toISOString())
       }
 
       const res = await fetch(`/api/v1/loans?${params}`)
@@ -144,7 +113,7 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
   })
 
   const filterBar = (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 ${isHistory ? 'lg:grid-cols-4' : 'lg:grid-cols-5'} gap-4`}>
+    <div className={`grid grid-cols-1 sm:grid-cols-2 ${isHistory ? 'lg:grid-cols-3' : 'lg:grid-cols-3'} gap-4`}>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Status
@@ -171,20 +140,6 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
             {isHistory && <SelectItem value="rejected">Ditolak</SelectItem>}
             {isHistory && <SelectItem value="returned">Sudah Kembali</SelectItem>}
             {isHistory && <SelectItem value="cancelled">Dibatalkan</SelectItem>}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gudang</Label>
-        <Select value={warehouseId} onValueChange={(v) => { setWarehouseId(v); setPage(1) }}>
-          <SelectTrigger className="h-9 text-xs">
-            <SelectValue placeholder="Semua Gudang" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Gudang</SelectItem>
-            {warehouses?.map((w) => (
-              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-            ))}
           </SelectContent>
         </Select>
       </div>
@@ -260,106 +215,6 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
           </PopoverContent>
         </Popover>
       </div>
-
-      {isHistory && (
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Waktu Pengembalian</Label>
-          <Popover>
-            <PopoverTrigger render={
-              <Button variant="outline" className="h-9 w-full justify-between font-normal px-3 text-xs">
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <CalendarIcon size={14} className="text-muted-foreground shrink-0" />
-                  <span className="truncate">
-                    {returnDatePreset === 'all' ? 'Semua Waktu' : 
-                     returnDatePreset === 'custom' ? (
-                       returnCustomStartDate && returnCustomEndDate ? `${returnCustomStartDate} - ${returnCustomEndDate}` :
-                       returnCustomStartDate ? `Dari ${returnCustomStartDate}` :
-                       returnCustomEndDate ? `Sampai ${returnCustomEndDate}` : 'Custom Waktu'
-                     ) : `${returnDatePreset} Hari Terakhir`}
-                  </span>
-                </div>
-                <ChevronDown size={14} className="text-muted-foreground shrink-0" />
-              </Button>
-            } />
-            <PopoverContent className="w-64 p-3" align="start">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  {[
-                    { label: 'Semua Waktu', value: 'all' },
-                    { label: '1 Hari Yang Lalu', value: '1' },
-                    { label: '7 Hari Yang Lalu', value: '7' },
-                    { label: '14 Hari Yang Lalu', value: '14' },
-                    { label: '30 Hari Yang Lalu', value: '30' },
-                    { label: '60 Hari Yang Lalu', value: '60' },
-                    { label: 'Custom Waktu', value: 'custom' },
-                  ].map((opt) => (
-                    <label key={`return-${opt.value}`} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded transition-colors">
-                      <input
-                        type="radio"
-                        name="returnDatePresetUser"
-                        value={opt.value}
-                        checked={returnDatePreset === opt.value}
-                        onChange={(e) => { setReturnDatePreset(e.target.value); setPage(1) }}
-                        className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
-                      />
-                      <span className="text-sm">{opt.label}</span>
-                    </label>
-                  ))}
-                </div>
-
-                {returnDatePreset === 'custom' && (
-                  <div className="space-y-2 pt-2 border-t">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Mulai Tanggal</Label>
-                      <Input
-                        type="date"
-                        value={returnCustomStartDate}
-                        onChange={(e) => { setReturnCustomStartDate(e.target.value); setPage(1) }}
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Sampai Tanggal</Label>
-                      <Input
-                        type="date"
-                        value={returnCustomEndDate}
-                        onChange={(e) => { setReturnCustomEndDate(e.target.value); setPage(1) }}
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-      )}
-
-      {!isHistory && (
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Batas Pengembalian</Label>
-          <Select value={dueFilter} onValueChange={(v) => { setDueFilter(v); setPage(1) }}>
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Semua Batas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Batas</SelectItem>
-              <SelectItem value="approaching">
-                <div className="flex items-center gap-2 text-amber-600">
-                  <AlarmClock size={14} />
-                  <span>Mendekati Batas</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="overdue">
-                <div className="flex items-center gap-2 text-destructive">
-                  <AlertCircle size={14} />
-                  <span>Melewati Batas</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
     </div>
   )
 
@@ -368,21 +223,30 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
       <DataTable
         columns={[
           {
-            key: 'item',
+            key: 'items',
             header: 'Barang',
             render: (_, row) => (
-              <span className="font-medium">{row.item?.name ?? '—'}</span>
+              <div className="flex flex-col gap-0.5">
+                {row.items?.slice(0, 2).map((item, i) => (
+                  <div key={i} className="text-sm truncate max-w-[200px]">
+                    {item.item?.name}
+                  </div>
+                ))}
+                {(row.items?.length ?? 0) > 2 && (
+                  <div className="text-[10px] text-muted-foreground">
+                    +{(row.items?.length ?? 0) - 2} barang lainnya
+                  </div>
+                )}
+              </div>
             ),
           },
           {
-            key: 'warehouse',
-            header: 'Gudang',
-            render: (_, row) => row.warehouse?.name ?? '—',
-          },
-          {
             key: 'quantity',
-            header: 'Jumlah',
-            render: (v) => <span className="font-semibold">{v as number}</span>,
+            header: 'Total Qty',
+            render: (_, row) => {
+              const total = row.items?.reduce((acc, item) => acc + (item.quantity || 0), 0) ?? 0
+              return <span className="font-semibold">{total}</span>
+            }
           },
           {
             key: 'loan_date',
@@ -497,7 +361,11 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
         emptyText={isHistory ? "Belum ada riwayat peminjaman" : "Tidak ada peminjaman aktif"}
       />
 
-      <LoanDetailModal loan={detailLoan} open={!!detailLoan} onOpenChange={(o) => !o && setDetailLoan(null)} />
+      <LoanDetailModal 
+        loan={detailLoan} 
+        open={!!detailLoan} 
+        onOpenChange={(o) => !o && setDetailLoan(null)} 
+      />
 
       <LoanRequestDialog open={requestOpen} onOpenChange={setRequestOpen} />
 
@@ -507,7 +375,7 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
         title="Batalkan Peminjaman"
         confirmText="Batalkan"
         loadingText="Membatalkan..."
-        description={`Batalkan peminjaman "${cancelLoan?.item?.name}"? Tindakan ini tidak dapat diurungkan.`}
+        description="Apakah Anda yakin ingin membatalkan pengajuan peminjaman ini? Tindakan ini tidak dapat diurungkan."
         onConfirm={() => cancelMutation.mutate()}
         loading={cancelMutation.isPending}
       />

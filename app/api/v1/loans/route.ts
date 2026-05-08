@@ -16,26 +16,29 @@ export async function GET(request: Request) {
   const status = searchParams.get('status') ?? 'all'
   const search = searchParams.get('search') ?? ''
   const actionedBy = searchParams.get('actioned_by') ?? 'all'
-  const warehouseId = searchParams.get('warehouse_id') ?? 'all'
   const dateFrom = searchParams.get('date_from') ?? ''
   const dateTo = searchParams.get('date_to') ?? ''
-  const returnDateFrom = searchParams.get('return_date_from') ?? ''
-  const returnDateTo = searchParams.get('return_date_to') ?? ''
-  const dueFilter = searchParams.get('due_filter') ?? 'all' // all, approaching, overdue
 
-  // Build the select query dynamically based on search
-  // Use !inner on requester if we are searching so we can filter by it
-  const selectQuery = search
-    ? `*, item:items(id, name, price), warehouse:warehouses(id, name), requester:profiles!item_loans_requested_by_fkey!inner(id, full_name), actioner:profiles!item_loans_actioned_by_fkey(id, full_name)`
-    : `*, item:items(id, name, price), warehouse:warehouses(id, name), requester:profiles!item_loans_requested_by_fkey(id, full_name), actioner:profiles!item_loans_actioned_by_fkey(id, full_name)`
+  // Build the select query
+  // We join loan_items and then items inside it
+  const selectQuery = `
+    *,
+    items:loan_items(
+      *,
+      item:items(id, name, price),
+      warehouse:warehouses(id, name),
+      returns:loan_item_returns(*)
+    ),
+    requester:profiles!loan_requests_requested_by_fkey(id, full_name),
+    actioner:profiles!loan_requests_actioned_by_fkey(id, full_name)
+  `
 
   let q = supabase
-    .from('item_loans')
+    .from('loan_requests')
     .select(selectQuery, { count: 'exact' })
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
 
-  // Users only see their own loans
   if (profile.role === 'user') {
     q = q.eq('requested_by', user.id)
   }
@@ -49,47 +52,10 @@ export async function GET(request: Request) {
     q = q.eq('actioned_by', actionedBy)
   }
 
-  if (warehouseId !== 'all') {
-    q = q.eq('warehouse_id', warehouseId)
-  }
-
-  if (dateFrom) {
-    q = q.gte('loan_date', dateFrom)
-  }
-
-  if (dateTo) {
-    q = q.lte('loan_date', dateTo)
-  }
-
-  if (returnDateFrom) {
-    q = q.gte('actual_return_date', returnDateFrom)
-  }
-
-  if (returnDateTo) {
-    q = q.lte('actual_return_date', returnDateTo)
-  }
-
-  if (dueFilter !== 'all') {
-    const nowJakarta = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
-    q = q.eq('status', 'approved') // Only active loans
-
-    if (dueFilter === 'approaching') {
-      const threeDaysLater = new Date()
-      threeDaysLater.setDate(threeDaysLater.getDate() + 3)
-      const threeDaysLaterJakarta = threeDaysLater.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
-      
-      q = q.gte('return_date', nowJakarta)
-           .lte('return_date', threeDaysLaterJakarta)
-    } else if (dueFilter === 'overdue') {
-      q = q.lt('return_date', nowJakarta)
-    }
-  }
+  if (dateFrom) q = q.gte('loan_date', dateFrom)
+  if (dateTo) q = q.lte('loan_date', dateTo)
 
   if (search) {
-    // If user role, they already only see their own, so search by item name or purpose is better.
-    // If admin/GA, search by borrower's name or item name or purpose
-    // Actually, cross-table OR is not supported natively like item.name.ilike OR requester.full_name.ilike
-    // So we will just search by requester.full_name for GA/admin, or purpose for user
     if (profile.role === 'user') {
       q = q.ilike('purpose', `%${search}%`)
     } else {
@@ -110,48 +76,55 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'user') {
-    return NextResponse.json({ error: 'Hanya user yang dapat membuat request peminjaman' }, { status: 403 })
-  }
+  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
   const body = await request.json()
-  const { item_id, warehouse_id, quantity, purpose, loan_date, return_date, note } = body
+  const { items, purpose, loan_date, return_date, note, atas_nama } = body
 
-  if (!item_id || !warehouse_id || !quantity || !purpose || !loan_date) {
+  const isGAOrAdmin = profile.role === 'general_affair' || profile.role === 'admin'
+
+  if (!items || !Array.isArray(items) || items.length === 0 || !purpose || !loan_date) {
     return NextResponse.json({ error: 'Field wajib tidak lengkap' }, { status: 400 })
   }
 
-  // Cek ketersediaan stok
-  const { data: stock, error: stockErr } = await supabase
-    .from('stock_ledger')
-    .select('current_stock')
-    .eq('item_id', item_id)
-    .eq('warehouse_id', warehouse_id)
+  // 1. Insert Request Header
+  const { data: loanReq, error: reqErr } = await supabase
+    .from('loan_requests')
+    .insert({
+      purpose,
+      loan_date,
+      return_date: return_date || null,
+      note: note || null,
+      requested_by: user.id,
+      created_by: user.id,
+      atas_nama: isGAOrAdmin ? (atas_nama || null) : null,
+      is_by_ga: isGAOrAdmin,
+      status: isGAOrAdmin ? 'approved' : 'pending',
+      actioned_by: isGAOrAdmin ? user.id : null,
+    })
+    .select('id')
     .single()
 
-  if (stockErr && stockErr.code !== 'PGRST116') {
-    return NextResponse.json({ error: 'Gagal memvalidasi stok' }, { status: 500 })
+  if (reqErr) return NextResponse.json({ error: reqErr.message }, { status: 500 })
+
+  // 2. Insert Request Items (Pivot)
+  const insertItems = items.map((item: { item_id: string; quantity: number; warehouse_id?: string }) => ({
+    loan_request_id: loanReq.id,
+    item_id: item.item_id,
+    quantity: item.quantity,
+    warehouse_id: isGAOrAdmin ? (item.warehouse_id || null) : null,
+    status: isGAOrAdmin ? 'approved' : 'pending'
+  }))
+
+  const { error: itemsErr } = await supabase.from('loan_items').insert(insertItems)
+
+  if (itemsErr) {
+    // Cleanup header if items fail
+    await supabase.from('loan_requests').delete().eq('id', loanReq.id)
+    return NextResponse.json({ error: itemsErr.message }, { status: 500 })
   }
 
-  const currentStock = stock?.current_stock ?? 0
-  if (quantity > currentStock) {
-    return NextResponse.json({ error: 'Stok tidak mencukupi' }, { status: 400 })
-  }
-
-  const { error } = await supabase.from('item_loans').insert({
-    item_id,
-    warehouse_id,
-    quantity,
-    purpose,
-    loan_date,
-    return_date: return_date || null,
-    note: note || null,
-    requested_by: user.id,
-    status: 'pending',
-  })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, id: loanReq.id })
 }
 
 // DELETE /api/v1/loans

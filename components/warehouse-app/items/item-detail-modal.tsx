@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -18,6 +19,8 @@ interface ItemDetailModalProps {
 
 export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) {
   const supabase = createClient()
+  const [page, setPage] = useState(1)
+  const pageSize = 10
 
   const { data: item, isLoading: isItemLoading } = useQuery({
     queryKey: ['item_detail', itemId],
@@ -38,34 +41,58 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
     },
   })
 
-  const { data: ledger, isLoading: isLedgerLoading } = useQuery({
-    queryKey: ['item_ledger', itemId],
+  const { data: ledgerData, isLoading: isLedgerLoading } = useQuery({
+    queryKey: ['item_ledger', itemId, page],
     enabled: !!itemId,
     queryFn: async () => {
-      const [inRes, outRes] = await Promise.all([
-        supabase
-          .from('stock_in')
-          .select('id, quantity, date, note, warehouse:warehouses(name), creator:profiles!created_by(full_name)')
-          .eq('item_id', itemId)
-          .order('date', { ascending: false })
-          .limit(20),
-        supabase
-          .from('stock_out')
-          .select('id, quantity, date, note, warehouse:warehouses(name), creator:profiles!created_by(full_name)')
-          .eq('item_id', itemId)
-          .order('date', { ascending: false })
-          .limit(20)
-      ])
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
 
-      if (inRes.error) throw inRes.error
-      if (outRes.error) throw outRes.error
+      const { data, count, error } = await supabase
+        .from('stock_transactions_view')
+        .select('*', { count: 'exact' })
+        .eq('item_id', itemId)
+        .order('date', { ascending: false })
+        .range(from, to)
 
-      const inData = (inRes.data || []).map(d => ({ ...d, type: 'in' as const }))
-      const outData = (outRes.data || []).map(d => ({ ...d, type: 'out' as const }))
+      if (error) throw error
+      
+      // 1. Map flattened view columns back to the structure expected by the component
+      const mappedData = (data || []).map(d => ({
+        ...d,
+        warehouse: { name: d.warehouse_name },
+        creator: { full_name: d.creator_name },
+        loan_details: null as any
+      }))
 
-      return [...inData, ...outData]
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 20)
+      // 2. Fetch loan details for transactions that have a loan ID in the note
+      const loanIds = (data || [])
+        .map(d => d.note?.match(/#([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/)?.[1])
+        .filter(Boolean) as string[]
+
+      if (loanIds.length > 0) {
+        const { data: loans } = await supabase
+          .from('loan_requests')
+          .select('id, loan_date, atas_nama, requested_by:profiles!requested_by(full_name)')
+          .in('id', loanIds)
+        
+        if (loans) {
+          mappedData.forEach(item => {
+            const loanId = item.note?.match(/#([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/)?.[1]
+            if (loanId) {
+              const loan = loans.find(l => l.id === loanId)
+              if (loan) {
+                item.loan_details = {
+                  borrower: loan.atas_nama || (loan.requested_by as any)?.full_name,
+                  date: loan.loan_date
+                }
+              }
+            }
+          })
+        }
+      }
+
+      return { data: mappedData, count }
     },
   })
 
@@ -80,7 +107,7 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
           .eq('item_id', itemId)
           .order('warehouse_name'),
         supabase
-          .from('item_loans')
+          .from('loan_items')
           .select('quantity, warehouse_id')
           .eq('item_id', itemId)
           .eq('status', 'approved')
@@ -102,7 +129,12 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
         return {
           ...stat,
           borrowed,
-          available_stock: stat.current_stock - borrowed
+          // total_out in the view already includes loans, 
+          // so current_stock is the actual available stock in warehouse.
+          available_stock: stat.current_stock,
+          // we subtract borrowed from total_out for display purposes 
+          // to show "regular" exits in the 'KELUAR' column
+          display_total_out: Math.max(0, stat.total_out - borrowed)
         }
       })
     }
@@ -110,7 +142,7 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
 
   return (
     <Dialog open={!!itemId} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent className="sm:max-w-4xl h-[85vh] sm:h-[80vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
         <div className="p-6 pb-4 border-b bg-muted/30 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-medium tracking-tight text-foreground/80 uppercase">
             <Package size={18} className="text-primary/70" />
@@ -118,9 +150,9 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
           </DialogTitle>
         </div>
 
-        <div className="flex-1 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
           {/* Left Side: Info */}
-          <div className="w-full lg:w-[42%] p-5 sm:p-8 space-y-6 lg:border-r bg-muted/5 lg:overflow-y-auto flex-shrink-0">
+          <div className="w-full lg:w-[42%] p-5 sm:p-8 space-y-6 lg:border-r bg-muted/5 lg:overflow-y-auto shrink-0">
             {isItemLoading ? (
               <div className="flex flex-col items-center justify-center h-64 gap-3">
                 <Loader2 className="animate-spin text-primary/30" size={32} />
@@ -137,8 +169,12 @@ export function ItemDetailModal({ itemId, onOpenChange }: ItemDetailModalProps) 
 
           {/* Right Side: Ledger */}
           <ItemLedgerList 
-            ledger={(ledger || []) as any} 
+            ledger={(ledgerData?.data || []) as any} 
             isLoading={isLedgerLoading} 
+            currentPage={page}
+            totalCount={ledgerData?.count || 0}
+            pageSize={pageSize}
+            onPageChange={setPage}
           />
         </div>
       </DialogContent>

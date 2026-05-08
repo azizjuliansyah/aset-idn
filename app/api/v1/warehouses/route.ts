@@ -41,6 +41,7 @@ export async function POST(request: Request) {
   const { error, data } = await supabase.from('warehouses').insert({
     name: body.name,
     note: body.note ?? null,
+    is_default: body.is_default ?? false,
     created_by: user.id,
   }).select().single()
 

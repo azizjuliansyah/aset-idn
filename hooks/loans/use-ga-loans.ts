@@ -1,15 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import type { ItemLoan } from '@/types/database'
+import type { LoanRequest, LoanItem, Item, Warehouse, Profile, LoanWithJoins } from '@/types/database'
 import { useDebounce } from '@/hooks/use-debounce'
+ 
+export type { LoanWithJoins }
 
-export type LoanWithJoins = ItemLoan & {
-  item?: { id: string; name: string }
-  warehouse?: { id: string; name: string }
-  requester?: { id: string; full_name: string }
-  actioner?: { id: string; full_name: string }
-}
+
 
 const PAGE_SIZE = 10
 
