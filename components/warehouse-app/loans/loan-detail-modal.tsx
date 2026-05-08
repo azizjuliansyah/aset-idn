@@ -8,20 +8,20 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { 
-  User, 
-  Calendar, 
-  Package, 
-  Warehouse as WarehouseIcon, 
-  Info, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  User,
+  Calendar,
+  Package,
+  Warehouse as WarehouseIcon,
+  Info,
+  CheckCircle2,
+  XCircle,
   Clock,
   ClipboardList,
   FileText,
   UserCheck,
   RotateCcw
- } from 'lucide-react'
+} from 'lucide-react'
 import { formatDateTime, formatDate } from '@/lib/utils'
 import type { LoanRequest, LoanItem, Item, Warehouse, Profile, LoanWithJoins } from '@/types/database'
 import { LoanStatusBadge } from './loan-status-badge'
@@ -42,15 +42,15 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl overflow-hidden p-0 gap-0">
-        <DialogHeader className="p-8 pb-6 bg-muted/20 border-b m-0">
-          <div className="flex items-center justify-between pr-12">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+      <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[85vh] flex flex-col overflow-hidden p-0 gap-0 rounded-2xl sm:rounded-xl">
+        <DialogHeader className="bg-muted/20 border-b m-0">
+          <div className="flex items-center justify-between pr-8 sm:pr-12">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <ClipboardList size={24} />
               </div>
               <div>
-                <DialogTitle className="text-2xl font-bold tracking-tight">
+                <DialogTitle className="text-lg sm:text-2xl font-bold tracking-tight">
                   Detail Peminjaman
                 </DialogTitle>
 
@@ -62,50 +62,63 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
           </div>
         </DialogHeader>
 
-        <div className="p-8 space-y-10 max-h-[80vh] overflow-y-auto">
+        <div className="p-4 sm:p-8 space-y-6 sm:space-y-10 flex-1 overflow-y-auto">
           {/* Single Column Layout */}
-          <div className="space-y-10">
-            {/* 1. Header Info: Requester & Timeline */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <section className="space-y-3">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
-                  <User size={12} className="text-primary" /> Peminjam
-                </h3>
-                <div className="bg-muted/30 p-4 rounded-xl border border-muted-foreground/10">
-                  <p className="font-bold text-base text-foreground">{loan.atas_nama || loan.requester?.full_name || '—'}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1.5 font-medium">
-                    {loan.is_by_ga && loan.atas_nama ? `Dibuat oleh: ${loan.requester?.full_name}` : ''}
-                  </p>
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
-                  <Calendar size={12} className="text-primary" /> Timeline
-                </h3>
-                <div className="bg-muted/30 p-4 rounded-xl border border-muted-foreground/10 flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Pinjam</span>
-                    <span className="text-xs font-bold mt-0.5">{formatDateTime(loan.loan_date)}</span>
+          <div className="space-y-6 sm:space-y-10">
+            {/* 1. Header Info: Unified Table Layout */}
+            <section className="space-y-2">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
+                <Info size={12} className="text-primary" /> Informasi Peminjaman
+              </h3>
+              <div className="rounded-xl border border-muted-foreground/10 overflow-hidden bg-muted/5">
+                <div className="grid grid-cols-1 md:grid-cols-2">
+                  <div className="p-4 border-b md:border-b-0 md:border-r border-muted-foreground/10 space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Nama Peminjam</p>
+                    <p className="text-sm font-bold text-foreground">{loan.atas_nama || loan.requester?.full_name || '—'}</p>
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-medium">
+                      {loan.is_by_ga && loan.atas_nama ? `Dibuat oleh: ${loan.requester?.full_name}` : ''}
+                    </p>
                   </div>
-                  <div className="h-8 w-px bg-muted-foreground/10 mx-4" />
-                  <div className="flex flex-col text-right">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Batas Kembali</span>
-                    <span className="text-xs font-bold mt-0.5 text-amber-600">
+                  <div className="p-4 border-b md:border-b-0 border-muted-foreground/10 space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Yang Menyetujui / PIC</p>
+                    <p className="text-sm font-bold text-foreground">{loan.actioner?.full_name ?? '—'}</p>
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter opacity-50">General Affair</p>
+                  </div>
+                  <div className="p-4 border-b md:border-r border-muted-foreground/10 space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Tanggal Pinjam</p>
+                    <p className="text-sm font-bold text-foreground">{formatDateTime(loan.loan_date)}</p>
+                  </div>
+                  <div className="p-4 border-b border-muted-foreground/10 space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Batas Waktu Kembali</p>
+                    <p className="text-sm font-bold text-amber-600">
                       {loan.return_date ? formatDateTime(loan.return_date) : 'Flexible'}
-                    </span>
+                    </p>
+                  </div>
+                  <div className="col-span-1 md:col-span-2 p-4 bg-muted/20 space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Alasan / Tujuan</p>
+                    <p className="text-sm font-medium italic text-foreground/80 leading-relaxed">
+                      "{loan.purpose}"
+                    </p>
+                    {loan.note && (
+                      <div className="mt-2 pt-2 border-t border-muted-foreground/10">
+                        <p className="text-[11px] text-muted-foreground italic">
+                          <span className="font-bold text-[9px] uppercase mr-2 opacity-70">Catatan GA:</span>
+                          {loan.note}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </section>
-            </div>
+              </div>
+            </section>
 
             {/* 2. Items Table */}
-            <section className="space-y-4">
+            <section className="space-y-2">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
                 <Package size={12} className="text-primary" /> Rincian Barang
               </h3>
-              <div className="rounded-xl border border-muted-foreground/10 overflow-hidden bg-muted/5">
-                <table className="w-full text-left border-collapse">
+              <div className="rounded-xl border border-muted-foreground/10 overflow-x-auto bg-muted/5 scrollbar-thin">
+                <table className="w-full text-left border-collapse min-w-[500px]">
                   <thead>
                     <tr className="bg-muted/50 border-b border-muted-foreground/10">
                       <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-muted-foreground">Nama Barang</th>
@@ -129,10 +142,7 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
                           </div>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground font-medium">
-                          <div className="flex items-center gap-1.5">
-                            <WarehouseIcon size={10} className="opacity-50" />
-                            {item.warehouse?.name ?? '—'}
-                          </div>
+                          {item.warehouse?.name ?? '—'}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="font-black text-sm text-primary">{item.quantity}</span>
@@ -160,104 +170,74 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
               </div>
             </section>
 
-            {/* 3. Return History Log */}
-            {loan.items?.some(item => (item.returns?.length ?? 0) > 0) && (
-              <section className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
-                  <RotateCcw size={12} className="text-blue-600" /> Riwayat Pengembalian
-                </h3>
-                <div className="space-y-2">
-                  {loan.items.flatMap(item =>
-                    (item.returns || []).map(ret => ({ ...ret, itemName: item.item?.name }))
-                  )
-                  .sort((a, b) => new Date(b.returned_at).getTime() - new Date(a.returned_at).getTime())
-                  .map((log, idx) => (
-                    <div key={idx} className="bg-blue-50/30 p-3 rounded-xl border border-blue-100/50 flex items-start justify-between gap-4">
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-blue-900">{log.itemName}</p>
-                        {log.note && <p className="text-[10px] text-blue-700 italic">"{log.note}"</p>}
-                        <p className="text-[9px] text-muted-foreground flex items-center gap-1 mt-1">
-                          <Clock size={8} /> {formatDateTime(log.returned_at)}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <Badge className="bg-blue-600 text-white font-black text-[10px]">+{log.quantity}</Badge>
-                        <p className="text-[8px] uppercase font-bold text-muted-foreground mt-1">Kembali</p>
-                      </div>
+            {/* 3. Return History Log & Closing Status */}
+            {(loan.actual_return_date || loan.items?.some(item => (item.returns?.length ?? 0) > 0)) && (
+              <section className="space-y-2">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
+                    <RotateCcw size={12} className="text-blue-600" /> Riwayat Pengembalian
+                  </h3>
+                  {loan.actual_return_date && (
+                    <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-100 shadow-sm">
+                      <CheckCircle2 size={10} className="text-emerald-600" />
+                      <span className="text-[9px] font-bold whitespace-nowrap">
+                        Closed: {formatDateTime(loan.actual_return_date)}
+                      </span>
                     </div>
-                  ))}
+                  )}
                 </div>
+
+                {loan.items?.some(item => (item.returns?.length ?? 0) > 0) ? (
+                  <div className="space-y-2">
+                    {loan.items.flatMap(item =>
+                      (item.returns || []).map(ret => ({ ...ret, itemName: item.item?.name }))
+                    )
+                      .sort((a, b) => new Date(b.returned_at).getTime() - new Date(a.returned_at).getTime())
+                      .map((log, idx) => (
+                        <div key={idx} className="bg-blue-50/30 p-3 rounded-xl border border-blue-100/50 flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-blue-900">{log.itemName}</p>
+                            {log.note && <p className="text-[10px] text-blue-700 italic">"{log.note}"</p>}
+                            <p className="text-[9px] text-muted-foreground flex items-center gap-1 mt-1">
+                              <Clock size={8} /> {formatDateTime(log.returned_at)}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <Badge className="bg-blue-600 text-white font-black text-[10px]">+{log.quantity}</Badge>
+                            <p className="text-[8px] uppercase font-bold text-muted-foreground mt-1">Kembali</p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="bg-muted/5 border border-dashed border-muted-foreground/10 p-4 rounded-xl text-center">
+                    <p className="text-[10px] text-muted-foreground font-medium italic">Tidak ada detail riwayat pengembalian tercatat</p>
+                  </div>
+                )}
               </section>
             )}
 
-            {/* 4. Handled By & Actual Return (If any) */}
-            {(loan.actioned_by || loan.actual_return_date) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {loan.actual_return_date && (
-                  <section className="space-y-3">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
-                      <CheckCircle2 size={12} className="text-emerald-600" /> Selesai
-                    </h3>
-                    <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-700">Waktu Closing</span>
-                      <Badge variant="outline" className="bg-white text-emerald-700 border-emerald-200 font-black text-[10px]">
-                        {formatDateTime(loan.actual_return_date)}
-                      </Badge>
-                    </div>
-                  </section>
-                )}
 
-                {loan.actioned_by && (
-                  <section className="space-y-3">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
-                      <UserCheck size={12} className="text-primary" /> Verifikasi GA
-                    </h3>
-                    <div className="bg-muted/30 p-4 rounded-xl border border-muted-foreground/10 flex items-center justify-between">
-                      <span className="text-xs font-bold text-muted-foreground">Petugas</span>
-                      <span className="text-xs font-black text-foreground">{loan.actioner?.full_name ?? '—'}</span>
-                    </div>
-                  </section>
-                )}
-              </div>
-            )}
           </div>
 
           <Separator className="opacity-50" />
 
-          {/* Purpose & Notes */}
-          <div className="space-y-6">
-            <section className="space-y-3">
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                <FileText size={14} className="text-primary" /> Tujuan & Keterangan
-              </h3>
-              <div className="bg-muted/10 p-6 rounded-2xl border border-muted-foreground/10 space-y-4">
-                <p className="text-sm leading-relaxed font-medium text-foreground italic">
-                  "{loan.purpose}"
-                </p>
-                
-                {loan.items?.some(i => i.status === 'rejected') && (
-                  <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex gap-2 items-start">
-                    <Info size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
-                      Beberapa barang dalam pengajuan ini ditolak/tidak disetujui oleh GA. Silakan cek rincian barang di atas.
-                    </p>
-                  </div>
-                )}
-
-                {loan.note && (
-                  <div className="mt-4 pt-4 border-t border-muted-foreground/10">
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      <span className="font-bold text-[10px] uppercase mr-2 opacity-70">Catatan:</span>
-                      {loan.note}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
+          {/* Warnings for Rejected Items */}
+          {loan.items?.some(i => i.status === 'rejected') && (
+            <div className="space-y-6">
+              <section className="space-y-3">
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex gap-2 items-start">
+                  <Info size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
+                    Beberapa barang dalam pengajuan ini ditolak/tidak disetujui oleh GA. Silakan cek rincian barang di atas.
+                  </p>
+                </div>
+              </section>
+            </div>
+          )}
         </div>
 
-        <div className="p-6 px-8 bg-muted/10 border-t flex items-center justify-between">
+        <div className="p-4 sm:p-6 sm:px-8 bg-muted/10 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[10px] text-muted-foreground font-medium">
             Sistem Manajemen Peminjaman Gudang IDN
           </p>
