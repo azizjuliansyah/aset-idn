@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createActivityLog } from '@/lib/logger'
 
 export async function PATCH(request: Request) {
   const supabase = await createClient()
@@ -23,5 +24,13 @@ export async function PATCH(request: Request) {
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  await createActivityLog({
+    action: 'UPDATE',
+    entityType: 'SETTINGS',
+    entityId: id,
+    details: updateData
+  })
+
   return NextResponse.json({ success: true })
 }

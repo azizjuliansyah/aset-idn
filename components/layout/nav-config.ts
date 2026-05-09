@@ -13,6 +13,7 @@ import {
   History,
   ShieldCheck,
   ClipboardCheck,
+  Activity,
 } from 'lucide-react'
 
 export type AppRole = 'admin' | 'user' | 'general_affair'
@@ -57,6 +58,12 @@ export const navGroups: NavGroup[] = [
         title: 'Pengaturan',
         href: '/dashboard/admin/settings',
         icon: Settings,
+        roles: ['admin'],
+      },
+      {
+        title: 'Log Aktivitas',
+        href: '/dashboard/admin/logs',
+        icon: Activity,
         roles: ['admin'],
       },
     ],

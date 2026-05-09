@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createActivityLog } from '@/lib/logger'
 
 export async function PATCH(
   request: Request,
@@ -33,6 +34,13 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
+  await createActivityLog({
+    action: 'UPDATE',
+    entityType: 'ITEM',
+    entityId: id,
+    details: { name: data.name, changes: body }
+  })
+
   return NextResponse.json({ data })
 }
 
@@ -55,6 +63,12 @@ export async function DELETE(
     console.error('[API] Delete error:', error)
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
+
+  await createActivityLog({
+    action: 'DELETE',
+    entityType: 'ITEM',
+    entityId: id
+  })
 
   return NextResponse.json({ success: true })
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createActivityLog } from '@/lib/logger'
 
 export async function PATCH(
   request: Request,
@@ -29,6 +30,13 @@ export async function PATCH(
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  await createActivityLog({
+    action: 'UPDATE',
+    entityType: 'USER',
+    entityId: id,
+    details: { full_name, role, phone }
+  })
+
   return NextResponse.json({ success: true })
 }
 
@@ -50,5 +58,11 @@ export async function DELETE(
   const { error } = await adminClient.auth.admin.deleteUser(id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  await createActivityLog({
+    action: 'DELETE',
+    entityType: 'USER',
+    entityId: id
+  })
+
   return NextResponse.json({ success: true })
 }

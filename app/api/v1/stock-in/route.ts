@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createActivityLog } from '@/lib/logger'
 
 function authError() { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
@@ -57,5 +58,17 @@ export async function POST(request: Request) {
   }).select('*, item:items(id,name), warehouse:warehouses(id,name)').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  await createActivityLog({
+    action: 'CREATE',
+    entityType: 'STOCK_IN',
+    entityId: data.id,
+    details: { 
+      item_name: data.item?.name, 
+      quantity: data.quantity, 
+      warehouse_name: data.warehouse?.name 
+    }
+  })
+
   return NextResponse.json({ data }, { status: 201 })
 }

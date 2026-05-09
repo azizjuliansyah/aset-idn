@@ -98,6 +98,18 @@ export async function POST(
       return NextResponse.json({ error: 'Gagal mengirim pesan melalui Fonnte: ' + (result.reason || result.detail || 'Unknown error') }, { status: 500 })
     }
 
+    const { createActivityLog } = await import('@/lib/logger')
+    await createActivityLog({
+      action: 'UPDATE',
+      entityType: 'LOAN_REQUEST',
+      entityId: id,
+      details: { 
+        name: requester.full_name, 
+        type: 'WhatsApp Reminder',
+        status: 'Sent'
+      }
+    })
+
     return NextResponse.json({ success: true, message: 'Pengingat WhatsApp berhasil dikirim' })
   } catch (error: any) {
     console.error('Error sending WA:', error)

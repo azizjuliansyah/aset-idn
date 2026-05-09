@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createActivityLog } from '@/lib/logger'
 
 // GET /api/admin/users
 export async function GET(request: Request) {
@@ -59,6 +60,13 @@ export async function POST(request: Request) {
     await supabase.from('profiles').update({ role }).eq('id', newUser.user.id)
   }
 
+  await createActivityLog({
+    action: 'CREATE',
+    entityType: 'USER',
+    entityId: newUser.user.id,
+    details: { full_name, role, email }
+  })
+
   return NextResponse.json({ success: true })
 }
 
@@ -81,6 +89,12 @@ export async function DELETE(request: Request) {
     if (id === user.id) continue
     await adminClient.auth.admin.deleteUser(id)
   }
+
+  await createActivityLog({
+    action: 'BULK_DELETE',
+    entityType: 'USER',
+    details: { ids }
+  })
 
   return NextResponse.json({ success: true })
 }

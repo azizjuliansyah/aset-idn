@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createActivityLog } from '@/lib/logger'
 
 export async function PATCH(
   request: Request,
@@ -232,6 +233,13 @@ export async function PATCH(
         .ilike('note', `%#${id}%`)
     }
 
+    await createActivityLog({
+      action: action.toUpperCase() as any,
+      entityType: 'LOAN_REQUEST',
+      entityId: id,
+      details: { action, ...extra }
+    })
+
     return NextResponse.json({ success: true })
   }
 
@@ -266,5 +274,13 @@ export async function DELETE(
   const { error } = await q
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  await createActivityLog({
+    action: 'DELETE',
+    entityType: 'LOAN_REQUEST',
+    entityId: id
+  })
+
   return NextResponse.json({ success: true })
 }
+

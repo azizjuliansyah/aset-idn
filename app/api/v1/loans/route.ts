@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createActivityLog } from '@/lib/logger'
 
 // GET /api/v1/loans
 export async function GET(request: Request) {
@@ -123,6 +124,13 @@ export async function POST(request: Request) {
     await supabase.from('loan_requests').delete().eq('id', loanReq.id)
     return NextResponse.json({ error: itemsErr.message }, { status: 500 })
   }
+
+  await createActivityLog({
+    action: 'LOAN',
+    entityType: 'LOAN_REQUEST',
+    entityId: loanReq.id,
+    details: { purpose, item_count: items.length, atas_nama }
+  })
 
   return NextResponse.json({ success: true, id: loanReq.id })
 }

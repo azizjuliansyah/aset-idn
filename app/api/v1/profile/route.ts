@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createActivityLog } from '@/lib/logger'
 
 function authError() { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
@@ -36,5 +37,13 @@ export async function PATCH(request: Request) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  await createActivityLog({
+    action: 'UPDATE',
+    entityType: 'USER',
+    entityId: user.id,
+    details: { full_name }
+  })
+
   return NextResponse.json({ data })
 }
