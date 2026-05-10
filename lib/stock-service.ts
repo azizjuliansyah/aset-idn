@@ -75,7 +75,9 @@ async function sendLowStockAlert(itemName: string, currentStock: number, minStoc
     .replace(/{{batas_minimum}}/g, minStock.toString())
     .replace(/{{trigger_notifikasi}}/g, triggerNotif)
 
-  if (!process.env.WATZAP_API_KEY || !process.env.WATZAP_NUMBER_KEY) {
+  const numberKey = settings?.wa_number_key || process.env.WATZAP_NUMBER_KEY
+
+  if (!process.env.WATZAP_API_KEY || !numberKey) {
     console.error('[StockService] Watzap credentials missing')
     return
   }
@@ -88,7 +90,7 @@ async function sendLowStockAlert(itemName: string, currentStock: number, minStoc
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           api_key: process.env.WATZAP_API_KEY,
-          number_key: process.env.WATZAP_NUMBER_KEY,
+          number_key: numberKey,
           group_id: groupId,
           message: message,
         }),
@@ -155,7 +157,8 @@ export async function sendLoanReturnAlert(loanId: string, returnedItems: { name:
     .replace(/{{batas_pengembalian}}/g, returnDate)
 
   // 5. Send via Watzap
-  if (!process.env.WATZAP_API_KEY || !process.env.WATZAP_NUMBER_KEY) return
+  const numberKey = settings?.wa_number_key || process.env.WATZAP_NUMBER_KEY
+  if (!process.env.WATZAP_API_KEY || !numberKey) return
 
   // 5.1 Personal Notification (Borrower)
   try {
@@ -164,7 +167,7 @@ export async function sendLoanReturnAlert(loanId: string, returnedItems: { name:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: process.env.WATZAP_API_KEY,
-        number_key: process.env.WATZAP_NUMBER_KEY,
+        number_key: numberKey,
         phone_no: '62' + loan.requester.phone,
         message: message,
       }),
@@ -201,7 +204,7 @@ export async function sendLoanReturnAlert(loanId: string, returnedItems: { name:
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               api_key: process.env.WATZAP_API_KEY,
-              number_key: process.env.WATZAP_NUMBER_KEY,
+              number_key: numberKey,
               group_id: groupId,
               message: groupMessage,
             }),

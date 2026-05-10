@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2, Search, Users, Check, Smartphone, X, RotateCcw, Clock } from 'lucide-react'
+import { Loader2, Search, Users, Check, Smartphone, X, RotateCcw, Clock, AlertCircle, Settings2 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,21 @@ import {
   TabsList, 
   TabsTrigger 
 } from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 // Sub-components
@@ -45,6 +60,7 @@ const schema = z.object({
   wa_overdue_group_names: z.string().optional(),
   wa_overdue_group_message_format: z.string().optional(),
   wa_overdue_cron_time: z.string().optional(),
+  wa_number_key: z.string().optional(),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -84,6 +100,7 @@ export function WhatsappSettings() {
       wa_overdue_group_names: '',
       wa_overdue_group_message_format: '',
       wa_overdue_cron_time: '08:00',
+      wa_number_key: '',
     },
     values: settings
       ? {
@@ -105,6 +122,7 @@ export function WhatsappSettings() {
           wa_overdue_group_names: settings.wa_overdue_group_names ?? '',
           wa_overdue_group_message_format: settings.wa_overdue_group_message_format ?? '',
           wa_overdue_cron_time: settings.wa_overdue_cron_time ?? '08:00',
+          wa_number_key: settings.wa_number_key ?? '',
         }
       : undefined,
   })
@@ -206,20 +224,56 @@ export function WhatsappSettings() {
       <div className="w-full pb-10">
       <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="inline-flex h-auto bg-muted/50 rounded-xl gap-1">
-            <TabsTrigger value="loan" className="flex items-center gap-2">
+          {/* Mobile Dropdown Navigation */}
+          <div className="md:hidden mb-4">
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="w-full bg-muted/50 border-none rounded-xl h-11 focus:ring-0">
+                <SelectValue placeholder="Pilih Kategori" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="loan">
+                  <div className="flex items-center gap-2">
+                    <Smartphone size={14} className="text-muted-foreground" />
+                    <span>Peminjaman Barang</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="stock">
+                  <div className="flex items-center gap-2">
+                    <Check size={14} className="text-muted-foreground" />
+                    <span>Pergerakan Stok</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="return">
+                  <div className="flex items-center gap-2">
+                    <RotateCcw size={14} className="text-muted-foreground" />
+                    <span>Pengembalian Barang</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="overdue">
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-muted-foreground" />
+                    <span>Keterlambatan</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Desktop Tab Navigation */}
+          <TabsList className="hidden md:inline-flex h-auto bg-muted/50 rounded-xl gap-1 p-1">
+            <TabsTrigger value="loan" className="flex items-center gap-2 py-2 px-4">
               <Smartphone size={14} />
               Peminjaman Barang
             </TabsTrigger>
-            <TabsTrigger value="stock" className="flex items-center gap-2">
+            <TabsTrigger value="stock" className="flex items-center gap-2 py-2 px-4">
               <Check size={14} />
               Pergerakan Stok
             </TabsTrigger>
-            <TabsTrigger value="return" className="flex items-center gap-2">
+            <TabsTrigger value="return" className="flex items-center gap-2 py-2 px-4">
               <RotateCcw size={14} />
               Pengembalian Barang Pinjaman
             </TabsTrigger>
-            <TabsTrigger value="overdue" className="flex items-center gap-2">
+            <TabsTrigger value="overdue" className="flex items-center gap-2 py-2 px-4">
               <Clock size={14} />
               Keterlambatan Pengembalian
             </TabsTrigger>
@@ -530,22 +584,19 @@ export function WhatsappSettings() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 py-4 px-4 bg-muted/30 rounded-lg border">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 px-4 bg-muted/30 rounded-lg border">
                   <div className="flex items-center gap-2">
                     <Clock size={16} className="text-primary" />
                     <Label className="text-sm font-medium">Waktu Pengiriman Otomatis</Label>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-start md:flex-row md:items-center gap-2">
                     <input 
                       type="time" 
-                      className="w-28 h-9 text-center font-mono bg-background border rounded-md px-2 focus:ring-1 focus:ring-primary outline-none"
+                      className="w-full md:w-28 h-9 text-center font-mono bg-background border rounded-md px-2 focus:ring-1 focus:ring-primary outline-none"
                       {...form.register('wa_overdue_cron_time')}
                     />
-                    <span className="text-xs text-muted-foreground">WIB (Asia/Jakarta)</span>
+                    <span className="text-[10px] md:text-xs text-muted-foreground">WIB (Asia/Jakarta)</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground ml-auto max-w-[250px] leading-tight">
-                    Sistem akan mengirimkan pengingat setiap hari pada jam ini jika scheduler diaktifkan di Vercel.
-                  </p>
                 </div>
 
                 <div className="pt-4 border-t">
@@ -560,7 +611,73 @@ export function WhatsappSettings() {
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end mt-6">
+        <div className="flex items-center justify-end gap-3 mt-6">
+          <Dialog>
+            <DialogTrigger render={
+              <Button type="button" variant="outline" className="gap-2">
+                <Settings2 size={16} />
+                Konfigurasi Watzap
+              </Button>
+            } />
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="p-1.5 bg-primary/10 rounded-md">
+                    <Smartphone className="w-4 h-4 text-primary" />
+                  </div>
+                  <DialogTitle>Koneksi Watzap</DialogTitle>
+                </div>
+                <DialogDescription>
+                  Masukkan Number Key dari dashboard Watzap Anda.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="wa_number_key" className="text-xs">Number Key</Label>
+                  <input 
+                    id="wa_number_key"
+                    type="password" 
+                    placeholder="Masukkan Number Key"
+                    className="w-full h-10 bg-background border rounded-md px-3 text-sm focus:ring-1 focus:ring-primary outline-none font-mono"
+                    {...form.register('wa_number_key')}
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 px-3 py-3 bg-amber-50/50 border border-amber-200/50 rounded-lg text-amber-800">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-tight">Penting</p>
+                    <p className="text-[11px] leading-relaxed opacity-90">
+                      Perubahan membutuhkan waktu sinkronisasi. Daftar grup mungkin tidak langsung lengkap sampai proses selesai.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  onClick={() => {
+                    const closeBtn = document.querySelector('[data-radix-collection-item]') as any
+                    if (closeBtn) closeBtn.click()
+                  }}
+                >
+                  Tutup
+                </Button>
+                <Button 
+                  type="button" 
+                  onClick={form.handleSubmit((v) => saveMutation.mutate(v))}
+                  disabled={saveMutation.isPending}
+                >
+                  {saveMutation.isPending ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
+                  Simpan Koneksi
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button type="submit" disabled={saveMutation.isPending}>
             {saveMutation.isPending ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Menyimpan...</> : 'Simpan Perubahan'}
           </Button>

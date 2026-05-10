@@ -159,7 +159,7 @@ export const navGroups: NavGroup[] = [
         icon: Building2,
       },
       {
-        title: 'Pengaturan WhatsApp',
+        title: 'WhatsApp',
         href: '/dashboard/admin/settings/whatsapp',
         icon: Smartphone,
       },

@@ -62,8 +62,10 @@ export async function POST(
       return NextResponse.json({ error: 'Format Pesan WA belum diatur di Pengaturan Admin' }, { status: 400 })
     }
 
-    if (!process.env.WATZAP_API_KEY || !process.env.WATZAP_NUMBER_KEY) {
-      return NextResponse.json({ error: 'Kredensial Watzap (API Key / Number Key) belum dikonfigurasi di server' }, { status: 500 })
+    const numberKey = settings?.wa_number_key || process.env.WATZAP_NUMBER_KEY
+
+    if (!process.env.WATZAP_API_KEY || !numberKey) {
+      return NextResponse.json({ error: 'Kredensial Watzap (API Key / Number Key) belum dikonfigurasi di server atau database' }, { status: 500 })
     }
 
     // 4. Parse message
@@ -86,7 +88,7 @@ export async function POST(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: process.env.WATZAP_API_KEY,
-        number_key: process.env.WATZAP_NUMBER_KEY,
+        number_key: numberKey,
         phone_no: '62' + requester.phone,
         message: message,
       }),
@@ -122,7 +124,7 @@ export async function POST(
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 api_key: process.env.WATZAP_API_KEY,
-                number_key: process.env.WATZAP_NUMBER_KEY,
+                number_key: numberKey,
                 group_id: groupId,
                 message: groupMessage,
               }),

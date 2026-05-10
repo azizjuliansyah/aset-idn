@@ -39,6 +39,7 @@ export interface CompanySettings {
   wa_overdue_group_names: string | null
   wa_overdue_group_message_format: string | null
   wa_overdue_cron_time: string | null
+  wa_number_key: string | null
   updated_at: string
 }
 
