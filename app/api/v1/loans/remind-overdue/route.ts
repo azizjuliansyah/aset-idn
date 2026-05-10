@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { CompanySettings } from '@/types/database'
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
     const { searchParams } = new URL(request.url)
     const secret = searchParams.get('secret') || request.headers.get('x-cron-secret')
     
@@ -12,6 +11,8 @@ export async function POST(request: Request) {
     if (process.env.CRON_SECRET && secret === process.env.CRON_SECRET) {
       isCron = true
     }
+
+    let supabase = await createClient()
 
     if (!isCron) {
       // 1. Auth check for manual trigger
@@ -27,6 +28,9 @@ export async function POST(request: Request) {
       if (!profile || (profile.role !== 'admin' && profile.role !== 'general_affair')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
+    } else {
+      // Use admin client for cron to bypass RLS
+      supabase = createAdminClient()
     }
     
     // 2. Get Company Settings
