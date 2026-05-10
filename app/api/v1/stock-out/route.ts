@@ -48,27 +48,18 @@ export async function POST(request: Request) {
   if (!user) return authError()
 
   const body = await request.json()
-  const { data, error } = await supabase.from('stock_out').insert({
-    item_id: body.item_id,
-    warehouse_id: body.warehouse_id,
-    quantity: body.quantity,
-    date: body.date ?? new Date().toISOString(),
-    note: body.note ?? null,
-    created_by: user.id,
-  }).select('*, item:items(id,name), warehouse:warehouses(id,name)').single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-
-  await createActivityLog({
-    action: 'CREATE',
-    entityType: 'STOCK_OUT',
-    entityId: data.id,
-    details: { 
-      item_name: data.item?.name, 
-      quantity: data.quantity, 
-      warehouse_name: data.warehouse?.name 
-    }
-  })
-
-  return NextResponse.json({ data }, { status: 201 })
+  try {
+    const { reduceStock } = await import('@/lib/stock-service')
+    const data = await reduceStock({
+      itemId: body.item_id,
+      warehouseId: body.warehouse_id,
+      quantity: body.quantity,
+      note: body.note,
+      userId: user.id
+    })
+    return NextResponse.json({ data }, { status: 201 })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 400 })
+  }
 }

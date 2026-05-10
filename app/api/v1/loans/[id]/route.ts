@@ -60,11 +60,18 @@ export async function PATCH(
     // Verify permission
     const { data: loan, error: loanErr } = await supabase
       .from('loan_requests')
-      .select('requested_by, status, items:loan_items(item_id, quantity)')
+      .select('requested_by, status, loan_date, items:loan_items(item_id, quantity)')
       .eq('id', id)
       .single()
 
     if (loanErr || !loan) return NextResponse.json({ error: 'Data peminjaman tidak ditemukan' }, { status: 404 })
+
+    // 0. Validate return_date if provided during approval
+    if (action === 'approve' && extra.return_date) {
+      if (new Date(extra.return_date) < new Date(loan.loan_date)) {
+        return NextResponse.json({ error: 'Batas waktu kembali tidak boleh sebelum waktu pinjam' }, { status: 400 })
+      }
+    }
     
     const isAdminOrGA = profile.role === 'admin' || profile.role === 'general_affair'
     
@@ -116,15 +123,16 @@ export async function PATCH(
       )
 
       if (approvedItems.length > 0) {
-        const stockOutData = approvedItems.map((item: any) => ({
-          item_id: item.item_id,
-          warehouse_id: itemsExtra[item.item_id].warehouse_id,
-          quantity: item.quantity,
-          date: new Date().toISOString(),
-          note: `Peminjaman #${id} disetujui`,
-          created_by: user.id
-        }))
-        await adminClient.from('stock_out').insert(stockOutData)
+        const { reduceStock } = await import('@/lib/stock-service')
+        for (const item of approvedItems) {
+          await reduceStock({
+            itemId: item.item_id,
+            warehouseId: itemsExtra[item.item_id].warehouse_id,
+            quantity: item.quantity,
+            note: `Peminjaman #${id} disetujui`,
+            userId: user.id
+          })
+        }
       }
 
     } else if (action === 'partial_return') {
@@ -134,17 +142,24 @@ export async function PATCH(
       }
 
       // 1. Process each return
+      const returnedItemsForAlert: { name: string, quantity: number }[] = []
+
       for (const [loanItemId, data] of Object.entries(returns) as [string, any][]) {
         if (data.quantity <= 0) continue
 
         // Update returned_quantity
         const { data: item } = await adminClient
           .from('loan_items')
-          .select('item_id, warehouse_id, quantity, returned_quantity')
+          .select('item_id, warehouse_id, quantity, returned_quantity, item:items(name)')
           .eq('id', loanItemId)
           .single()
 
         if (!item) continue
+        
+        returnedItemsForAlert.push({ 
+          name: (item.item as any)?.name || 'Barang', 
+          quantity: data.quantity 
+        })
 
         const newReturnedQty = (item.returned_quantity || 0) + data.quantity
         await adminClient
@@ -162,14 +177,20 @@ export async function PATCH(
         })
 
         // Add back to stock
-        await adminClient.from('stock_in').insert({
-          item_id: item.item_id,
-          warehouse_id: item.warehouse_id,
+        const { addStock } = await import('@/lib/stock-service')
+        await addStock({
+          itemId: item.item_id,
+          warehouseId: item.warehouse_id,
           quantity: data.quantity,
-          date: new Date().toISOString(),
           note: `Pengembalian Parsial Peminjaman #${id} (ID: ${loanItemId})`,
-          created_by: user.id
+          userId: user.id
         })
+      }
+
+      // Send WA Alert
+      if (returnedItemsForAlert.length > 0) {
+        const { sendLoanReturnAlert } = await import('@/lib/stock-service')
+        await sendLoanReturnAlert(id, returnedItemsForAlert)
       }
 
       // 2. Check if all items are fully returned to update header status
@@ -194,14 +215,21 @@ export async function PATCH(
       // Legacy full return for backward compatibility
       const { data: items } = await adminClient
         .from('loan_items')
-        .select('*')
+        .select('*, item:items(name)')
         .eq('loan_request_id', id)
         .eq('status', 'approved')
 
       if (items && items.length > 0) {
+        const returnedItemsForAlert: { name: string, quantity: number }[] = []
+
         for (const item of items) {
           const remaining = item.quantity - (item.returned_quantity || 0)
           if (remaining <= 0) continue
+
+          returnedItemsForAlert.push({ 
+            name: (item.item as any)?.name || 'Barang', 
+            quantity: remaining 
+          })
 
           await adminClient
             .from('loan_items')
@@ -216,14 +244,20 @@ export async function PATCH(
             returned_at: new Date().toISOString()
           })
 
-          await adminClient.from('stock_in').insert({
-            item_id: item.item_id,
-            warehouse_id: item.warehouse_id,
+          const { addStock } = await import('@/lib/stock-service')
+          await addStock({
+            itemId: item.item_id,
+            warehouseId: item.warehouse_id,
             quantity: remaining,
-            date: new Date().toISOString(),
             note: `Pengembalian Peminjaman #${id}`,
-            created_by: user.id
+            userId: user.id
           })
+        }
+
+        // Send WA Alert
+        if (returnedItemsForAlert.length > 0) {
+          const { sendLoanReturnAlert } = await import('@/lib/stock-service')
+          await sendLoanReturnAlert(id, returnedItemsForAlert)
         }
       }
     } else if (action === 'undo_return') {

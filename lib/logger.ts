@@ -12,6 +12,7 @@ export type LogAction =
   | 'LOGIN'
   | 'RESTORE'
   | 'BULK_DELETE'
+  | 'REMINDER'
 
 export type LogEntityType = 
   | 'ITEM' 

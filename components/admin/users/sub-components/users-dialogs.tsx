@@ -15,12 +15,13 @@ const createSchema = z.object({
   full_name: z.string().min(1, 'Nama wajib diisi'),
   email: z.string().email('Email tidak valid'),
   password: z.string().min(8, 'Password minimal 8 karakter'),
+  phone: z.string().regex(/^8[1-9][0-9]{7,11}$/, 'Format nomor tidak valid (contoh: 81234567890)').optional().or(z.literal('')),
   role: z.enum(['admin', 'user', 'general_affair']),
 })
 
 const editSchema = z.object({
   full_name: z.string().min(1, 'Nama wajib diisi'),
-  phone: z.string().optional(),
+  phone: z.string().regex(/^8[1-9][0-9]{7,11}$/, 'Format nomor tidak valid (contoh: 81234567890)').optional().or(z.literal('')),
   role: z.enum(['admin', 'user', 'general_affair']),
 })
 
@@ -56,7 +57,7 @@ export function UsersDialogs({
 }: UsersDialogsProps) {
   const createForm = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { full_name: '', email: '', password: '', role: 'user' },
+    defaultValues: { full_name: '', email: '', password: '', phone: '', role: 'user' },
   })
 
   const editForm = useForm<EditValues>({
@@ -68,7 +69,7 @@ export function UsersDialogs({
     if (editUser) {
       editForm.reset({ full_name: editUser.full_name, phone: editUser.phone || '', role: editUser.role })
     } else if (dialogOpen) {
-      createForm.reset({ full_name: '', email: '', password: '', role: 'user' })
+      createForm.reset({ full_name: '', email: '', password: '', phone: '', role: 'user' })
     }
   }, [editUser, dialogOpen, editForm, createForm])
 
@@ -89,7 +90,20 @@ export function UsersDialogs({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="u-phone">No. Telepon (WA)</Label>
-                <Input id="u-phone" placeholder="Contoh: 8123456789" {...editForm.register('phone')} />
+                <div className="flex rounded-md shadow-sm">
+                  <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                    +62
+                  </span>
+                  <Input 
+                    id="u-phone" 
+                    placeholder="8123456789" 
+                    className="rounded-l-none"
+                    {...editForm.register('phone')} 
+                  />
+                </div>
+                <p className="text-[10px] text-red-600">
+                  Format angka saja (contoh: 81234567890).
+                </p>
                 {editForm.formState.errors.phone && <p className="text-destructive text-xs">{editForm.formState.errors.phone.message}</p>}
               </div>
               <div className="space-y-1.5">
@@ -129,6 +143,24 @@ export function UsersDialogs({
                 <Label htmlFor="cu-password">Password *</Label>
                 <Input id="cu-password" type="password" {...createForm.register('password')} />
                 {createForm.formState.errors.password && <p className="text-destructive text-xs">{createForm.formState.errors.password.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cu-phone">No. Telepon (WA)</Label>
+                <div className="flex rounded-md shadow-sm">
+                  <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                    +62
+                  </span>
+                  <Input 
+                    id="cu-phone" 
+                    placeholder="8123456789" 
+                    className="rounded-l-none"
+                    {...createForm.register('phone')} 
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Format angka saja (contoh: 81234567890).
+                </p>
+                {createForm.formState.errors.phone && <p className="text-destructive text-xs">{createForm.formState.errors.phone.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>Role *</Label>

@@ -22,6 +22,23 @@ export interface CompanySettings {
   email: string | null
   is_wa_enabled: boolean
   wa_message_format: string | null
+  wa_group_id: string | null
+  wa_group_names: string | null
+  wa_group_message_format: string | null
+  wa_stock_low_group_id: string | null
+  wa_stock_low_group_names: string | null
+  wa_stock_low_message_format: string | null
+  wa_return_message_format: string | null
+  wa_return_group_id: string | null
+  wa_return_group_names: string | null
+  wa_return_group_message_format: string | null
+  wa_return_finished_message_format: string | null
+  wa_return_finished_group_message_format: string | null
+  wa_overdue_message_format: string | null
+  wa_overdue_group_id: string | null
+  wa_overdue_group_names: string | null
+  wa_overdue_group_message_format: string | null
+  wa_overdue_cron_time: string | null
   updated_at: string
 }
 

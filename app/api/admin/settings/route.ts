@@ -17,8 +17,13 @@ export async function PATCH(request: Request) {
     .from('company_settings')
     .update({
       ...updateData,
-      is_wa_enabled: updateData.is_wa_enabled ?? false,
       wa_message_format: updateData.wa_message_format ?? null,
+      wa_group_id: updateData.wa_group_id ?? null,
+      wa_group_message_format: updateData.wa_group_message_format ?? null,
+      wa_stock_low_group_id: updateData.wa_stock_low_group_id ?? null,
+      wa_stock_low_group_names: updateData.wa_stock_low_group_names ?? null,
+      wa_stock_low_message_format: updateData.wa_stock_low_message_format ?? null,
+      wa_return_message_format: updateData.wa_return_message_format ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -27,7 +32,7 @@ export async function PATCH(request: Request) {
 
   await createActivityLog({
     action: 'UPDATE',
-    entityType: 'SETTINGS',
+    entityType: 'SETTING',
     entityId: id,
     details: updateData
   })

@@ -27,11 +27,15 @@ export async function PATCH(request: Request) {
   if (!user) return authError()
 
   const body = await request.json()
-  const { full_name } = body
+  const { full_name, phone } = body
 
   const { data, error } = await supabase
     .from('profiles')
-    .update({ full_name, updated_at: new Date().toISOString() })
+    .update({ 
+      full_name, 
+      phone: phone || null,
+      updated_at: new Date().toISOString() 
+    })
     .eq('id', user.id)
     .select()
     .single()
@@ -42,7 +46,7 @@ export async function PATCH(request: Request) {
     action: 'UPDATE',
     entityType: 'USER',
     entityId: user.id,
-    details: { full_name }
+    details: { full_name, phone }
   })
 
   return NextResponse.json({ data })

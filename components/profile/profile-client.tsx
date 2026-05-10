@@ -20,7 +20,7 @@ import { getInitials, cn } from '@/lib/utils'
 
 const profileSchema = z.object({
   full_name: z.string().min(1, 'Nama wajib diisi'),
-  phone: z.string().regex(/^8[0-9]{6,12}$/, 'Nomor harus diawali angka 8 (contoh: 812...)').optional().or(z.literal('')),
+  phone: z.string().regex(/^8[1-9][0-9]{7,11}$/, 'Format nomor tidak valid (contoh: 81234567890)').optional().or(z.literal('')),
 })
 const passwordSchema = z.object({
   password: z.string().min(8, 'Password minimal 8 karakter'),
@@ -58,15 +58,15 @@ export function ProfileClient() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (values: ProfileValues) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      const { error } = await supabase.from('profiles')
-        .update({ 
-          full_name: values.full_name, 
-          phone: values.phone || null,
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', user!.id)
-      if (error) throw error
+      const res = await fetch('/api/v1/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Gagal memperbarui profil')
+      }
     },
     onSuccess: () => {
       toast.success('Profil diperbarui')
@@ -237,6 +237,9 @@ export function ProfileClient() {
                         {...profileForm.register('phone')} 
                       />
                     </div>
+                    <p className="text-[10px] text-red-600 mt-1">
+                      Gunakan format angka saja (contoh: 81234567890). Sistem otomatis menambahkan awalan +62.
+                    </p>
                     {profileForm.formState.errors.phone && (
                       <p className="text-destructive text-xs mt-1 font-medium">{profileForm.formState.errors.phone.message}</p>
                     )}

@@ -14,6 +14,8 @@ import {
   ShieldCheck,
   ClipboardCheck,
   Activity,
+  Building2,
+  Smartphone,
 } from 'lucide-react'
 
 export type AppRole = 'admin' | 'user' | 'general_affair'
@@ -52,12 +54,6 @@ export const navGroups: NavGroup[] = [
         title: 'Manajemen User',
         href: '/dashboard/admin/users',
         icon: Users,
-        roles: ['admin'],
-      },
-      {
-        title: 'Pengaturan',
-        href: '/dashboard/admin/settings',
-        icon: Settings,
         roles: ['admin'],
       },
       {
@@ -150,6 +146,22 @@ export const navGroups: NavGroup[] = [
         title: 'Kondisi Barang',
         href: '/dashboard/admin/item-condition',
         icon: Tag,
+      },
+    ],
+  },
+  {
+    title: 'Pengaturan',
+    roles: ['admin'],
+    items: [
+      {
+        title: 'Informasi Umum',
+        href: '/dashboard/admin/settings/general',
+        icon: Building2,
+      },
+      {
+        title: 'Pengaturan WhatsApp',
+        href: '/dashboard/admin/settings/whatsapp',
+        icon: Smartphone,
       },
     ],
   },

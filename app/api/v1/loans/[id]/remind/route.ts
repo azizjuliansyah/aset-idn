@@ -28,7 +28,7 @@ export async function POST(
     // 2. Get Loan Details with Relations
     const { data: loan, error: loanError } = await supabase
       .from('loan_requests')
-      .select('*, requester:requested_by(full_name, phone), items:loan_items(item:item_id(name))')
+      .select('*, requester:requested_by(full_name, phone), items:loan_items(quantity, item:item_id(name))')
       .eq('id', id)
       .single()
 
@@ -42,7 +42,8 @@ export async function POST(
 
     const requester = loan.requester as any
     const items = loan.items as any[]
-    const itemNames = items?.map((i: any) => i.item?.name).filter(Boolean).join(', ') || 'Barang'
+    const itemNames = items?.map((i: any) => `${i.item?.name} (${i.quantity} pcs)`).filter(Boolean).join(', ') || 'Barang'
+    const itemList = items?.map((i: any, idx: number) => `${idx + 1}. ${i.item?.name} (${i.quantity} pcs)`).filter(Boolean).join('\n') || '1. Barang'
 
     if (!requester?.phone) {
       return NextResponse.json({ error: 'Peminjam belum mengatur nomor WhatsApp di profilnya' }, { status: 400 })
@@ -55,17 +56,14 @@ export async function POST(
       .limit(1)
       .single<CompanySettings>()
 
-    if (!settings?.is_wa_enabled) {
-      return NextResponse.json({ error: 'Fitur Pengingat WhatsApp sedang dinonaktifkan' }, { status: 400 })
-    }
 
-    const rawFormat = settings.wa_message_format
+    const rawFormat = settings?.wa_message_format
     if (!rawFormat) {
       return NextResponse.json({ error: 'Format Pesan WA belum diatur di Pengaturan Admin' }, { status: 400 })
     }
 
-    if (!process.env.FONNTE_TOKEN) {
-      return NextResponse.json({ error: 'Token Fonnte belum dikonfigurasi di server' }, { status: 500 })
+    if (!process.env.WATZAP_API_KEY || !process.env.WATZAP_NUMBER_KEY) {
+      return NextResponse.json({ error: 'Kredensial Watzap (API Key / Number Key) belum dikonfigurasi di server' }, { status: 500 })
     }
 
     // 4. Parse message
@@ -74,43 +72,92 @@ export async function POST(
 
     const message = rawFormat
       .replace(/{{nama_peminjam}}/g, requester.full_name || '')
+      .replace(/{{nomor_peminjam}}/g, requester.phone ? `+62${requester.phone}` : '-')
       .replace(/{{nama_barang}}/g, itemNames)
+      .replace(/{{list_barang}}/g, itemList)
       .replace(/{{waktu_pinjam}}/g, loanDate)
       .replace(/{{batas_pengembalian}}/g, returnDate)
 
     const targetNumber = '62' + requester.phone
 
-    // 5. Send using Fonnte
-    const res = await fetch('https://api.fonnte.com/send', {
+    // 5. Send to Borrower using Watzap
+    const res = await fetch('https://api.watzap.id/v1/send_message', {
       method: 'POST',
-      headers: {
-        'Authorization': process.env.FONNTE_TOKEN,
-      },
-      body: new URLSearchParams({
-        target: targetNumber,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: process.env.WATZAP_API_KEY,
+        number_key: process.env.WATZAP_NUMBER_KEY,
+        phone_no: '62' + requester.phone,
         message: message,
-        countryCode: '62', // optional but good
       }),
     })
 
     const result = await res.json()
-    if (!result.status) {
-      return NextResponse.json({ error: 'Gagal mengirim pesan melalui Fonnte: ' + (result.reason || result.detail || 'Unknown error') }, { status: 500 })
+    const isBorrowerSent = result.status === '200' || result.status === 200
+
+    if (!isBorrowerSent) {
+      return NextResponse.json({ 
+        error: 'Gagal mengirim ke peminjam: ' + (result.message || result.detail || 'Unknown error') 
+      }, { status: 500 })
+    }
+
+    // 6. Send to Group if configured
+    let isGroupSent = false
+    if (settings.wa_group_id && settings.wa_group_message_format) {
+      const groupIds = settings.wa_group_id.split(',').map(id => id.trim()).filter(Boolean)
+      
+      if (groupIds.length > 0) {
+        const groupMessage = settings.wa_group_message_format
+          .replace(/{{nama_peminjam}}/g, requester.full_name || '')
+          .replace(/{{nomor_peminjam}}/g, requester.phone ? `+62${requester.phone}` : '-')
+          .replace(/{{nama_barang}}/g, itemNames)
+          .replace(/{{list_barang}}/g, itemList)
+          .replace(/{{waktu_pinjam}}/g, loanDate)
+          .replace(/{{batas_pengembalian}}/g, returnDate)
+
+        const groupResults = await Promise.all(groupIds.map(async (groupId) => {
+          try {
+            const groupRes = await fetch('https://api.watzap.id/v1/send_message_group', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                api_key: process.env.WATZAP_API_KEY,
+                number_key: process.env.WATZAP_NUMBER_KEY,
+                group_id: groupId,
+                message: groupMessage,
+              }),
+            })
+            const groupResult = await groupRes.json()
+            return groupResult.status === '200' || groupResult.status === 200
+          } catch (e) {
+            console.error(`Failed to send to group ${groupId}:`, e)
+            return false
+          }
+        }))
+        
+        isGroupSent = groupResults.some(success => success)
+      }
     }
 
     const { createActivityLog } = await import('@/lib/logger')
     await createActivityLog({
-      action: 'UPDATE',
+      action: 'REMINDER',
       entityType: 'LOAN_REQUEST',
       entityId: id,
       details: { 
         name: requester.full_name, 
         type: 'WhatsApp Reminder',
+        sentTo: isGroupSent ? 'Borrower & Group' : 'Borrower Only',
         status: 'Sent'
       }
     })
 
-    return NextResponse.json({ success: true, message: 'Pengingat WhatsApp berhasil dikirim' })
+    return NextResponse.json({ 
+      success: true, 
+      message: isGroupSent 
+        ? 'Pengingat WhatsApp berhasil dikirim ke peminjam dan grup' 
+        : 'Pengingat WhatsApp berhasil dikirim ke peminjam' 
+    })
   } catch (error: any) {
     console.error('Error sending WA:', error)
     return NextResponse.json({ error: error.message || 'Terjadi kesalahan internal' }, { status: 500 })

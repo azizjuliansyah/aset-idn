@@ -88,6 +88,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Field wajib tidak lengkap' }, { status: 400 })
   }
 
+  // 0. Validate Dates
+  if (return_date && new Date(return_date) < new Date(loan_date)) {
+    return NextResponse.json({ error: 'Batas waktu kembali tidak boleh sebelum waktu pinjam' }, { status: 400 })
+  }
+
   // 1. Insert Request Header
   const { data: loanReq, error: reqErr } = await supabase
     .from('loan_requests')

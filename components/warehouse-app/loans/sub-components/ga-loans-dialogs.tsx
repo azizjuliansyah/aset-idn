@@ -34,12 +34,16 @@ interface GaLoansDialogsProps {
   setDeleteTarget: (loan: LoanWithJoins | null) => void
   remindTarget: LoanWithJoins | null
   setRemindTarget: (loan: LoanWithJoins | null) => void
+  overdueConfirm: boolean
+  setOverdueConfirm: (open: boolean) => void
   onAction: (id: string, action: string, extra?: any) => void
   onDelete: (id: string) => void
   onRemind: (id: string) => void
+  onRemindOverdue: () => void
   isPending: boolean
   isDeleting: boolean
   isReminding: boolean
+  isRemindingOverdue: boolean
 }
 
 export function GaLoansDialogs({
@@ -57,12 +61,16 @@ export function GaLoansDialogs({
   setDeleteTarget,
   remindTarget,
   setRemindTarget,
+  overdueConfirm,
+  setOverdueConfirm,
   onAction,
   onDelete,
   onRemind,
+  onRemindOverdue,
   isPending,
   isDeleting,
   isReminding,
+  isRemindingOverdue,
 }: GaLoansDialogsProps) {
   const [rejectionNote, setRejectionNote] = useState('')
   const [actualReturnDate, setActualReturnDate] = useState(new Date().toISOString().slice(0, 16))
@@ -100,7 +108,7 @@ export function GaLoansDialogs({
       returnTarget.items?.filter(i => i.status === 'approved').forEach(item => {
         const remaining = (item.quantity || 0) - (item.returned_quantity || 0)
         initial[item.id] = {
-          quantity: remaining > 0 ? remaining : 0,
+          quantity: 0,
           note: ''
         }
       })
@@ -342,11 +350,23 @@ export function GaLoansDialogs({
         loading={isReminding}
       />
 
+      <ConfirmDialog
+        open={overdueConfirm}
+        onOpenChange={setOverdueConfirm}
+        title="Kirim Pengingat Keterlambatan"
+        confirmText="Kirim Sekarang"
+        loadingText="Mengirim..."
+        variant="default"
+        description="Kirim pengingat WhatsApp ke semua peminjam yang sudah melewati batas waktu pengembalian? Pesan akan dikirim satu per satu sesuai template yang diatur."
+        onConfirm={onRemindOverdue}
+        loading={isRemindingOverdue}
+      />
+
       <Dialog open={!!returnTarget} onOpenChange={(o) => !o && setReturnTarget(null)}>
         <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="px-6 py-5 border-b m-0">
             <div className="space-y-1">
-              <DialogTitle className="flex items-center gap-2 text-xl font-black tracking-tight">
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
                 <RotateCcw size={22} className="text-blue-600" />
                 Konfirmasi Pengembalian
               </DialogTitle>
@@ -422,7 +442,7 @@ export function GaLoansDialogs({
                           <Label className="text-[9px] font-bold uppercase opacity-60">Jml Kembali</Label>
                           <Input
                             type="number"
-                            min={1}
+                            min={0}
                             max={remaining}
                             className="h-8 text-xs font-bold"
                             value={partialReturns[item.id]?.quantity || 0}
@@ -480,9 +500,8 @@ export function GaLoansDialogs({
                   returns: finalReturns,
                   actual_return_date: actualReturnDate 
                 })
-                setReturnTarget(null)
               }}
-              disabled={isPending}
+              disabled={isPending || Object.values(partialReturns).every(v => v.quantity <= 0)}
             >
               {isPending ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Memproses...</> : 'Simpan Pengembalian'}
             </Button>

@@ -112,6 +112,16 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
       });
     }
 
+    if (data.return_date && data.loan_date) {
+      if (new Date(data.return_date) < new Date(data.loan_date)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Batas waktu kembali tidak boleh sebelum waktu pinjam',
+          path: ['return_date'],
+        });
+      }
+    }
+
     data.items.forEach((item, index) => {
       // 1. Warehouse required for GA
       if (isGAOrAdmin && !item.warehouse_id) {
@@ -387,10 +397,16 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
             <div className="space-y-1.5">
               <Label htmlFor="loan-date">Waktu Pinjam *</Label>
               <Input id="loan-date" type="datetime-local" {...form.register('loan_date')} />
+              {form.formState.errors.loan_date && (
+                <p className="text-destructive text-xs">{form.formState.errors.loan_date.message}</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="return-date">Batas Waktu Kembali</Label>
               <Input id="return-date" type="datetime-local" {...form.register('return_date')} />
+              {form.formState.errors.return_date && (
+                <p className="text-destructive text-xs">{form.formState.errors.return_date.message}</p>
+              )}
             </div>
           </div>
 

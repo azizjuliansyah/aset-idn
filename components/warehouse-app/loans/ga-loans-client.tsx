@@ -33,6 +33,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
   const [undoTarget, setUndoTarget] = useState<LoanWithJoins | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<LoanWithJoins | null>(null)
   const [remindTarget, setRemindTarget] = useState<LoanWithJoins | null>(null)
+  const [overdueConfirm, setOverdueConfirm] = useState(false)
   const [requestOpen, setRequestOpen] = useState(false)
 
   const handleAction = (id: string, action: string, extra?: any) => {
@@ -216,9 +217,19 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         onSearchChange={(v) => { handlers.setSearch(v); handlers.setPage(1) }}
         searchPlaceholder="Cari nama peminjam..."
         actions={!isHistory && (
-          <Button onClick={() => setRequestOpen(true)} className="h-9 gap-1.5" size="sm">
-            <Plus size={16} /> Pinjam Barang
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setOverdueConfirm(true)} 
+              className="h-9 gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50" 
+              size="sm"
+            >
+              <MessageSquareWarning size={16} /> Kirim Pengingat Terlambat
+            </Button>
+            <Button onClick={() => setRequestOpen(true)} className="h-9 gap-1.5" size="sm">
+              <Plus size={16} /> Pinjam Barang
+            </Button>
+          </div>
         )}
         filters={
           <GaLoansFilter 
@@ -265,12 +276,16 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         setDeleteTarget={setDeleteTarget}
         remindTarget={remindTarget}
         setRemindTarget={setRemindTarget}
+        overdueConfirm={overdueConfirm}
+        setOverdueConfirm={setOverdueConfirm}
         onAction={handleAction}
         onDelete={(id) => mutations.deleteLoan.mutate(id, { onSuccess: () => setDeleteTarget(null) })}
         onRemind={(id) => mutations.remindLoan.mutate(id, { onSuccess: () => setRemindTarget(null) })}
+        onRemindOverdue={() => mutations.remindOverdue.mutate(undefined, { onSuccess: () => setOverdueConfirm(false) })}
         isPending={mutations.performAction.isPending}
         isDeleting={mutations.deleteLoan.isPending}
         isReminding={mutations.remindLoan.isPending}
+        isRemindingOverdue={mutations.remindOverdue.isPending}
       />
 
       <LoanRequestDialog open={requestOpen} onOpenChange={setRequestOpen} />

@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -207,6 +209,16 @@ export function useGaLoans(isHistory: boolean) {
       deleteLoan,
       deleteBulkLoans,
       remindLoan,
+      remindOverdue: useMutation({
+        mutationFn: async () => {
+          const res = await fetch('/api/v1/loans/remind-overdue', { method: 'POST' })
+          const result = await res.json()
+          if (!res.ok) throw new Error(result.error ?? 'Gagal mengirim pengingat massal')
+          return result
+        },
+        onSuccess: (res) => toast.success(res.message || 'Pengingat massal berhasil dikirim'),
+        onError: (err: Error) => toast.error(err.message),
+      }),
     }
   }
 }
