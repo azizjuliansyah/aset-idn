@@ -101,6 +101,7 @@ export interface StockIn {
   note: string | null
   created_by: string | null
   created_at: string
+  transfer_id: string | null
   // joined
   item?: Item
   warehouse?: Warehouse
@@ -115,9 +116,25 @@ export interface StockOut {
   note: string | null
   created_by: string | null
   created_at: string
+  transfer_id: string | null
+  warehouse?: Warehouse
+}
+
+export interface StockTransfer {
+  id: string
+  item_id: string
+  from_warehouse_id: string
+  to_warehouse_id: string
+  quantity: number
+  date: string
+  note: string | null
+  created_by: string | null
+  created_at: string
   // joined
   item?: Item
-  warehouse?: Warehouse
+  from?: Warehouse
+  to?: Warehouse
+  creator?: Profile
 }
 
 export interface StockLedger {

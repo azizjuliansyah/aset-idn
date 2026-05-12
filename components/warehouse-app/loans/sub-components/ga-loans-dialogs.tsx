@@ -155,12 +155,12 @@ export function GaLoansDialogs({
         if (!extra) return
 
         const currentStock = stockInfo[`${item.item_id}-${extra.warehouse_id}`] ?? 0
-        
+
         // If stock is 0 and status is not yet 'no_stock'
         if (currentStock <= 0 && extra.status !== 'no_stock') {
           updates[item.item_id] = { ...extra, status: 'no_stock' }
           hasChanges = true
-        } 
+        }
         // If stock is > 0 and it was 'no_stock' (e.g. warehouse changed), revert to approved
         else if (currentStock > 0 && extra.status === 'no_stock') {
           updates[item.item_id] = { ...extra, status: 'approved' }
@@ -202,7 +202,7 @@ export function GaLoansDialogs({
 
       <Dialog open={!!approveTarget} onOpenChange={(o) => !o && setApproveTarget(null)}>
         <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="px-6 py-4 border-b m-0">
+          <DialogHeader className="bg-muted/20 border-b m-0">
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle2 size={18} />
               Setujui Peminjaman
@@ -332,7 +332,7 @@ export function GaLoansDialogs({
                     </div>
                     <div className="space-y-1.5 pt-1 border-t border-destructive/10">
                       <Label htmlFor="auto-reject-note" className="text-[10px] font-bold text-destructive uppercase">Alasan Penolakan *</Label>
-                      <Textarea 
+                      <Textarea
                         id="auto-reject-note"
                         placeholder="Berikan alasan penolakan..."
                         className="text-xs bg-background/50 border-destructive/20 focus-visible:ring-destructive/20 min-h-[60px]"
@@ -362,7 +362,7 @@ export function GaLoansDialogs({
             })()}
           </div>
 
-          <DialogFooter className="px-6 py-4 bg-muted/5 border-t flex items-center justify-end gap-3 m-0">
+          <DialogFooter className="px-6 py-4 bg-muted/5 border-t flex flex-row items-center justify-end gap-2 m-0">
             <Button variant="outline" onClick={() => {
               setApproveTarget(null)
               setRejectionNote('')
@@ -383,7 +383,7 @@ export function GaLoansDialogs({
                     toast.error('Alasan penolakan wajib diisi')
                     return
                   }
-                  
+
                   // Ensure items are marked as rejected only if they aren't 'no_stock'
                   approveTarget?.items?.forEach(item => {
                     if (finalItemsExtra[item.item_id].status !== 'no_stock') {
@@ -391,7 +391,7 @@ export function GaLoansDialogs({
                     }
                   })
 
-                  onAction(approveTarget!.id, 'reject', { 
+                  onAction(approveTarget!.id, 'reject', {
                     rejection_note: rejectionNote,
                     items_extra: finalItemsExtra
                   })
@@ -462,10 +462,9 @@ export function GaLoansDialogs({
 
       <Dialog open={!!returnTarget} onOpenChange={(o) => !o && setReturnTarget(null)}>
         <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="px-6 py-5 border-b m-0">
+          <DialogHeader className="border-b m-0 bg-muted/20">
             <div className="space-y-1">
-              <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
-                <RotateCcw size={22} className="text-blue-600" />
+              <DialogTitle className="gap-2 text-xl font-semibold tracking-tight">
                 Konfirmasi Pengembalian
               </DialogTitle>
               <div className="flex items-center gap-2 px-0.5">
@@ -476,7 +475,7 @@ export function GaLoansDialogs({
               </div>
             </div>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
             {/* Timeline Info & Actual Return Input */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -514,7 +513,7 @@ export function GaLoansDialogs({
                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Daftar Barang</p>
                 <Badge variant="outline" className="text-[9px] font-black uppercase opacity-60">Sisa Qty</Badge>
               </div>
-              
+
               <div className="space-y-3">
                 {returnTarget?.items?.filter(i => i.status === 'approved').map((item) => {
                   const remaining = (item.quantity || 0) - (item.returned_quantity || 0)
@@ -575,7 +574,7 @@ export function GaLoansDialogs({
             </div>
           </div>
 
-          <DialogFooter className="px-6 py-4 bg-muted/5 border-t flex items-center justify-end gap-3 m-0">
+          <DialogFooter className="px-6 py-4 bg-muted/5 border-t flex flex-row items-center justify-end gap-2 m-0">
             <Button variant="outline" onClick={() => setReturnTarget(null)} className="h-9 px-4">
               Batal
             </Button>
@@ -588,15 +587,15 @@ export function GaLoansDialogs({
                     finalReturns[id] = data
                   }
                 })
-                
+
                 if (Object.keys(finalReturns).length === 0) {
                   toast.error('Pilih minimal 1 barang untuk dikembalikan')
                   return
                 }
 
-                onAction(returnTarget!.id, 'partial_return', { 
+                onAction(returnTarget!.id, 'partial_return', {
                   returns: finalReturns,
-                  actual_return_date: actualReturnDate 
+                  actual_return_date: actualReturnDate
                 })
               }}
               disabled={isPending || Object.values(partialReturns).every(v => v.quantity <= 0)}
@@ -627,7 +626,7 @@ export function GaLoansDialogs({
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-row items-center justify-end gap-2">
             <Button variant="outline" onClick={() => setRejectTarget(null)}>Batal</Button>
             <Button
               variant="destructive"

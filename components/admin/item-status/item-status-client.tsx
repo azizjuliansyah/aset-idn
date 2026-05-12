@@ -250,7 +250,7 @@ export function ItemStatusClient() {
             <div className="space-y-4">
               <div className="space-y-1">
                 <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Nama Status</p>
-                <p className="font-bold text-lg">{viewItem.name}</p>
+                <p className="font-semibold text-lg">{viewItem.name}</p>
               </div>
               <div className="space-y-2 border-t border-dashed pt-3">
                 <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Catatan</p>

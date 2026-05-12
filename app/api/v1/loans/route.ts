@@ -146,7 +146,10 @@ export async function DELETE(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const adminClient = createAdminClient()
+
+  const { data: profile } = await adminClient.from('profiles').select('role').eq('id', user.id).single()
   const isAdminOrGA = profile?.role === 'admin' || profile?.role === 'general_affair'
 
   const body = await request.json()
@@ -156,14 +159,47 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Data tidak valid' }, { status: 400 })
   }
 
-  let q = supabase.from('item_loans').delete().in('id', ids)
+  // 1. Get all loans to check status and revert stock if needed
+  const { data: loans } = await adminClient
+    .from('loan_requests')
+    .select('id, status, requested_by, items:loan_items(item_id, warehouse_id, quantity, status)')
+    .in('id', ids)
 
-  if (!isAdminOrGA) {
-    q = q.eq('requested_by', user.id)
+  if (!loans || loans.length === 0) {
+    return NextResponse.json({ error: 'Data tidak ditemukan' }, { status: 404 })
   }
 
-  const { error } = await q
+  const { addStock } = await import('@/lib/stock-service')
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  for (const loan of loans) {
+    // Permission check per loan
+    if (!isAdminOrGA && loan.requested_by !== user.id) continue
+
+    // Revert stock if approved
+    if (loan.status === 'approved') {
+      const approvedItems = (loan.items as any[]).filter(i => i.status === 'approved')
+      for (const item of approvedItems) {
+        if (item.warehouse_id) {
+          await addStock({
+            itemId: item.item_id,
+            warehouseId: item.warehouse_id,
+            quantity: item.quantity,
+            note: `Penghapusan Massal #${loan.id} (Stok dikembalikan)`,
+            userId: user.id
+          })
+        }
+      }
+    }
+
+    // Delete and log
+    await adminClient.from('loan_requests').delete().eq('id', loan.id)
+    await createActivityLog({
+      action: 'DELETE',
+      entityType: 'LOAN_REQUEST',
+      entityId: loan.id,
+      details: { bulk: true, status: loan.status }
+    })
+  }
+
   return NextResponse.json({ success: true })
 }

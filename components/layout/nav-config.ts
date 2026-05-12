@@ -16,6 +16,7 @@ import {
   Activity,
   Building2,
   Smartphone,
+  Repeat,
 } from 'lucide-react'
 
 export type AppRole = 'admin' | 'user' | 'general_affair'
@@ -99,6 +100,11 @@ export const navGroups: NavGroup[] = [
         href: '/dashboard/stock-out',
         icon: ArrowUpFromLine,
       },
+      {
+        title: 'Pindah Barang',
+        href: '/dashboard/stock-transfer',
+        icon: Repeat,
+      },
     ],
   },
   {
@@ -118,7 +124,7 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: 'Peminjaman (GA)',
+    title: 'Peminjaman',
     roles: ['general_affair'],
     items: [
       {

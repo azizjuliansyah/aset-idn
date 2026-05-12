@@ -1,13 +1,15 @@
 import { History, ArrowDownLeft, ArrowUpRight, Package, User, Calendar } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { formatDateTime, cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 import type { StockIn, Item, Warehouse } from '@/types/database'
 
-type LedgerEntry = (StockIn | { type: 'out'; id: string; quantity: number; date: string; note: string | null; warehouse: Warehouse; creator: { full_name: string } }) & {
+type LedgerEntry = (StockIn | { type: 'out'; id: string; quantity: number; date: string; note: string | null; warehouse: Warehouse; creator: { full_name: string }; transfer_id: string | null }) & {
   type: 'in' | 'out'
   item?: Item
   warehouse?: Warehouse
   creator?: { full_name: string }
+  transfer_id?: string | null
 }
 
 interface ItemLedgerListProps {
@@ -67,6 +69,11 @@ export function ItemLedgerList({
                           <p className="text-sm font-medium tracking-tight text-foreground/80">
                             {isReturn ? 'Pengembalian Pinjaman' : isLoan ? 'Peminjaman Barang' : tx.type === 'in' ? 'Pemasukan Stok' : 'Pengeluaran Stok'}
                           </p>
+                          {tx.transfer_id && (
+                            <Badge variant="outline" className="text-[10px] h-3.4 bg-blue-50 text-blue-700 border-blue-200">
+                              Pindah Barang
+                            </Badge>
+                          )}
                           <span className={cn(
                             "text-base font-semibold tracking-tight",
                             tx.type === 'in' ? (isReturn ? "text-blue-600" : "text-green-600") : (isLoan ? "text-amber-600" : "text-red-600")

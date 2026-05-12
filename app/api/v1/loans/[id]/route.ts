@@ -295,23 +295,54 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const adminClient = createAdminClient()
+
+  const { data: profile } = await adminClient.from('profiles').select('role').eq('id', user.id).single()
   const isAdminOrGA = profile?.role === 'admin' || profile?.role === 'general_affair'
 
-  let q = supabase.from('loan_requests').delete().eq('id', id)
-  
-  if (!isAdminOrGA) {
-    q = q.eq('requested_by', user.id)
+  // 1. Get loan details to check status and items
+  const { data: loan, error: fetchErr } = await adminClient
+    .from('loan_requests')
+    .select('status, requested_by, items:loan_items(item_id, warehouse_id, quantity, status)')
+    .eq('id', id)
+    .single()
+
+  if (fetchErr || !loan) return NextResponse.json({ error: 'Data tidak ditemukan' }, { status: 404 })
+
+  // Permission check
+  if (!isAdminOrGA && loan.requested_by !== user.id) {
+    return NextResponse.json({ error: 'Tidak memiliki izin' }, { status: 403 })
   }
 
-  const { error } = await q
+  // 2. If status was 'approved', we MUST revert the stock
+  if (loan.status === 'approved') {
+    const { addStock } = await import('@/lib/stock-service')
+    const approvedItems = (loan.items as any[]).filter(i => i.status === 'approved')
+    
+    for (const item of approvedItems) {
+      if (item.warehouse_id) {
+        await addStock({
+          itemId: item.item_id,
+          warehouseId: item.warehouse_id,
+          quantity: item.quantity,
+          note: `Penghapusan Peminjaman #${id} (Stok dikembalikan otomatis)`,
+          userId: user.id
+        })
+      }
+    }
+  }
+
+  // 3. Delete the record
+  const { error } = await adminClient.from('loan_requests').delete().eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
   await createActivityLog({
     action: 'DELETE',
     entityType: 'LOAN_REQUEST',
-    entityId: id
+    entityId: id,
+    details: { status: loan.status }
   })
 
   return NextResponse.json({ success: true })

@@ -59,7 +59,7 @@ export function LogDetailModal({
   const InfoRow = ({ label, value, icon: Icon }: { label: string, value: React.ReactNode, icon: any }) => (
     <tr className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
       <td className="py-5 px-10 w-[240px] align-top">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase  text-muted-foreground">
           <Icon size={14} className="text-primary/70" />
           {label}
         </div>
@@ -75,9 +75,11 @@ export function LogDetailModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-5xl h-[85vh] sm:h-[80vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl">
-        <div className="px-10 pt-6 bg-muted/20">
-          <DialogHeader className="space-y-1">
-            <div className="flex items-center gap-2 mb-2">
+        <DialogHeader className="bg-muted/20 border-b m-0">
+            <DialogTitle className="text-xl font-semibold flex items-center">
+              Detail Log Aktivitas
+            </DialogTitle>
+            <div className="flex items-center gap-2">
               <Badge variant="outline" className={cn("font-bold text-[10px] px-2 py-0.5", getActionColor(log.action))}>
                 {log.action}
               </Badge>
@@ -86,14 +88,7 @@ export function LogDetailModal({
                 {log.entity_type}
               </div>
             </div>
-            <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-2">
-              Detail Log Aktivitas
-            </DialogTitle>
-            <DialogDescription className="text-sm font-medium text-muted-foreground">
-              Informasi lengkap mengenai perubahan sistem pada {formatDateTime(log.created_at)}
-            </DialogDescription>
           </DialogHeader>
-        </div>
 
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-0">
@@ -114,9 +109,9 @@ export function LogDetailModal({
                         {log.user?.full_name?.[0] || 'U'}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-base leading-tight">{log.user?.full_name || 'System'}</span>
+                        <span className="font-semibold text-base leading-tight">{log.user?.full_name || 'System'}</span>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary" className="text-[9px] font-black uppercase h-4 px-1.5">{log.user?.role || 'user'}</Badge>
+                          <Badge variant="secondary" className="text-[9px] font-semibold bg-primary/10 text-primary uppercase h-4 px-1.5">{log.user?.role || 'user'}</Badge>
                           <span className="text-[11px] text-muted-foreground font-medium">{log.user?.email || ''}</span>
                         </div>
                       </div>
@@ -128,15 +123,15 @@ export function LogDetailModal({
                   icon={Clock}
                   value={
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm">{formatDateTime(log.created_at)}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase font-black mt-0.5">Western Indonesia Time (WIB)</span>
+                      <span className="font-semibold text-sm">{formatDateTime(log.created_at)}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold mt-0.5">Western Indonesia Time (WIB)</span>
                     </div>
                   } 
                 />
                 <InfoRow 
                   label="Alamat IP" 
                   icon={Globe}
-                  value={<code className="bg-muted px-2 py-1 rounded text-primary font-black text-xs">{log.ip_address || '—'}</code>} 
+                  value={<code className="bg-muted px-2 py-1 rounded text-primary font-semibold text-xs">{log.ip_address || '—'}</code>} 
                 />
                 <InfoRow 
                   label="User Agent" 
@@ -147,7 +142,7 @@ export function LogDetailModal({
                   <InfoRow 
                     label="ID Entitas" 
                     icon={Hash}
-                    value={<code className="bg-primary/5 text-primary px-2 py-1 rounded font-black text-xs border border-primary/10 select-all">{log.entity_id}</code>} 
+                    value={<code className="bg-primary/5 text-primary px-2 py-1 rounded font-semibold text-xs border border-primary/10 select-all">{log.entity_id}</code>} 
                   />
                 )}
                 <InfoRow 

@@ -300,3 +300,67 @@ export async function reduceStock(params: {
   
   return data
 }
+
+/**
+ * Moves stock from one warehouse to another.
+ */
+export async function transferStock(params: {
+  itemId: string,
+  fromWarehouseId: string,
+  toWarehouseId: string,
+  quantity: number,
+  note?: string,
+  userId: string
+}) {
+  const adminClient = createAdminClient()
+  
+  // 1. Create Master Transfer
+  const { data: transfer, error: transferError } = await adminClient.from('stock_transfers').insert({
+    item_id: params.itemId,
+    from_warehouse_id: params.fromWarehouseId,
+    to_warehouse_id: params.toWarehouseId,
+    quantity: params.quantity,
+    note: params.note,
+    created_by: params.userId
+  }).select('*, item:item_id(name), from:from_warehouse_id(name), to:to_warehouse_id(name)').single()
+  
+  if (transferError) throw transferError
+  
+  // 2. Reduce from source (OUT)
+  await adminClient.from('stock_out').insert({
+    item_id: params.itemId,
+    warehouse_id: params.fromWarehouseId,
+    quantity: params.quantity,
+    note: `[TRANSFER] Ke ${transfer.to?.name}${params.note ? ` - ${params.note}` : ''}`,
+    created_by: params.userId,
+    transfer_id: transfer.id
+  })
+  
+  // 3. Add to destination (IN)
+  await adminClient.from('stock_in').insert({
+    item_id: params.itemId,
+    warehouse_id: params.toWarehouseId,
+    quantity: params.quantity,
+    note: `[TRANSFER] Dari ${transfer.from?.name}${params.note ? ` - ${params.note}` : ''}`,
+    created_by: params.userId,
+    transfer_id: transfer.id
+  })
+  
+  // 4. Log Activity
+  await createActivityLog({
+    action: 'CREATE',
+    entityType: 'STOCK_TRANSFER',
+    entityId: transfer.id,
+    details: { 
+      item_name: transfer.item?.name, 
+      quantity: params.quantity, 
+      from_warehouse: transfer.from?.name,
+      to_warehouse: transfer.to?.name
+    }
+  })
+  
+  // 5. Validate Source (stock decreased)
+  await validateStockThreshold(params.itemId, params.quantity, 'OUT')
+  
+  return transfer
+}

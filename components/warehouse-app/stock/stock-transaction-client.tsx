@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { formatDateTime } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 
 import { useStockTransactions, type StockInWithJoins } from '@/hooks/stock/use-stock-transactions'
 import { StockTransactionFilter } from './sub-components/stock-transaction-filter'
@@ -62,7 +63,16 @@ export function StockTransactionClient({ type }: StockClientProps) {
     <>
       <DataTable
         columns={[
-          { key: 'item', header: 'Barang', render: (_, row) => row.item?.name ?? '—' },
+          { key: 'item', header: 'Barang', render: (_, row) => (
+            <div className="flex flex-col gap-1">
+              <span>{row.item?.name ?? '—'}</span>
+              {row.transfer_id && (
+                <Badge variant="outline" className="w-fit text-[10px] h-3.4 bg-blue-50 text-blue-700 border-blue-200">
+                  Pindah Barang
+                </Badge>
+              )}
+            </div>
+          ) },
           { key: 'category', header: 'Kategori', render: (_, row) => row.item?.item_category?.name ?? '—' },
           { key: 'warehouse', header: 'Gudang', render: (_, row) => row.warehouse?.name ?? '—' },
           { key: 'quantity', header: 'Jumlah',

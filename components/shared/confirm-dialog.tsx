@@ -39,8 +39,8 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-sm flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="bg-muted/20 border-b m-0">
           <div className="flex items-center gap-3">
             {variant === 'destructive' && (
               <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
@@ -50,12 +50,12 @@ export function ConfirmDialog({
             <DialogTitle>{title}</DialogTitle>
           </div>
         </DialogHeader>
-        <div className="py-2">
+        <div className="px-6">
           <DialogDescription className="text-foreground/80 leading-relaxed">
             {description}
           </DialogDescription>
         </div>
-        <DialogFooter className="gap-2">
+        <DialogFooter className="p-4 m-0 flex flex-row items-center justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Batal
           </Button>

@@ -45,7 +45,7 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
       <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[85vh] flex flex-col overflow-hidden p-0 gap-0 rounded-2xl sm:rounded-xl">
         <DialogHeader className="bg-muted/20 border-b m-0">
           <div >
-            <DialogTitle className="text-base sm:text-xl font-bold tracking-tight">
+            <DialogTitle className="text-base sm:text-xl font-semibold tracking-tight">
               Detail Peminjaman
             </DialogTitle>
             <LoanStatusBadge status={loan.status} />
