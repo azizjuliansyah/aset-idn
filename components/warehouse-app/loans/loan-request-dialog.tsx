@@ -132,26 +132,14 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
         });
       }
 
-      // 2. Stock check
-      if (item.item_id && stockBalances) {
-        if (isGAOrAdmin && item.warehouse_id) {
+      // 2. Stock check (Only for GA/Admin)
+      if (isGAOrAdmin && item.item_id && stockBalances) {
+        if (item.warehouse_id) {
           const stock = Number(stockBalances.find(s => s.item_id === item.item_id && s.warehouse_id === item.warehouse_id)?.balance ?? 0)
           if (item.quantity > stock) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               message: `Stok tidak cukup (Tersedia: ${stock})`,
-              path: ['items', index, 'quantity'],
-            });
-          }
-        } else if (!isGAOrAdmin) {
-          const totalStock = stockBalances
-            .filter(s => s.item_id === item.item_id)
-            .reduce((acc, s) => acc + Number(s.balance), 0)
-          
-          if (item.quantity > totalStock) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: `Stok tidak cukup (Total: ${totalStock})`,
               path: ['items', index, 'quantity'],
             });
           }
@@ -299,15 +287,13 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center justify-between">
                           <Label className="text-[10px] font-semibold">Jumlah</Label>
-                          {(() => {
+                          {isGAOrAdmin && (() => {
                             const itemId = form.watch(`items.${index}.item_id`)
                             const whId = form.watch(`items.${index}.warehouse_id`)
                             if (itemId && stockBalances) {
                               let s = 0
-                              if (isGAOrAdmin && whId) {
+                              if (whId) {
                                 s = Number(stockBalances.find(st => st.item_id === itemId && st.warehouse_id === whId)?.balance ?? 0)
-                              } else if (!isGAOrAdmin) {
-                                s = stockBalances.filter(st => st.item_id === itemId).reduce((acc, st) => acc + Number(st.balance), 0)
                               }
                               return (
                                 <span className="text-[9px] text-muted-foreground font-medium bg-muted/50 px-1 py-0.5 rounded leading-none">

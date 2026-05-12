@@ -87,9 +87,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Template pesan terlambat belum diatur di Pengaturan WhatsApp' }, { status: 400 })
     }
 
+    const apiKey = settings?.wa_api_key || process.env.WATZAP_API_KEY
     const numberKey = settings?.wa_number_key || process.env.WATZAP_NUMBER_KEY
 
-    if (!process.env.WATZAP_API_KEY || !numberKey) {
+    if (!apiKey || !numberKey) {
       return NextResponse.json({ error: 'Kredensial Watzap belum dikonfigurasi di server atau database' }, { status: 500 })
     }
 
@@ -133,7 +134,7 @@ export async function POST(request: Request) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            api_key: process.env.WATZAP_API_KEY,
+            api_key: apiKey,
             number_key: numberKey,
             phone_no: '62' + requester.phone,
             message: personalMessage,
@@ -163,7 +164,7 @@ export async function POST(request: Request) {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    api_key: process.env.WATZAP_API_KEY,
+                    api_key: apiKey,
                     number_key: numberKey,
                     group_id: groupId,
                     message: groupMessage,

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -26,6 +27,26 @@ export function LoginForm() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [settings, setSettings] = useState<{ logo_url: string | null; name: string | null }>({
+    logo_url: null,
+    name: null,
+  })
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('company_settings')
+      .select('logo_url, name')
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setSettings({
+            logo_url: data.logo_url,
+            name: data.name,
+          })
+        }
+      })
+  }, [])
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -62,10 +83,16 @@ export function LoginForm() {
         </div>
         
         <div className="relative z-10 max-w-lg text-center text-white">
-          <div className="inline-flex w-20 h-20 rounded-3xl bg-white/20 backdrop-blur-md items-center justify-center mb-8 border border-white/30 shadow-2xl">
-            <Warehouse className="text-white" size={40} />
+          <div className="inline-flex w-24 h-24 rounded-3xl bg-white items-center justify-center mb-8 border border-white/30 shadow-2xl overflow-hidden">
+            {settings.logo_url ? (
+              <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain p-3" />
+            ) : (
+              <Warehouse className="text-primary" size={48} />
+            )}
           </div>
-          <h1 className="text-5xl font-bold mb-4 tracking-tight">Gudang IDN</h1>
+          <h1 className="text-5xl font-bold mb-4 tracking-tight">
+            {settings.name ?? 'Gudang IDN'}
+          </h1>
           <p className="text-red-100 text-lg font-light leading-relaxed">
             Sistem Manajemen Gudang terintegrasi untuk efisiensi operasional dan kontrol inventaris yang maksimal.
           </p>
@@ -92,10 +119,16 @@ export function LoginForm() {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="flex flex-col items-center mb-10 lg:hidden">
-            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-xl shadow-primary/20 mb-4">
-              <Warehouse className="text-white" size={32} />
+            <div className="w-20 h-20 rounded-2xl bg-white flex items-center justify-center shadow-xl shadow-primary/10 mb-4 overflow-hidden border border-slate-100">
+              {settings.logo_url ? (
+                <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain p-2" />
+              ) : (
+                <Warehouse className="text-primary" size={32} />
+              )}
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Gudang IDN</h1>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight text-center px-4">
+              {settings.name ?? 'Gudang IDN'}
+            </h1>
             <p className="text-slate-500 text-sm mt-1">Warehouse Management System</p>
           </div>
 
@@ -123,9 +156,9 @@ export function LoginForm() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-slate-700 font-semibold" htmlFor="password">Password</Label>
-                <button type="button" className="text-xs font-semibold text-primary hover:underline">
+                <Link href="/forgot-password" className="text-xs font-semibold text-primary hover:underline">
                   Lupa password?
-                </button>
+                </Link>
               </div>
               <div className="relative">
                 <Input
@@ -178,7 +211,7 @@ export function LoginForm() {
 
           <div className="mt-12 text-center">
             <p className="text-slate-400 text-sm">
-              &copy; {new Date().getFullYear()} <span className="font-semibold text-slate-500">IDN Media</span>. Semua hak dilindungi.
+              &copy; {new Date().getFullYear()} <span className="font-semibold text-slate-500">ID-Networkers</span>. Semua hak dilindungi.
             </p>
           </div>
         </div>

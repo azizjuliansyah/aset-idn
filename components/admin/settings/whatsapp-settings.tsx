@@ -61,6 +61,7 @@ const schema = z.object({
   wa_overdue_group_message_format: z.string().optional(),
   wa_overdue_cron_time: z.string().optional(),
   wa_number_key: z.string().optional(),
+  wa_api_key: z.string().optional(),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -101,6 +102,7 @@ export function WhatsappSettings() {
       wa_overdue_group_message_format: '',
       wa_overdue_cron_time: '08:00',
       wa_number_key: '',
+      wa_api_key: '',
     },
     values: settings
       ? {
@@ -123,17 +125,19 @@ export function WhatsappSettings() {
           wa_overdue_group_message_format: settings.wa_overdue_group_message_format ?? '',
           wa_overdue_cron_time: settings.wa_overdue_cron_time ?? '08:00',
           wa_number_key: settings.wa_number_key ?? '',
+          wa_api_key: settings.wa_api_key ?? '',
         }
       : undefined,
   })
 
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
+      if (!settings?.id) throw new Error('ID Pengaturan tidak ditemukan')
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: settings!.id,
+          id: settings.id,
           ...values,
         }),
       })
@@ -148,6 +152,27 @@ export function WhatsappSettings() {
     },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground italic">Memuat pengaturan...</p>
+      </div>
+    )
+  }
+
+  if (!settings) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 space-y-4 border rounded-xl bg-muted/20">
+        <AlertCircle className="w-8 h-8 text-destructive" />
+        <p className="text-sm font-medium">Gagal memuat pengaturan WhatsApp</p>
+        <Button onClick={() => qc.invalidateQueries({ queryKey: ['company_settings'] })} variant="outline" size="sm">
+          Coba Lagi
+        </Button>
+      </div>
+    )
+  }
 
   const insertTemplate = (placeholder: string, field: keyof FormValues = 'wa_message_format') => {
     const ids: Record<string, string> = {
@@ -633,6 +658,17 @@ export function WhatsappSettings() {
               </DialogHeader>
               
               <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="wa_api_key" className="text-xs">API Key</Label>
+                  <input 
+                    id="wa_api_key"
+                    type="password" 
+                    placeholder="Masukkan API Key"
+                    className="w-full h-10 bg-background border rounded-md px-3 text-sm focus:ring-1 focus:ring-primary outline-none font-mono"
+                    {...form.register('wa_api_key')}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="wa_number_key" className="text-xs">Number Key</Label>
                   <input 

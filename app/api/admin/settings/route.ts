@@ -24,6 +24,8 @@ export async function PATCH(request: Request) {
       wa_stock_low_group_names: updateData.wa_stock_low_group_names ?? null,
       wa_stock_low_message_format: updateData.wa_stock_low_message_format ?? null,
       wa_return_message_format: updateData.wa_return_message_format ?? null,
+      wa_number_key: updateData.wa_number_key ?? null,
+      wa_api_key: updateData.wa_api_key ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

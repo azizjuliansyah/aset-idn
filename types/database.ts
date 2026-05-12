@@ -40,6 +40,7 @@ export interface CompanySettings {
   wa_overdue_group_message_format: string | null
   wa_overdue_cron_time: string | null
   wa_number_key: string | null
+  wa_api_key: string | null
   updated_at: string
 }
 
@@ -164,7 +165,7 @@ export interface LoanItem {
   item_id: string
   warehouse_id: string | null
   quantity: number
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'rejected' | 'no_stock'
   // joined
   item?: Item
   warehouse?: Warehouse

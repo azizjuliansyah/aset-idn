@@ -75,9 +75,10 @@ async function sendLowStockAlert(itemName: string, currentStock: number, minStoc
     .replace(/{{batas_minimum}}/g, minStock.toString())
     .replace(/{{trigger_notifikasi}}/g, triggerNotif)
 
+  const apiKey = settings?.wa_api_key || process.env.WATZAP_API_KEY
   const numberKey = settings?.wa_number_key || process.env.WATZAP_NUMBER_KEY
-
-  if (!process.env.WATZAP_API_KEY || !numberKey) {
+  
+  if (!apiKey || !numberKey) {
     console.error('[StockService] Watzap credentials missing')
     return
   }
@@ -89,7 +90,7 @@ async function sendLowStockAlert(itemName: string, currentStock: number, minStoc
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          api_key: process.env.WATZAP_API_KEY,
+          api_key: apiKey,
           number_key: numberKey,
           group_id: groupId,
           message: message,
@@ -157,8 +158,9 @@ export async function sendLoanReturnAlert(loanId: string, returnedItems: { name:
     .replace(/{{batas_pengembalian}}/g, returnDate)
 
   // 5. Send via Watzap
+  const apiKey = settings?.wa_api_key || process.env.WATZAP_API_KEY
   const numberKey = settings?.wa_number_key || process.env.WATZAP_NUMBER_KEY
-  if (!process.env.WATZAP_API_KEY || !numberKey) return
+  if (!apiKey || !numberKey) return
 
   // 5.1 Personal Notification (Borrower)
   try {
@@ -166,7 +168,7 @@ export async function sendLoanReturnAlert(loanId: string, returnedItems: { name:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        api_key: process.env.WATZAP_API_KEY,
+        api_key: apiKey,
         number_key: numberKey,
         phone_no: '62' + loan.requester.phone,
         message: message,
@@ -203,7 +205,7 @@ export async function sendLoanReturnAlert(loanId: string, returnedItems: { name:
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              api_key: process.env.WATZAP_API_KEY,
+              api_key: apiKey,
               number_key: numberKey,
               group_id: groupId,
               message: groupMessage,

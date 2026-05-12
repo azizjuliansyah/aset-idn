@@ -44,21 +44,11 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[85vh] flex flex-col overflow-hidden p-0 gap-0 rounded-2xl sm:rounded-xl">
         <DialogHeader className="bg-muted/20 border-b m-0">
-          <div className="flex items-center justify-between pr-8 sm:pr-12">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <ClipboardList size={24} />
-              </div>
-              <div>
-                <DialogTitle className="text-lg sm:text-2xl font-bold tracking-tight">
-                  Detail Peminjaman
-                </DialogTitle>
-
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <LoanStatusBadge status={loan.status} />
-            </div>
+          <div >
+            <DialogTitle className="text-base sm:text-xl font-bold tracking-tight">
+              Detail Peminjaman
+            </DialogTitle>
+            <LoanStatusBadge status={loan.status} />
           </div>
         </DialogHeader>
 
@@ -107,6 +97,17 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
                         </p>
                       </div>
                     )}
+                    {isRejected && loan.rejection_note && (
+                      <div className="mt-2 pt-2 border-t border-destructive/20">
+                        <p className="text-[11px] text-destructive font-bold italic flex items-start gap-2">
+                          <XCircle size={12} className="shrink-0 mt-0.5 opacity-70" />
+                          <span>
+                            <span className="font-bold text-[9px] uppercase mr-2 opacity-70 text-destructive/70">Alasan Penolakan:</span>
+                            "{loan.rejection_note}"
+                          </span>
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -130,14 +131,17 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
                   </thead>
                   <tbody className="divide-y divide-muted-foreground/10">
                     {loan.items?.map((item, i) => (
-                      <tr key={i} className={`text-xs transition-colors hover:bg-muted/20 ${item.status === 'rejected' ? 'bg-destructive/5' : ''}`}>
+                      <tr key={i} className={`text-xs transition-colors hover:bg-muted/20 ${item.status === 'rejected' || item.status === 'no_stock' ? 'bg-destructive/5' : ''}`}>
                         <td className="px-4 py-3 font-bold text-foreground">
                           <div className="flex flex-col gap-0.5">
-                            <span className={item.status === 'rejected' ? 'line-through opacity-50' : ''}>
+                            <span className={item.status === 'rejected' || item.status === 'no_stock' ? 'line-through opacity-50' : ''}>
                               {item.item?.name ?? '—'}
                             </span>
                             {item.status === 'rejected' && (
                               <span className="text-[9px] text-destructive font-black uppercase tracking-tighter">Tidak Disetujui</span>
+                            )}
+                            {item.status === 'no_stock' && (
+                              <span className="text-[9px] text-destructive font-black uppercase tracking-tighter">Stok Kosong</span>
                             )}
                           </div>
                         </td>
@@ -153,7 +157,7 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {item.status === 'rejected' ? (
+                          {item.status === 'rejected' || item.status === 'no_stock' ? (
                             <XCircle size={14} className="text-destructive ml-auto" />
                           ) : item.returned_quantity >= item.quantity ? (
                             <CheckCircle2 size={14} className="text-blue-600 ml-auto" />
@@ -219,27 +223,11 @@ export function LoanDetailModal({ loan, open, onOpenChange }: LoanDetailModalPro
 
 
           </div>
-
-          <Separator className="opacity-50" />
-
-          {/* Warnings for Rejected Items */}
-          {loan.items?.some(i => i.status === 'rejected') && (
-            <div className="space-y-6">
-              <section className="space-y-3">
-                <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex gap-2 items-start">
-                  <Info size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
-                    Beberapa barang dalam pengajuan ini ditolak/tidak disetujui oleh GA. Silakan cek rincian barang di atas.
-                  </p>
-                </div>
-              </section>
-            </div>
-          )}
         </div>
 
         <div className="p-4 sm:p-6 sm:px-8 bg-muted/10 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[10px] text-muted-foreground font-medium">
-            Sistem Manajemen Peminjaman Gudang IDN
+            Sistem Manajemen Peminjaman Barang
           </p>
           <Badge variant="outline" className="font-mono text-[9px] opacity-40 uppercase tracking-tighter">
             Created: {formatDateTime(loan.created_at!)}

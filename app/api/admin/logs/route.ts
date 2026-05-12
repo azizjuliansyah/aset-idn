@@ -15,20 +15,64 @@ export async function GET(request: Request) {
   const search = searchParams.get('search') ?? ''
   const action = searchParams.get('action') ?? 'all'
   const entityType = searchParams.get('entity_type') ?? 'all'
-
+  const userId = searchParams.get('user_id') ?? 'all'
+  const startDate = searchParams.get('start_date')
+  const endDate = searchParams.get('end_date')
+  const days = searchParams.get('days') ?? 'all'
+ 
   let q = supabase
     .from('activity_logs')
     .select('*, user:profiles(full_name, role)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
-
+ 
   if (action !== 'all') q = q.eq('action', action)
   if (entityType !== 'all') q = q.eq('entity_type', entityType)
+  if (userId !== 'all') q = q.eq('user_id', userId)
+  
+  if (days !== 'all' && days !== 'custom') {
+    const date = new Date()
+    date.setDate(date.getDate() - parseInt(days))
+    q = q.gte('created_at', date.toISOString())
+  } else {
+    if (startDate) {
+      q = q.gte('created_at', `${startDate}T00:00:00`)
+    }
+    
+    if (endDate) {
+      q = q.lte('created_at', `${endDate}T23:59:59`)
+    }
+  }
   
   if (search) {
-    // Search in details or user full name if possible
-    // Note: searching in jsonb might be complex, let's keep it simple for now
-    q = q.or(`action.ilike.%${search}%,entity_type.ilike.%${search}%`)
+    const s = `%${search}%`
+    
+    // First, find profiles that match the search term to get their IDs
+    const { data: matchedProfiles } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('full_name', s)
+    
+    const matchedUserIds = matchedProfiles?.map(p => p.id) || []
+    
+    // Build the OR conditions
+    let orConditions = [
+      `action.ilike.${s}`,
+      `entity_type.ilike.${s}`,
+      `details->>name.ilike.${s}`,
+      `details->>item_name.ilike.${s}`,
+      `details->>purpose.ilike.${s}`,
+      `details->>note.ilike.${s}`,
+      `details->>full_name.ilike.${s}`,
+      `entity_id.eq.${search}` // Also try exact match for ID if it's a UUID
+    ]
+
+    // If we found matching users, include them in the OR filter
+    if (matchedUserIds.length > 0) {
+      orConditions.push(`user_id.in.(${matchedUserIds.join(',')})`)
+    }
+
+    q = q.or(orConditions.join(','))
   }
 
   const { data, count, error } = await q

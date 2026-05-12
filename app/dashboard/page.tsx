@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardClient } from '@/components/dashboard/dashboard-client'
+import { UserDashboardClient } from '@/components/dashboard/user-dashboard-client'
 import { PageWrapper } from '@/components/shared/page-wrapper'
 
 export const metadata: Metadata = { title: 'Dashboard — Gudang IDN' }
@@ -20,19 +21,15 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  // Redirect role 'user' to loans page
-  if (profile?.role === 'user') {
-    redirect('/dashboard/loans')
-  }
+  const isUser = profile?.role === 'user'
 
-  // Admin and GA can access Dashboard
   return (
     <PageWrapper
-      title="Dashboard"
-      description="Ringkasan aktivitas gudang"
+      title={isUser ? "Ringkasan Saya" : "Dashboard"}
+      description={isUser ? "Ringkasan aktivitas peminjaman Anda" : "Ringkasan aktivitas gudang"}
       contentClassName="bg-transparent p-0"
     >
-      <DashboardClient />
+      {isUser ? <UserDashboardClient /> : <DashboardClient />}
     </PageWrapper>
   )
 }

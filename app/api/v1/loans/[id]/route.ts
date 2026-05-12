@@ -98,43 +98,42 @@ export async function PATCH(
     if (headerErr) return NextResponse.json({ error: headerErr.message }, { status: 400 })
 
     // 2. Handle Stock and Pivot Updates
-    if (action === 'approve') {
+    if (action === 'approve' || action === 'reject') {
       const itemsExtra = extra.items_extra // Record<item_id, { warehouse_id, status }>
-      if (!itemsExtra || Object.keys(itemsExtra).length === 0) {
-        return NextResponse.json({ error: 'Data item tidak lengkap' }, { status: 400 })
+      if (itemsExtra && Object.keys(itemsExtra).length > 0) {
+        // Update each item with its specific warehouse and status
+        const updatePromises = Object.entries(itemsExtra).map(([itemId, data]: [string, any]) => 
+          adminClient
+            .from('loan_items')
+            .update({ 
+              warehouse_id: data.status === 'approved' ? data.warehouse_id : null,
+              status: data.status 
+            })
+            .eq('loan_request_id', id)
+            .eq('item_id', itemId)
+        )
+        await Promise.all(updatePromises)
       }
 
-      // Update each item with its specific warehouse and status
-      const updatePromises = Object.entries(itemsExtra).map(([itemId, data]: [string, any]) => 
-        adminClient
-          .from('loan_items')
-          .update({ 
-            warehouse_id: data.status === 'approved' ? data.warehouse_id : null,
-            status: data.status 
-          })
-          .eq('loan_request_id', id)
-          .eq('item_id', itemId)
-      )
-      await Promise.all(updatePromises)
+      // Insert into stock_out ONLY for items marked as 'approved' (only if approving the whole loan)
+      if (action === 'approve') {
+        const approvedItems = (loan.items as any[]).filter((item: any) => 
+          itemsExtra[item.item_id]?.status === 'approved'
+        )
 
-      // Insert into stock_out ONLY for items marked as 'approved'
-      const approvedItems = (loan.items as any[]).filter((item: any) => 
-        itemsExtra[item.item_id]?.status === 'approved'
-      )
-
-      if (approvedItems.length > 0) {
-        const { reduceStock } = await import('@/lib/stock-service')
-        for (const item of approvedItems) {
-          await reduceStock({
-            itemId: item.item_id,
-            warehouseId: itemsExtra[item.item_id].warehouse_id,
-            quantity: item.quantity,
-            note: `Peminjaman #${id} disetujui`,
-            userId: user.id
-          })
+        if (approvedItems.length > 0) {
+          const { reduceStock } = await import('@/lib/stock-service')
+          for (const item of approvedItems) {
+            await reduceStock({
+              itemId: item.item_id,
+              warehouseId: itemsExtra[item.item_id].warehouse_id,
+              quantity: item.quantity,
+              note: `Peminjaman #${id} disetujui`,
+              userId: user.id
+            })
+          }
         }
       }
-
     } else if (action === 'partial_return') {
       const returns = extra.returns // Record<loan_item_id, { quantity, note }>
       if (!returns || Object.keys(returns).length === 0) {

@@ -12,9 +12,13 @@ export function useLogsManager() {
   const debouncedSearch = useDebounce(search, 400)
   const [actionFilter, setActionFilter] = useState('all')
   const [entityFilter, setEntityFilter] = useState('all')
+  const [userFilter, setUserFilter] = useState('all')
+  const [datePreset, setDatePreset] = useState('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['activity-logs', page, debouncedSearch, actionFilter, entityFilter],
+    queryKey: ['activity-logs', page, debouncedSearch, actionFilter, entityFilter, userFilter, datePreset, startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -22,7 +26,12 @@ export function useLogsManager() {
         search: debouncedSearch,
         action: actionFilter,
         entity_type: entityFilter,
+        user_id: userFilter,
+        days: datePreset,
       })
+      if (startDate) params.set('start_date', startDate)
+      if (endDate) params.set('end_date', endDate)
+      
       const res = await fetch(`/api/admin/logs?${params}`)
       if (!res.ok) throw new Error('Gagal memuat data log')
       return res.json()
@@ -35,6 +44,10 @@ export function useLogsManager() {
       search,
       actionFilter,
       entityFilter,
+      userFilter,
+      datePreset,
+      startDate,
+      endDate,
       PAGE_SIZE,
     },
     handlers: {
@@ -42,6 +55,10 @@ export function useLogsManager() {
       setSearch,
       setActionFilter,
       setEntityFilter,
+      setUserFilter,
+      setDatePreset,
+      setStartDate,
+      setEndDate,
     },
     queries: {
       data,

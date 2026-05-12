@@ -18,6 +18,12 @@ import {
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { LogDetailModal } from './log-detail-modal'
+import { useQuery } from '@tanstack/react-query'
+import { Combobox } from '@/components/ui/combobox'
+import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
+import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react'
 
 export function LogsClient() {
   const { state, handlers, queries } = useLogsManager()
@@ -52,6 +58,32 @@ export function LogsClient() {
       case 'SETTING': return <Smartphone size={12} className="mr-1" />
       default: return <Info size={12} className="mr-1" />
     }
+  }
+
+  // Fetch users for filtering
+  const { data: users } = useQuery({
+    queryKey: ['profiles-filter'],
+    queryFn: async () => {
+      const res = await fetch('/api/v1/profiles')
+      if (!res.ok) throw new Error('Gagal memuat daftar pengguna')
+      return res.json()
+    }
+  })
+
+  const userOptions = [
+    { label: 'Semua Pengguna', value: 'all' },
+    ...(users?.map((u: any) => ({ label: u.full_name, value: u.id })) || [])
+  ]
+
+  const getDateLabel = () => {
+    if (state.datePreset === 'all') return 'Semua Tanggal'
+    if (state.datePreset === 'custom') {
+      if (state.startDate && state.endDate) return `${state.startDate} - ${state.endDate}`
+      if (state.startDate) return `Dari ${state.startDate}`
+      if (state.endDate) return `Sampai ${state.endDate}`
+      return 'Custom Tanggal'
+    }
+    return `${state.datePreset} Hari Terakhir`
   }
 
   return (
@@ -137,7 +169,7 @@ export function LogsClient() {
         onSearchChange={(v) => { handlers.setSearch(v); handlers.setPage(1) }}
         searchPlaceholder="Cari log..."
         filters={
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Aksi</Label>
               <Select value={state.actionFilter} onValueChange={(v) => { handlers.setActionFilter(v); handlers.setPage(1) }}>
@@ -173,6 +205,81 @@ export function LogsClient() {
                   <SelectItem value="SETTING">SETTING</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pengguna</Label>
+              <Combobox 
+                options={userOptions}
+                value={state.userFilter}
+                onValueChange={(v) => { handlers.setUserFilter(v); handlers.setPage(1) }}
+                placeholder="Pilih Pengguna"
+                searchPlaceholder="Cari pengguna..."
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Filter Tanggal</Label>
+              <Popover>
+                <PopoverTrigger render={
+                  <Button variant="outline" className="h-9 w-full justify-between font-normal px-3">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <CalendarIcon size={14} className="text-muted-foreground shrink-0" />
+                      <span className="truncate">{getDateLabel()}</span>
+                    </div>
+                    <ChevronDown size={14} className="text-muted-foreground shrink-0" />
+                  </Button>
+                } />
+                <PopoverContent className="w-64 p-3" align="start">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      {[
+                        { label: 'Semua Tanggal', value: 'all' },
+                        { label: '1 Hari Yang Lalu', value: '1' },
+                        { label: '7 Hari Yang Lalu', value: '7' },
+                        { label: '14 Hari Yang Lalu', value: '14' },
+                        { label: '30 Hari Yang Lalu', value: '30' },
+                        { label: '60 Hari Yang Lalu', value: '60' },
+                        { label: 'Custom Tanggal', value: 'custom' },
+                      ].map((opt) => (
+                        <label key={opt.value} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded transition-colors">
+                          <input
+                            type="radio"
+                            name="datePreset"
+                            value={opt.value}
+                            checked={state.datePreset === opt.value}
+                            onChange={(e) => { handlers.setDatePreset(e.target.value); handlers.setPage(1) }}
+                            className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
+                          />
+                          <span className="text-sm">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {state.datePreset === 'custom' && (
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Mulai Tanggal</Label>
+                          <Input
+                            type="date"
+                            value={state.startDate}
+                            onChange={(e) => { handlers.setStartDate(e.target.value); handlers.setPage(1) }}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Sampai Tanggal</Label>
+                          <Input
+                            type="date"
+                            value={state.endDate}
+                            onChange={(e) => { handlers.setEndDate(e.target.value); handlers.setPage(1) }}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         }

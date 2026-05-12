@@ -15,7 +15,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { LoanDetailModal } from '../loan-detail-modal'
 import type { LoanWithJoins } from '@/hooks/loans/use-ga-loans'
 import { useWarehouses } from '@/hooks/queries/use-warehouses'
-import { formatDateTime } from '@/lib/utils'
+import { cn, formatDateTime } from '@/lib/utils'
 import { Separator } from '@base-ui/react'
 import { toast } from 'sonner'
 
@@ -75,7 +75,7 @@ export function GaLoansDialogs({
   const [rejectionNote, setRejectionNote] = useState('')
   const [actualReturnDate, setActualReturnDate] = useState(new Date().toISOString().slice(0, 16))
   const [expectedReturnDate, setExpectedReturnDate] = useState('')
-  const [itemsExtra, setItemsExtra] = useState<Record<string, { warehouse_id: string, status: 'approved' | 'rejected' }>>({})
+  const [itemsExtra, setItemsExtra] = useState<Record<string, { warehouse_id: string, status: 'approved' | 'rejected' | 'no_stock' }>>({})
   const [partialReturns, setPartialReturns] = useState<Record<string, { quantity: number, note: string }>>({})
 
   const { data: warehouses } = useWarehouses()
@@ -144,6 +144,36 @@ export function GaLoansDialogs({
     enabled: !!approveTarget && Object.keys(itemsExtra).length > 0,
   })
 
+  // Automatically update item status to 'no_stock' when stock is 0
+  useEffect(() => {
+    if (!isCheckingStock && stockInfo && approveTarget) {
+      const updates: Record<string, any> = {}
+      let hasChanges = false
+
+      approveTarget.items?.forEach(item => {
+        const extra = itemsExtra[item.item_id]
+        if (!extra) return
+
+        const currentStock = stockInfo[`${item.item_id}-${extra.warehouse_id}`] ?? 0
+        
+        // If stock is 0 and status is not yet 'no_stock'
+        if (currentStock <= 0 && extra.status !== 'no_stock') {
+          updates[item.item_id] = { ...extra, status: 'no_stock' }
+          hasChanges = true
+        } 
+        // If stock is > 0 and it was 'no_stock' (e.g. warehouse changed), revert to approved
+        else if (currentStock > 0 && extra.status === 'no_stock') {
+          updates[item.item_id] = { ...extra, status: 'approved' }
+          hasChanges = true
+        }
+      })
+
+      if (hasChanges) {
+        setItemsExtra(prev => ({ ...prev, ...updates }))
+      }
+    }
+  }, [stockInfo, isCheckingStock, approveTarget])
+
   const itemsWithInsufficientStock = approveTarget?.items?.filter(item => {
     const extra = itemsExtra[item.item_id]
     if (!extra || extra.status === 'rejected') return false
@@ -154,6 +184,14 @@ export function GaLoansDialogs({
 
   const isAnyStockInsufficient = itemsWithInsufficientStock.length > 0
 
+  // Calculate effectively approved items at top level for consistent use in UI
+  const effectivelyApproved = approveTarget?.items?.filter(item => {
+    const extra = itemsExtra[item.item_id]
+    return extra?.status === 'approved'
+  }) ?? []
+
+  const hasApproved = effectivelyApproved.length > 0
+
   return (
     <>
       <LoanDetailModal
@@ -163,15 +201,15 @@ export function GaLoansDialogs({
       />
 
       <Dialog open={!!approveTarget} onOpenChange={(o) => !o && setApproveTarget(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b m-0">
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle2 size={18} />
               Setujui Peminjaman
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
             <div className="bg-muted/30 p-3 rounded-lg border border-dashed space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase">Daftar Barang & Pengaturan:</p>
               <div className="space-y-4">
@@ -181,17 +219,20 @@ export function GaLoansDialogs({
                   const status = extra?.status ?? 'approved'
                   const currentStock = stockInfo?.[`${item.item_id}-${whId}`] ?? 0
                   const isLow = currentStock < item.quantity && status === 'approved'
-                  const isNoStock = currentStock <= 0 && !isCheckingStock && whId
+                  const isNoStock = status === 'no_stock'
 
                   return (
-                    <div key={i} className={`space-y-3 pb-4 border-b border-muted last:border-0 last:pb-0 transition-all ${status === 'rejected' ? 'bg-destructive/5 -mx-3 px-3 py-3 rounded-lg border-b-0' : ''}`}>
+                    <div key={i} className={cn(
+                      "space-y-3 pb-4 border-b border-muted last:border-0 last:pb-0 transition-all",
+                      (status === 'rejected' || status === 'no_stock') && "bg-destructive/5 -mx-1 px-3 pt-3 mb-2 rounded-lg border-b-0 border border-destructive/10"
+                    )}>
                       <div className="flex items-start justify-between">
                         <div className="flex flex-col min-w-0">
-                          <span className={`text-sm font-bold truncate ${status === 'rejected' ? 'line-through opacity-40' : 'text-foreground'}`}>
+                          <span className={`text-sm font-bold truncate ${(status === 'rejected' || status === 'no_stock') ? 'line-through opacity-40' : 'text-foreground'}`}>
                             {item.item?.name}
                           </span>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <Badge variant="outline" className="h-4 px-1.5 text-[9px] font-bold uppercase tracking-tighter">
+                            <Badge variant="outline" className="h-4 px-1.5 mb-2 text-[9px] font-bold uppercase tracking-tighter">
                               {item.quantity}
                             </Badge>
                             {!isCheckingStock && whId && status === 'approved' && (
@@ -221,13 +262,13 @@ export function GaLoansDialogs({
                             </button>
                           </div>
                         ) : (
-                          <Badge variant="destructive" className="h-6 px-2 text-[9px] uppercase animate-pulse shrink-0 ml-4">
-                            STOK KOSONG / MINUS
+                          <Badge variant="destructive" className="h-6 px-2 text-[10px] font-black uppercase shrink-0 ml-4 bg-red-600 text-white border-red-700 shadow-sm">
+                            STOK KOSONG
                           </Badge>
                         )}
                       </div>
 
-                      {status === 'approved' && (
+                      {(status === 'approved' || status === 'no_stock') && (
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-1.5 px-0.5">
                             <WarehouseIcon size={10} className="text-muted-foreground" />
@@ -253,20 +294,22 @@ export function GaLoansDialogs({
                 })}
               </div>
             </div>
-            <div className="p-3 rounded-lg border border-primary/10 space-y-2">
-              <Label htmlFor="expected-return-date" className="text-xs font-bold uppercase text-primary tracking-tighter">Batas Waktu Pengembalian</Label>
-              <div className="relative">
-                <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-primary pointer-events-none" />
-                <Input
-                  id="expected-return-date"
-                  type="datetime-local"
-                  className="pl-9 border-primary/20 focus:ring-primary/20 h-9 text-xs"
-                  value={expectedReturnDate}
-                  onChange={(e) => setExpectedReturnDate(e.target.value)}
-                />
+            {hasApproved && (
+              <div className="p-3 rounded-lg border border-primary/10 space-y-2">
+                <Label htmlFor="expected-return-date" className="text-xs font-bold uppercase text-primary tracking-tighter">Batas Waktu Pengembalian</Label>
+                <div className="relative">
+                  <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-primary pointer-events-none" />
+                  <Input
+                    id="expected-return-date"
+                    type="datetime-local"
+                    className="pl-9 border-primary/20 focus:ring-primary/20 h-9 text-xs"
+                    value={expectedReturnDate}
+                    onChange={(e) => setExpectedReturnDate(e.target.value)}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground italic px-1">GA dapat merubah batas waktu jika diperlukan</p>
               </div>
-              <p className="text-[10px] text-muted-foreground italic px-1">GA dapat merubah batas waktu jika diperlukan</p>
-            </div>
+            )}
 
             {isCheckingStock && (
               <p className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -274,41 +317,96 @@ export function GaLoansDialogs({
               </p>
             )}
 
-            {isAnyStockInsufficient && (
-              <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex gap-2 items-start">
-                <AlertTriangle size={16} className="text-destructive shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-destructive">Peringatan: Stok Kurang</p>
-                  <p className="text-[11px] text-red-700 leading-relaxed">
-                    Beberapa barang di gudang yang dipilih tidak mencukupi stoknya. Pastikan stok fisik tersedia sebelum melanjutkan.
-                  </p>
-                </div>
-              </div>
-            )}
+            {(() => {
+              if (!hasApproved && !isCheckingStock && approveTarget) {
+                return (
+                  <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg space-y-3">
+                    <div className="flex gap-2 items-start">
+                      <XCircle size={16} className="text-destructive shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-destructive">Seluruh Barang Ditolak</p>
+                        <p className="text-[11px] text-destructive/80 leading-relaxed font-medium">
+                          Karena tidak ada barang yang bisa dipinjamkan, tindakan ini akan otomatis mengubah status pengajuan menjadi <span className="font-bold">Ditolak</span> secara keseluruhan.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 pt-1 border-t border-destructive/10">
+                      <Label htmlFor="auto-reject-note" className="text-[10px] font-bold text-destructive uppercase">Alasan Penolakan *</Label>
+                      <Textarea 
+                        id="auto-reject-note"
+                        placeholder="Berikan alasan penolakan..."
+                        className="text-xs bg-background/50 border-destructive/20 focus-visible:ring-destructive/20 min-h-[60px]"
+                        value={rejectionNote}
+                        onChange={(e) => setRejectionNote(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )
+              }
+
+              // Show "Stok Kurang" warning only if some items ARE approved but some have insufficient stock
+              if (isAnyStockInsufficient && hasApproved) {
+                return (
+                  <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex gap-2 items-start">
+                    <AlertTriangle size={16} className="text-destructive shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-destructive">Peringatan: Stok Kurang</p>
+                      <p className="text-[11px] text-red-700 leading-relaxed">
+                        Beberapa barang di gudang yang dipilih tidak mencukupi stoknya. Pastikan stok fisik tersedia sebelum melanjutkan.
+                      </p>
+                    </div>
+                  </div>
+                )
+              }
+              return null
+            })()}
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setApproveTarget(null)}>Batal</Button>
+          <DialogFooter className="px-6 py-4 bg-muted/5 border-t flex items-center justify-end gap-3 m-0">
+            <Button variant="outline" onClick={() => {
+              setApproveTarget(null)
+              setRejectionNote('')
+            }}>Batal</Button>
             <Button
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className={hasApproved ? "bg-green-600 hover:bg-green-700 text-white" : "bg-destructive hover:bg-destructive/90 text-white"}
               onClick={() => {
-                // Pre-process itemsExtra to mark zero/negative stock items as rejected
+                // Final pre-process for the actual action call
                 const finalItemsExtra = { ...itemsExtra }
-                approveTarget?.items?.forEach(item => {
-                  const whId = finalItemsExtra[item.item_id]?.warehouse_id
-                  const currentStock = stockInfo?.[`${item.item_id}-${whId}`] ?? 0
-                  if (currentStock <= 0 && !isCheckingStock) {
-                    finalItemsExtra[item.item_id].status = 'rejected'
+
+                if (hasApproved) {
+                  onAction(approveTarget!.id, 'approve', {
+                    items_extra: finalItemsExtra,
+                    return_date: expectedReturnDate
+                  })
+                } else {
+                  if (!rejectionNote.trim()) {
+                    toast.error('Alasan penolakan wajib diisi')
+                    return
                   }
-                })
-                onAction(approveTarget!.id, 'approve', {
-                  items_extra: finalItemsExtra,
-                  return_date: expectedReturnDate
-                })
+                  
+                  // Ensure items are marked as rejected only if they aren't 'no_stock'
+                  approveTarget?.items?.forEach(item => {
+                    if (finalItemsExtra[item.item_id].status !== 'no_stock') {
+                      finalItemsExtra[item.item_id].status = 'rejected'
+                    }
+                  })
+
+                  onAction(approveTarget!.id, 'reject', { 
+                    rejection_note: rejectionNote,
+                    items_extra: finalItemsExtra
+                  })
+                  setRejectionNote('')
+                }
               }}
               disabled={isPending || Object.keys(itemsExtra).length === 0 || isCheckingStock}
             >
-              {isPending ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Memproses...</> : 'Setujui Peminjaman'}
+              {isPending ? (
+                <><Loader2 size={14} className="mr-1.5 animate-spin" />Memproses...</>
+              ) : hasApproved ? (
+                'Setujui Peminjaman'
+              ) : (
+                'Tolak Peminjaman'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

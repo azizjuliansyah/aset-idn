@@ -71,17 +71,17 @@ export function Sidebar({ profile, companyName, logoUrl, mobileOpen, desktopOpen
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 h-16 border-b border-sidebar-border flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md overflow-hidden border border-sidebar-border/50">
+        <div className="flex items-center justify-between px-4 h-20 border-b border-sidebar-border flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm overflow-hidden border border-sidebar-border/50 flex-shrink-0">
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
+                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1.5" />
               ) : (
-                <Warehouse size={16} className="text-primary" />
+                <Warehouse size={20} className="text-primary" />
               )}
             </div>
-            <div>
-              <p className="text-sidebar-foreground font-semibold text-sm leading-none">
+            <div className="flex flex-col justify-center min-w-0">
+              <p className="text-sidebar-foreground font-bold text-[13px] leading-tight break-words">
                 {companyName ?? 'Gudang IDN'}
               </p>
             </div>

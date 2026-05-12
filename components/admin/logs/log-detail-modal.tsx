@@ -20,11 +20,14 @@ import {
   Hash,
   Terminal,
   UserCircle,
-  Monitor
+  Monitor,
+  Copy,
+  Check
 } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useState } from "react"
 
 interface LogDetailModalProps {
   log: any | null
@@ -41,9 +44,17 @@ export function LogDetailModal({
   getActionColor,
   getEntityIcon
 }: LogDetailModalProps) {
+  const [copied, setCopied] = useState(false)
   if (!log) return null
 
   const details = log.details || {}
+
+  const handleCopy = () => {
+    const jsonString = JSON.stringify(details, null, 2)
+    navigator.clipboard.writeText(jsonString)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const InfoRow = ({ label, value, icon: Icon }: { label: string, value: React.ReactNode, icon: any }) => (
     <tr className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
@@ -54,7 +65,7 @@ export function LogDetailModal({
         </div>
       </td>
       <td className="py-5 px-10 align-top">
-        <div className="text-sm font-medium">
+        <div className="text-sm font-medium break-words whitespace-normal max-w-full overflow-hidden">
           {value}
         </div>
       </td>
@@ -145,15 +156,35 @@ export function LogDetailModal({
                   value={
                     <div className="bg-slate-950 rounded-xl overflow-hidden border border-slate-800 shadow-xl group my-2">
                       <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
-                        <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">JSON Response</span>
-                        <div className="flex gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-rose-500/30" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/30" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/30" />
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">JSON Response</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={handleCopy}
+                            className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-colors group/copy"
+                          >
+                            {copied ? (
+                              <>
+                                <Check size={10} className="text-emerald-500" />
+                                <span className="text-emerald-500">Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={10} className="group-hover/copy:scale-110 transition-transform" />
+                                <span>Copy JSON</span>
+                              </>
+                            )}
+                          </button>
+                          <div className="flex gap-1.5 ml-2">
+                            <div className="w-2.5 h-2.5 rounded-full bg-rose-500/30" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/30" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/30" />
+                          </div>
                         </div>
                       </div>
                       <div className="p-4">
-                        <pre className="text-[11px] leading-relaxed font-mono text-slate-300 custom-scrollbar overflow-auto max-h-[400px]">
+                        <pre className="text-[11px] leading-relaxed font-mono text-slate-300 custom-scrollbar overflow-y-auto whitespace-pre-wrap break-all max-h-[400px]">
                           {JSON.stringify(details, null, 2)}
                         </pre>
                       </div>

@@ -37,7 +37,7 @@ export interface NavGroup {
 export const navGroups: NavGroup[] = [
   {
     title: 'Utama',
-    roles: ['admin', 'general_affair'],
+    roles: ['admin', 'general_affair', 'user'],
     items: [
       {
         title: 'Dashboard',
@@ -122,12 +122,12 @@ export const navGroups: NavGroup[] = [
     roles: ['general_affair'],
     items: [
       {
-        title: 'Pengajuan Peminjaman',
+        title: 'Kelola Peminjaman',
         href: '/dashboard/ga/loans',
         icon: ShieldCheck,
       },
       {
-        title: 'Kelola Peminjaman',
+        title: 'Riwayat Peminjaman',
         href: '/dashboard/ga/loans/history',
         icon: ClipboardCheck,
       },
