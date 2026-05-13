@@ -15,16 +15,26 @@ export async function GET(request: Request) {
   const pageSize = Math.min(parseInt(searchParams.get('pageSize') ?? '10'), 100)
   const itemId = searchParams.get('item_id') ?? ''
   const search = searchParams.get('search') ?? ''
+  const fromWarehouseId = searchParams.get('from_warehouse_id')
+  const toWarehouseId = searchParams.get('to_warehouse_id')
+  const categoryId = searchParams.get('category_id')
+  const startDate = searchParams.get('start_date')
+  const endDate = searchParams.get('end_date')
   const from = (page - 1) * pageSize
 
   let q = supabase
     .from('stock_transfers')
-    .select('*, item:items!inner(id,name), from:warehouses!from_warehouse_id(id,name), to:warehouses!to_warehouse_id(id,name), creator:profiles!created_by(full_name)', { count: 'exact' })
+    .select('*, item:items!inner(id,name,item_category_id), from:warehouses!from_warehouse_id(id,name), to:warehouses!to_warehouse_id(id,name), creator:profiles!created_by(full_name)', { count: 'exact' })
     .order('date', { ascending: false })
     .range(from, from + pageSize - 1)
 
   if (search) q = q.ilike('item.name', `%${search}%`)
   if (itemId) q = q.eq('item_id', itemId)
+  if (fromWarehouseId) q = q.eq('from_warehouse_id', fromWarehouseId)
+  if (toWarehouseId) q = q.eq('to_warehouse_id', toWarehouseId)
+  if (categoryId) q = q.eq('item.item_category_id', categoryId)
+  if (startDate) q = q.gte('date', startDate)
+  if (endDate) q = q.lte('date', endDate)
 
   const { data, count, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -11,13 +11,20 @@ import { formatDateTime } from '@/lib/utils'
 import { useStockTransfers } from '@/hooks/stock/use-stock-transfers'
 import { StockTransferDialog } from '@/components/warehouse-app/stock/sub-components/stock-transfer-dialog'
 import { StockTransferDetailDialog } from '@/components/warehouse-app/stock/sub-components/stock-transfer-detail-dialog'
+import { StockListFilter } from '@/components/warehouse-app/stock/sub-components/stock-list-filter'
 
 export function StockTransferClient() {
   const {
     page, setPage,
     search, setSearch,
+    fromWarehouseId, setFromWarehouseId,
+    toWarehouseId, setToWarehouseId,
+    categoryId, setCategoryId,
+    dateRange, setDateRange,
     data, isLoading, pageSize,
   } = useStockTransfers()
+
+  const [datePreset, setDatePreset] = useState('all')
 
   const debouncedSearch = useDebounce(search, 400)
 
@@ -55,6 +62,20 @@ export function StockTransferClient() {
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Cari barang..."
+        filters={
+          <StockListFilter 
+            fromWarehouseId={fromWarehouseId}
+            setFromWarehouseId={(v) => { setFromWarehouseId(v); setPage(1) }}
+            toWarehouseId={toWarehouseId}
+            setToWarehouseId={(v) => { setToWarehouseId(v); setPage(1) }}
+            categoryId={categoryId}
+            setCategoryId={(v) => { setCategoryId(v); setPage(1) }}
+            dateRange={dateRange}
+            setDateRange={(v) => { setDateRange(v); setPage(1) }}
+            datePreset={datePreset}
+            setDatePreset={setDatePreset}
+          />
+        }
         actions={
           <Button size="sm" onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
             <Repeat size={14} className="mr-1.5" /> Pindah Barang

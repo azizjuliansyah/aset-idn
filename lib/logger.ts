@@ -26,6 +26,7 @@ export type LogEntityType =
   | 'ITEM_STATUS'
   | 'ITEM_CONDITION'
   | 'STOCK_TRANSFER'
+  | 'STOCK_OPNAME_GROUP'
 
 interface ActivityLogParams {
   action: LogAction

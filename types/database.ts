@@ -154,6 +154,34 @@ export interface StockLedger {
   is_low_stock: boolean
 }
 
+export interface StockOpnameGroup {
+  id: string
+  name: string
+  description: string | null
+  status: 'draft' | 'completed'
+  created_by: string
+  created_at: string
+  updated_at: string
+  // joined
+  creator?: Profile
+}
+
+export interface StockOpname {
+  id: string
+  group_id: string
+  item_id: string
+  warehouse_id: string
+  system_stock: number
+  actual_stock: number
+  difference: number
+  note: string | null
+  created_by: string
+  created_at: string
+  // joined
+  item?: Item
+  warehouse?: Warehouse
+}
+
 export interface LoanRequest {
   id: string
   requested_by: string

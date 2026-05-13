@@ -105,6 +105,11 @@ export const navGroups: NavGroup[] = [
         href: '/dashboard/stock-transfer',
         icon: Repeat,
       },
+      {
+        title: 'Stock Opname',
+        href: '/dashboard/stock-opname',
+        icon: ClipboardCheck,
+      },
     ],
   },
   {

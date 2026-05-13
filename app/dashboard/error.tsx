@@ -61,13 +61,6 @@ export default function Error({
           Kembali ke Beranda
         </Link>
       </div>
-
-      <div className="mt-12 p-4 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/10 flex items-center gap-3">
-        <AlertCircle size={14} className="text-muted-foreground/50" />
-        <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/40">
-          Tim IT telah menerima laporan error ini secara otomatis
-        </p>
-      </div>
     </div>
   )
 }
