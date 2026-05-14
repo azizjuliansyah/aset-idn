@@ -66,9 +66,13 @@ export async function POST(request: Request) {
       }
     }
 
+    const body = await request.json().catch(() => ({}))
+    const { loanId, loanIds } = body
+
     // 3. Get Overdue Loans
     const now = new Date().toISOString()
-    const { data: overdueLoans, error: loansError } = await supabase
+    
+    let query = supabase
       .from('loan_requests')
       .select(`
         *,
@@ -76,11 +80,24 @@ export async function POST(request: Request) {
         items:loan_items(quantity, returned_quantity, item:item_id(name))
       `)
       .eq('status', 'approved')
-      .lt('return_date', now)
+
+    if (loanIds && Array.isArray(loanIds) && loanIds.length > 0) {
+      query = query.in('id', loanIds).lt('return_date', now)
+    } else if (loanId) {
+      query = query.eq('id', loanId).lt('return_date', now)
+    } else {
+      query = query.lt('return_date', now)
+    }
+
+    const { data: overdueLoans, error: loansError } = await query
 
     if (loansError) throw loansError
     if (!overdueLoans || overdueLoans.length === 0) {
-      return NextResponse.json({ success: true, message: 'Tidak ada peminjaman yang terlambat saat ini.' })
+      let message = 'Tidak ada peminjaman yang terlambat saat ini.'
+      if (loanIds) message = 'Peminjaman terpilih tidak ada yang berstatus disetujui dan terlambat.'
+      else if (loanId) message = 'Peminjaman tidak ditemukan, tidak disetujui, atau belum terlambat.'
+      
+      return NextResponse.json({ success: true, message })
     }
 
     if (!settings?.wa_overdue_message_format) {

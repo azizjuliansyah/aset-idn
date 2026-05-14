@@ -16,9 +16,11 @@ export async function GET(request: Request) {
   const pageSize = parseInt(searchParams.get('pageSize') ?? '10')
   const status = searchParams.get('status') ?? 'all'
   const search = searchParams.get('search') ?? ''
+  const ids = searchParams.get('ids') ?? ''
   const actionedBy = searchParams.get('actioned_by') ?? 'all'
   const dateFrom = searchParams.get('date_from') ?? ''
   const dateTo = searchParams.get('date_to') ?? ''
+  const dueFilter = searchParams.get('due_filter') ?? 'all'
 
   // Build the select query
   // We join loan_items and then items inside it
@@ -55,6 +57,16 @@ export async function GET(request: Request) {
 
   if (dateFrom) q = q.gte('loan_date', dateFrom)
   if (dateTo) q = q.lte('loan_date', dateTo)
+
+  if (ids) {
+    const idList = ids.split(',')
+    q = q.in('id', idList)
+  }
+
+  if (dueFilter === 'overdue') {
+    q = q.lt('return_date', new Date().toISOString())
+      .not('return_date', 'is', null)
+  }
 
   if (search) {
     if (profile.role === 'user') {

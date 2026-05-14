@@ -49,8 +49,10 @@ export function DashboardClient() {
               <p className="text-sm text-muted-foreground font-medium">Memuat data analisis...</p>
             </div>
           </Card>
-        ) : (
+        ) : mounted ? (
           <StockChart data={queries.chart.data ?? []} />
+        ) : (
+          <div className="w-full h-[450px] bg-card/30 rounded-xl animate-pulse" />
         )}
       </div>
 

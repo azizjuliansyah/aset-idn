@@ -34,12 +34,17 @@ interface GaLoansDialogsProps {
   setDeleteTarget: (loan: LoanWithJoins | null) => void
   remindTarget: LoanWithJoins | null
   setRemindTarget: (loan: LoanWithJoins | null) => void
+  remindOverdueTarget: LoanWithJoins | null
+  setRemindOverdueTarget: (loan: LoanWithJoins | null) => void
   overdueConfirm: boolean
   setOverdueConfirm: (open: boolean) => void
   onAction: (id: string, action: string, extra?: any) => void
   onDelete: (id: string) => void
   onRemind: (id: string) => void
+  onRemindOverdueSingle: (id: string) => void
   onRemindOverdue: () => void
+  selectedCount?: number
+  overdueCount?: number
   isPending: boolean
   isDeleting: boolean
   isReminding: boolean
@@ -61,12 +66,17 @@ export function GaLoansDialogs({
   setDeleteTarget,
   remindTarget,
   setRemindTarget,
+  remindOverdueTarget,
+  setRemindOverdueTarget,
   overdueConfirm,
   setOverdueConfirm,
   onAction,
   onDelete,
   onRemind,
+  onRemindOverdueSingle,
   onRemindOverdue,
+  selectedCount = 0,
+  overdueCount = 0,
   isPending,
   isDeleting,
   isReminding,
@@ -449,13 +459,28 @@ export function GaLoansDialogs({
       />
 
       <ConfirmDialog
+        open={!!remindOverdueTarget}
+        onOpenChange={(o) => !o && setRemindOverdueTarget(null)}
+        title="Kirim Pengingat Keterlambatan"
+        confirmText="Kirim Pengingat"
+        loadingText="Mengirim..."
+        variant="destructive"
+        description={`Kirim pesan pengingat keterlambatan via WhatsApp ke ${remindOverdueTarget?.requester?.full_name || 'User'}? Pesan akan menggunakan template pesan terlambat.`}
+        onConfirm={() => onRemindOverdueSingle(remindOverdueTarget!.id)}
+        loading={isRemindingOverdue}
+      />
+
+      <ConfirmDialog
         open={overdueConfirm}
         onOpenChange={setOverdueConfirm}
         title="Kirim Pengingat Keterlambatan"
         confirmText="Kirim Sekarang"
         loadingText="Mengirim..."
         variant="default"
-        description="Kirim pengingat WhatsApp ke semua peminjam yang sudah melewati batas waktu pengembalian? Pesan akan dikirim satu per satu sesuai template yang diatur."
+        description={selectedCount > 0 
+          ? `Kirim pengingat WhatsApp ke ${selectedCount} peminjam terpilih yang sudah melewati batas waktu pengembalian?`
+          : `Kirim pengingat WhatsApp ke ${overdueCount} peminjam yang sudah melewati batas waktu pengembalian saat ini? Pesan akan dikirim satu per satu sesuai template yang diatur.`
+        }
         onConfirm={onRemindOverdue}
         loading={isRemindingOverdue}
       />

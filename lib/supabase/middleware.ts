@@ -12,8 +12,7 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isApiRoute = pathname.startsWith('/api')
   const isAuthPage = pathname.startsWith('/login') || 
-                     pathname.startsWith('/forgot-password') || 
-                     pathname.startsWith('/reset-password')
+                     pathname.startsWith('/forgot-password')
 
   // Early return for API routes and OPTIONS requests to avoid breaking fetch/CORS
   if (request.method === 'OPTIONS') {

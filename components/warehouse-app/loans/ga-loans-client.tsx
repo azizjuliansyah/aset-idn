@@ -23,8 +23,11 @@ interface GaLoansClientProps {
   isHistory?: boolean
 }
 
+const EMPTY_LOANS: LoanWithJoins[] = []
+
 export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
-  const { state, handlers, queries, mutations } = useGaLoans(isHistory)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const { state, handlers, queries, mutations } = useGaLoans(isHistory, selectedIds)
 
   const [detailLoan, setDetailLoan] = useState<LoanWithJoins | null>(null)
   const [approveTarget, setApproveTarget] = useState<LoanWithJoins | null>(null)
@@ -33,6 +36,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
   const [undoTarget, setUndoTarget] = useState<LoanWithJoins | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<LoanWithJoins | null>(null)
   const [remindTarget, setRemindTarget] = useState<LoanWithJoins | null>(null)
+  const [remindOverdueTarget, setRemindOverdueTarget] = useState<LoanWithJoins | null>(null)
   const [overdueConfirm, setOverdueConfirm] = useState(false)
   const [requestOpen, setRequestOpen] = useState(false)
 
@@ -178,6 +182,9 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
                         <DropdownMenuItem onClick={() => setRemindTarget(row)} className="text-amber-600 focus:text-amber-600 focus:bg-amber-50">
                           <MessageSquareWarning size={14} className="mr-2" /> Ingatkan Pengembalian
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setRemindOverdueTarget(row)} className="text-destructive focus:text-destructive focus:bg-red-50 font-medium">
+                          <MessageSquareWarning size={14} className="mr-2" /> Kirim Pengingat Terlambat
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setReturnTarget(row)} className="text-blue-600 focus:text-blue-600 focus:bg-blue-50">
                           <RotateCcw size={14} className="mr-2" /> Tandai Dikembalikan
                         </DropdownMenuItem>
@@ -207,7 +214,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
             ),
           },
         ]}
-        data={queries.data?.data ?? []}
+        data={queries.data?.data ?? EMPTY_LOANS}
         isLoading={queries.isLoading}
         page={state.page}
         pageSize={state.PAGE_SIZE}
@@ -224,7 +231,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
               className="h-9 gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50" 
               size="sm"
             >
-              <MessageSquareWarning size={16} /> Kirim Pengingat Terlambat
+              <MessageSquareWarning size={16} /> Kirim Pengingat Terlambat {queries.validSelectedCount > 0 && `(${queries.validSelectedCount})`}
             </Button>
             <Button onClick={() => setRequestOpen(true)} className="h-9 gap-1.5" size="sm">
               <Plus size={16} /> Pinjam Barang
@@ -259,6 +266,8 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         }
         emptyText={isHistory ? "Belum ada riwayat peminjaman" : "Tidak ada peminjaman yang perlu ditangani"}
         onBulkDelete={!isHistory ? (ids) => mutations.deleteBulkLoans.mutate(ids) : undefined}
+        selectedIds={selectedIds}
+        onSelectedIdsChange={setSelectedIds}
       />
 
       <GaLoansDialogs 
@@ -276,12 +285,22 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         setDeleteTarget={setDeleteTarget}
         remindTarget={remindTarget}
         setRemindTarget={setRemindTarget}
+        remindOverdueTarget={remindOverdueTarget}
+        setRemindOverdueTarget={setRemindOverdueTarget}
         overdueConfirm={overdueConfirm}
         setOverdueConfirm={setOverdueConfirm}
         onAction={handleAction}
         onDelete={(id) => mutations.deleteLoan.mutate(id, { onSuccess: () => setDeleteTarget(null) })}
         onRemind={(id) => mutations.remindLoan.mutate(id, { onSuccess: () => setRemindTarget(null) })}
-        onRemindOverdue={() => mutations.remindOverdue.mutate(undefined, { onSuccess: () => setOverdueConfirm(false) })}
+        onRemindOverdueSingle={(id) => mutations.remindOverdue.mutate(id, { onSuccess: () => setRemindOverdueTarget(null) })}
+        onRemindOverdue={() => mutations.remindOverdue.mutate(selectedIds.length > 0 ? selectedIds : undefined, { 
+          onSuccess: () => {
+            setOverdueConfirm(false)
+            setSelectedIds([])
+          } 
+        })}
+        selectedCount={queries.validSelectedCount}
+        overdueCount={queries.overdueCount}
         isPending={mutations.performAction.isPending}
         isDeleting={mutations.deleteLoan.isPending}
         isReminding={mutations.remindLoan.isPending}

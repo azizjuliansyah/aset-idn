@@ -47,29 +47,24 @@ export async function GET(request: Request) {
   if (search) {
     const s = `%${search}%`
     
-    // First, find profiles that match the search term to get their IDs
-    const { data: matchedProfiles } = await supabase
-      .from('profiles')
-      .select('id')
-      .ilike('full_name', s)
-    
-    const matchedUserIds = matchedProfiles?.map(p => p.id) || []
-    
     // Build the OR conditions
     let orConditions = [
-      `action.ilike.${s}`,
-      `entity_type.ilike.${s}`,
       `details->>name.ilike.${s}`,
       `details->>item_name.ilike.${s}`,
       `details->>purpose.ilike.${s}`,
       `details->>note.ilike.${s}`,
       `details->>full_name.ilike.${s}`,
-      `entity_id.eq.${search}` // Also try exact match for ID if it's a UUID
+      `details->>atas_nama.ilike.${s}`,
+      `details->>warehouse_name.ilike.${s}`,
+      `details->>from_warehouse.ilike.${s}`,
+      `details->>to_warehouse.ilike.${s}`,
+      `details->>rejection_note.ilike.${s}`
     ]
 
-    // If we found matching users, include them in the OR filter
-    if (matchedUserIds.length > 0) {
-      orConditions.push(`user_id.in.(${matchedUserIds.join(',')})`)
+    // Only add entity_id filter if it's a valid UUID to prevent database errors
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search)
+    if (isUuid) {
+      orConditions.push(`entity_id.eq.${search}`)
     }
 
     q = q.or(orConditions.join(','))

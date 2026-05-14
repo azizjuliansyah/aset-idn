@@ -1,5 +1,5 @@
 'use client'
-
+ 
 import {
   LineChart,
   Line,
@@ -7,13 +7,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
-  Area,
-  AreaChart,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { TrendingUp, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react'
+import { TrendingUp } from 'lucide-react'
 
 interface StockChartProps {
   data: {
@@ -50,9 +47,9 @@ export function StockChart({ data }: StockChartProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:px-6">
-        <div className="h-[250px] sm:h-[350px] w-full relative">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+      <CardContent className="px-2 sm:px-6 min-w-0">
+        <div className="w-full relative min-h-[250px] sm:min-h-[350px]">
+          <ResponsiveContainer width="99%" height={350} debounce={100}>
             <LineChart
               data={data}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

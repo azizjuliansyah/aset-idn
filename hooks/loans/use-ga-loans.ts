@@ -11,8 +11,9 @@ export type { LoanWithJoins }
 
 
 const PAGE_SIZE = 10
+const EMPTY_ARRAY: string[] = []
 
-export function useGaLoans(isHistory: boolean) {
+export function useGaLoans(isHistory: boolean, selectedIds: string[] = EMPTY_ARRAY) {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -38,6 +39,42 @@ export function useGaLoans(isHistory: boolean) {
       return await res.json() as { id: string; full_name: string }[]
     },
     staleTime: 1000 * 60 * 60, // 1 hour
+  })
+
+  const { data: overdueCountData } = useQuery({
+    queryKey: ['loans_ga', 'overdue_count'],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        status: 'approved',
+        due_filter: 'overdue',
+        page: '1',
+        pageSize: '1'
+      })
+      const res = await fetch(`/api/v1/loans?${params}`)
+      if (!res.ok) return { count: 0 }
+      const json = await res.json()
+      return { count: json.count || 0 }
+    },
+    enabled: !isHistory,
+  })
+
+  const { data: validSelectedCountData } = useQuery({
+    queryKey: ['loans_ga', 'valid_selected_count', selectedIds],
+    queryFn: async () => {
+      if (!selectedIds || selectedIds.length === 0) return { count: 0 }
+      const params = new URLSearchParams({
+        ids: selectedIds.join(','),
+        status: 'approved',
+        due_filter: 'overdue',
+        page: '1',
+        pageSize: '1'
+      })
+      const res = await fetch(`/api/v1/loans?${params}`)
+      if (!res.ok) return { count: 0 }
+      const json = await res.json()
+      return { count: json.count || 0 }
+    },
+    enabled: !!selectedIds && selectedIds.length > 0 && !isHistory,
   })
 
   const { data, isLoading } = useQuery({
@@ -203,6 +240,8 @@ export function useGaLoans(isHistory: boolean) {
       data,
       isLoading,
       handlers,
+      overdueCount: overdueCountData?.count || 0,
+      validSelectedCount: validSelectedCountData?.count || 0
     },
     mutations: {
       performAction,
@@ -210,10 +249,21 @@ export function useGaLoans(isHistory: boolean) {
       deleteBulkLoans,
       remindLoan,
       remindOverdue: useMutation({
-        mutationFn: async () => {
-          const res = await fetch('/api/v1/loans/remind-overdue', { method: 'POST' })
+        mutationFn: async (target?: string | string[]) => {
+          const res = await fetch('/api/v1/loans/remind-overdue', { 
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-manual-trigger': 'true'
+            },
+            body: JSON.stringify(
+              Array.isArray(target) 
+                ? { loanIds: target } 
+                : { loanId: target }
+            )
+          })
           const result = await res.json()
-          if (!res.ok) throw new Error(result.error ?? 'Gagal mengirim pengingat massal')
+          if (!res.ok) throw new Error(result.error ?? 'Gagal mengirim pengingat')
           return result
         },
         onSuccess: (res) => toast.success(res.message || 'Pengingat massal berhasil dikirim'),

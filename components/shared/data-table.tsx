@@ -39,6 +39,8 @@ interface DataTableProps<T> {
   emptyText?: string
   onBulkDelete?: (ids: string[]) => void
   bulkActions?: (selectedIds: string[], selectedRows: T[]) => React.ReactNode
+  selectedIds?: string[]
+  onSelectedIdsChange?: (ids: string[]) => void
 }
 
 export function DataTable<T extends { id: string }>({
@@ -57,8 +59,24 @@ export function DataTable<T extends { id: string }>({
   emptyText = 'Tidak ada data',
   onBulkDelete,
   bulkActions,
+  selectedIds: externalSelectedIds,
+  onSelectedIdsChange: externalOnSelectedIdsChange,
 }: DataTableProps<T>) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [internalSelectedIds, setInternalSelectedIds] = useState<string[]>([])
+  const isControlled = externalSelectedIds !== undefined
+  const selectedIds = isControlled ? externalSelectedIds : internalSelectedIds
+
+  const setSelectedIds = (ids: string[] | ((prev: string[]) => string[])) => {
+    if (typeof ids === 'function') {
+      const newIds = ids(selectedIds)
+      if (!isControlled) setInternalSelectedIds(newIds)
+      externalOnSelectedIdsChange?.(newIds)
+    } else {
+      if (!isControlled) setInternalSelectedIds(ids)
+      externalOnSelectedIdsChange?.(ids)
+    }
+  }
+
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false)
   const totalPages = Math.ceil(totalCount / pageSize)
   const from = (page - 1) * pageSize + 1
@@ -66,7 +84,10 @@ export function DataTable<T extends { id: string }>({
 
   // Reset selection when data changes (search or page change)
   useEffect(() => {
-    setSelectedIds([])
+    if (selectedIds.length > 0) {
+      setSelectedIds([])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   function getCellValue(row: T, key: string): unknown {
