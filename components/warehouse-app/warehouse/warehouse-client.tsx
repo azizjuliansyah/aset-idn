@@ -88,7 +88,13 @@ export function WarehouseClient() {
         }
       }
     },
-    onSuccess: () => { toast.success(editItem ? 'Gudang diperbarui' : 'Gudang ditambahkan'); qc.invalidateQueries({ queryKey: ['warehouses'] }); setDialogOpen(false) },
+    onSuccess: () => { 
+      toast.success(editItem ? 'Gudang diperbarui' : 'Gudang ditambahkan')
+      qc.invalidateQueries({ queryKey: ['warehouses'] })
+      qc.invalidateQueries({ queryKey: ['warehouses_all'] })
+      qc.invalidateQueries({ queryKey: ['warehouses_for_loan'] })
+      setDialogOpen(false) 
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -102,7 +108,13 @@ export function WarehouseClient() {
         throw new Error(errData.error || 'Gagal menghapus gudang')
       }
     },
-    onSuccess: () => { toast.success('Gudang dihapus'); qc.invalidateQueries({ queryKey: ['warehouses'] }); setDeleteItem(null) },
+    onSuccess: () => { 
+      toast.success('Gudang dihapus')
+      qc.invalidateQueries({ queryKey: ['warehouses'] })
+      qc.invalidateQueries({ queryKey: ['warehouses_all'] })
+      qc.invalidateQueries({ queryKey: ['warehouses_for_loan'] })
+      setDeleteItem(null) 
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -115,7 +127,12 @@ export function WarehouseClient() {
         fetch(`/api/v1/warehouses/${id}`, { method: 'DELETE' })
       ))
     },
-    onSuccess: () => { toast.success('Gudang terpilih dihapus'); qc.invalidateQueries({ queryKey: ['warehouses'] }) },
+    onSuccess: () => { 
+      toast.success('Gudang terpilih dihapus')
+      qc.invalidateQueries({ queryKey: ['warehouses'] })
+      qc.invalidateQueries({ queryKey: ['warehouses_all'] })
+      qc.invalidateQueries({ queryKey: ['warehouses_for_loan'] })
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 

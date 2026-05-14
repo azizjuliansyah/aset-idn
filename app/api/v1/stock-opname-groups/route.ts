@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const endDate = searchParams.get('end_date')
   const from = (page - 1) * pageSize
 
-  let selectStr = '*, creator:profiles(full_name)'
+  let selectStr = 'id, name, description, status, created_by, created_at, creator:profiles(full_name)'
   if (warehouseId || categoryId) {
     selectStr += ', stock_opnames!inner(warehouse_id, item:items!inner(item_category_id))'
   }
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       status: 'draft',
       created_by: user.id
     })
-    .select()
+    .select('id, name, description, status, created_by, created_at')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

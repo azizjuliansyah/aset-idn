@@ -37,7 +37,7 @@ export function useStockTransactions(type: 'in' | 'out') {
     queryFn: async () => {
       let q = supabase
         .from(table)
-        .select('*, item:items!inner(id,name,item_category_id,item_category:item_category(name)), warehouse:warehouses(id,name), creator:profiles!created_by(full_name)', { count: 'exact' })
+        .select('*, item:items!inner(id,name,item_category_id,item_category:item_category(name)), warehouse:warehouses(id,name), creator:profiles!created_by(full_name)', { count: 'planned' })
         .order('date', { ascending: false })
         .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
 

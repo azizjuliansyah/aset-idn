@@ -49,7 +49,7 @@ export function StockOpnameClient() {
             render: (v, row) => (
               <button 
                 onClick={() => router.push(`/dashboard/stock-opname/${row.id}`)}
-                className="font-bold text-red-600 hover:underline text-left"
+                className="font-bold text-red-600 hover:underline cursor-pointer text-left"
               >
                 {v as string}
               </button>

@@ -18,7 +18,7 @@ export async function POST(
   // 1. Fetch group and its entries
   const { data: group, error: groupError } = await supabase
     .from('stock_opname_groups')
-    .select('*, entries:stock_opnames(*)')
+    .select('id, name, description, status, created_by, created_at, entries:stock_opnames(id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, created_at)')
     .eq('id', id)
     .single()
 
@@ -27,17 +27,23 @@ export async function POST(
     return NextResponse.json({ error: 'Group sudah selesai' }, { status: 400 })
   }
 
-  const entries = group.entries || []
-  if (entries.length === 0) {
+  const rawEntries = group.entries || []
+  if (rawEntries.length === 0) {
     return NextResponse.json({ error: 'Tidak ada item untuk difinalisasi' }, { status: 400 })
   }
+
+  // Calculate difference for each entry
+  const entries = rawEntries.map((e: any) => ({
+    ...e,
+    difference: e.actual_stock - e.system_stock
+  }))
 
   try {
     // 2. Perform adjustments for each entry
     for (const entry of entries) {
       const { item_id, warehouse_id, difference, note } = entry
       
-      if (difference === 0) continue
+      if (!difference || difference === 0) continue
 
       const adjustmentNote = `[OPNAME] Penyesuaian dari group: ${group.name}${note ? ` - ${note}` : ''}`
 

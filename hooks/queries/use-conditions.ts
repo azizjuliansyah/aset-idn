@@ -17,5 +17,8 @@ export function useItemConditions() {
       return (data ?? []) as ItemCondition[]
     },
     staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 }

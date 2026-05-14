@@ -22,15 +22,70 @@ export async function GET(request: Request) {
   const dateTo = searchParams.get('date_to') ?? ''
   const dueFilter = searchParams.get('due_filter') ?? 'all'
 
+  const isSummary = searchParams.get('summary') === 'true'
+
+  if (isSummary) {
+    let q = supabase.from('loan_requests').select('id', { count: 'exact', head: true })
+
+    if (profile.role === 'user') {
+      q = q.eq('requested_by', user.id)
+    }
+
+    if (status !== 'all') {
+      const statusList = status.split(',')
+      q = q.in('status', statusList)
+    }
+    
+    if (actionedBy !== 'all') {
+      q = q.eq('actioned_by', actionedBy)
+    }
+
+    if (dateFrom) q = q.gte('loan_date', dateFrom)
+    if (dateTo) q = q.lte('loan_date', dateTo)
+
+    if (ids) {
+      const idList = ids.split(',')
+      q = q.in('id', idList)
+    }
+
+    if (dueFilter === 'overdue') {
+      q = q.lt('return_date', new Date().toISOString())
+        .not('return_date', 'is', null)
+    }
+
+    const { count, error } = await q
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    return NextResponse.json({ count: count ?? 0 })
+  }
+
   // Build the select query
   // We join loan_items and then items inside it
   const selectQuery = `
-    *,
+    id,
+    purpose,
+    loan_date,
+    return_date,
+    actual_return_date,
+    note,
+    requested_by,
+    created_by,
+    atas_nama,
+    is_by_ga,
+    status,
+    actioned_by,
+    created_at,
+    rejection_note,
     items:loan_items(
-      *,
+      id,
+      loan_request_id,
+      item_id,
+      quantity,
+      warehouse_id,
+      status,
+      returned_quantity,
       item:items(id, name, price),
-      warehouse:warehouses(id, name),
-      returns:loan_item_returns(*)
+      warehouse:warehouses(id, name)
     ),
     requester:profiles!loan_requests_requested_by_fkey(id, full_name),
     actioner:profiles!loan_requests_actioned_by_fkey(id, full_name)

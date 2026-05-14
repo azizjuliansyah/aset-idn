@@ -265,6 +265,7 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
         open={isEntryDialogOpen}
         onOpenChange={setIsEntryDialogOpen}
         groupId={id}
+        existingEntries={group.entries}
       />
 
       <StockOpnameEntryDialog
@@ -272,6 +273,7 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
         onOpenChange={(open) => !open && setEditEntryData(null)}
         groupId={id}
         initialData={editEntryData}
+        existingEntries={group.entries}
       />
 
       <ConfirmDialog

@@ -91,6 +91,7 @@ export function ItemConditionClient() {
     onSuccess: () => { 
       toast.success(editItem ? 'Kondisi diperbarui' : 'Kondisi ditambahkan')
       qc.invalidateQueries({ queryKey: ['item_condition'] })
+      qc.invalidateQueries({ queryKey: ['item_condition_all'] })
       setDialogOpen(false) 
     },
     onError: (err: Error) => toast.error(err.message),
@@ -110,6 +111,7 @@ export function ItemConditionClient() {
     onSuccess: () => { 
       toast.success('Kondisi dihapus')
       qc.invalidateQueries({ queryKey: ['item_condition'] })
+      qc.invalidateQueries({ queryKey: ['item_condition_all'] })
       setDeleteItem(null) 
     },
     onError: (err: Error) => toast.error(err.message),
@@ -124,6 +126,7 @@ export function ItemConditionClient() {
     onSuccess: () => { 
       toast.success('Kondisi terpilih dihapus')
       qc.invalidateQueries({ queryKey: ['item_condition'] }) 
+      qc.invalidateQueries({ queryKey: ['item_condition_all'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })

@@ -28,7 +28,7 @@ export async function POST(
     // 2. Get Loan Details with Relations
     const { data: loan, error: loanError } = await supabase
       .from('loan_requests')
-      .select('*, requester:requested_by(full_name, phone), items:loan_items(quantity, item:item_id(name))')
+      .select('id, purpose, loan_date, return_date, status, requested_by, requester:requested_by(full_name, phone), items:loan_items(quantity, item:item_id(name))')
       .eq('id', id)
       .single()
 
@@ -52,7 +52,7 @@ export async function POST(
     // 3. Get Company Settings for WA Format
     const { data: settings } = await supabase
       .from('company_settings')
-      .select('*')
+      .select('wa_message_format, wa_group_id, wa_group_message_format, wa_api_key, wa_number_key')
       .limit(1)
       .single<CompanySettings>()
 

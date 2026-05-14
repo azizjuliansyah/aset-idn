@@ -26,7 +26,7 @@ export async function PATCH(
       minimum_stock: body.minimum_stock,
     })
     .eq('id', id)
-    .select()
+    .select('id, name, description, item_category_id, item_status_id, item_condition_id, minimum_stock, price, status, note, created_at, created_by')
     .single()
 
   if (error) {

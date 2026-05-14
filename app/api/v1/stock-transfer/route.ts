@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
   let q = supabase
     .from('stock_transfers')
-    .select('*, item:items!inner(id,name,item_category_id), from:warehouses!from_warehouse_id(id,name), to:warehouses!to_warehouse_id(id,name), creator:profiles!created_by(full_name)', { count: 'exact' })
+    .select('id, item_id, from_warehouse_id, to_warehouse_id, quantity, date, note, created_at, created_by, item:items!inner(id,name,item_category_id), from:warehouses!from_warehouse_id(id,name), to:warehouses!to_warehouse_id(id,name), creator:profiles!created_by(full_name)', { count: 'exact' })
     .order('date', { ascending: false })
     .range(from, from + pageSize - 1)
 

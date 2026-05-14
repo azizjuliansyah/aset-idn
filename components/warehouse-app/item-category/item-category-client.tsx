@@ -112,7 +112,12 @@ export function ItemCategoryClient() {
         }
       }
     },
-    onSuccess: () => { toast.success(editItem ? 'Kategori diperbarui' : 'Kategori ditambahkan'); qc.invalidateQueries({ queryKey: ['item_category'] }); setDialogOpen(false) },
+    onSuccess: () => { 
+      toast.success(editItem ? 'Kategori diperbarui' : 'Kategori ditambahkan')
+      qc.invalidateQueries({ queryKey: ['item_category'] })
+      qc.invalidateQueries({ queryKey: ['item_category_all'] })
+      setDialogOpen(false) 
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -126,7 +131,12 @@ export function ItemCategoryClient() {
         throw new Error(errData.error || 'Gagal menghapus kategori')
       }
     },
-    onSuccess: () => { toast.success('Kategori dihapus'); qc.invalidateQueries({ queryKey: ['item_category'] }); setDeleteItem(null) },
+    onSuccess: () => { 
+      toast.success('Kategori dihapus')
+      qc.invalidateQueries({ queryKey: ['item_category'] })
+      qc.invalidateQueries({ queryKey: ['item_category_all'] })
+      setDeleteItem(null) 
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -136,7 +146,11 @@ export function ItemCategoryClient() {
         fetch(`/api/v1/item-categories/${id}`, { method: 'DELETE' })
       ))
     },
-    onSuccess: () => { toast.success('Kategori terpilih dihapus'); qc.invalidateQueries({ queryKey: ['item_category'] }) },
+    onSuccess: () => { 
+      toast.success('Kategori terpilih dihapus')
+      qc.invalidateQueries({ queryKey: ['item_category'] })
+      qc.invalidateQueries({ queryKey: ['item_category_all'] })
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 

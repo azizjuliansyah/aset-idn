@@ -22,7 +22,7 @@ export async function GET(request: Request) {
  
   let q = supabase
     .from('activity_logs')
-    .select('*, user:profiles(full_name, role)', { count: 'exact' })
+    .select('id, user_id, action, entity_type, entity_id, details, created_at, user:profiles(full_name, role)', { count: 'planned' })
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
  

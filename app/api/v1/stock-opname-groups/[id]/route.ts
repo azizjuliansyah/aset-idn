@@ -23,13 +23,13 @@ export async function GET(
     // We execute these in parallel to improve performance
     const fetchGroup = supabase
       .from('stock_opname_groups')
-      .select('*, creator:profiles(full_name)')
+      .select('id, name, description, status, created_by, created_at, creator:profiles(full_name)')
       .eq('id', groupId)
       .single()
 
     const fetchEntries = supabase
       .from('stock_opnames')
-      .select('*, item:items(name, category:item_category(name)), warehouse:warehouses(name)')
+      .select('id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, created_at, item:items(name, category:item_category(name)), warehouse:warehouses(name)')
       .eq('group_id', groupId)
       .order('created_at', { ascending: true })
 
@@ -49,10 +49,17 @@ export async function GET(
       return serverError(entriesResponse.error.message)
     }
 
+    // Map entries to include difference (actual - system)
+    const entries = (entriesResponse.data || []).map((entry: any) => ({
+      ...entry,
+      physical_stock: entry.actual_stock, // For backward compatibility with frontend if needed
+      difference: entry.actual_stock - entry.system_stock
+    }))
+
     return NextResponse.json({
       data: {
         ...groupResponse.data,
-        entries: entriesResponse.data || []
+        entries
       }
     })
   } catch (err: any) {

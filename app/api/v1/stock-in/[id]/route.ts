@@ -22,7 +22,7 @@ export async function PATCH(
       note: body.note ?? null,
     })
     .eq('id', id)
-    .select('*, items(name)')
+    .select('id, item_id, warehouse_id, quantity, date, note, created_at, created_by, items(name)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

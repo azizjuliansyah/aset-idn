@@ -114,6 +114,7 @@ export function ItemStatusClient() {
     onSuccess: () => {
       toast.success(editItem ? 'Status diperbarui' : 'Status ditambahkan')
       qc.invalidateQueries({ queryKey: ['item_status'] })
+      qc.invalidateQueries({ queryKey: ['item_status_all'] })
       setDialogOpen(false)
     },
     onError: (err: Error) => toast.error(err.message),
@@ -133,6 +134,7 @@ export function ItemStatusClient() {
     onSuccess: () => {
       toast.success('Status dihapus')
       qc.invalidateQueries({ queryKey: ['item_status'] })
+      qc.invalidateQueries({ queryKey: ['item_status_all'] })
       setDeleteItem(null)
     },
     onError: (err: Error) => toast.error(err.message),
@@ -147,6 +149,7 @@ export function ItemStatusClient() {
     onSuccess: () => {
       toast.success('Status terpilih dihapus')
       qc.invalidateQueries({ queryKey: ['item_status'] })
+      qc.invalidateQueries({ queryKey: ['item_status_all'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })

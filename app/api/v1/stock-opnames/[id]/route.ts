@@ -35,7 +35,7 @@ export async function PATCH(
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
-    .select()
+    .select('id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, created_at, created_by')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

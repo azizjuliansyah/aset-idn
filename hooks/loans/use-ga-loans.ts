@@ -45,10 +45,9 @@ export function useGaLoans(isHistory: boolean, selectedIds: string[] = EMPTY_ARR
     queryKey: ['loans_ga', 'overdue_count'],
     queryFn: async () => {
       const params = new URLSearchParams({
+        summary: 'true',
         status: 'approved',
         due_filter: 'overdue',
-        page: '1',
-        pageSize: '1'
       })
       const res = await fetch(`/api/v1/loans?${params}`)
       if (!res.ok) return { count: 0 }
@@ -63,11 +62,10 @@ export function useGaLoans(isHistory: boolean, selectedIds: string[] = EMPTY_ARR
     queryFn: async () => {
       if (!selectedIds || selectedIds.length === 0) return { count: 0 }
       const params = new URLSearchParams({
+        summary: 'true',
         ids: selectedIds.join(','),
         status: 'approved',
         due_filter: 'overdue',
-        page: '1',
-        pageSize: '1'
       })
       const res = await fetch(`/api/v1/loans?${params}`)
       if (!res.ok) return { count: 0 }

@@ -12,7 +12,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, full_name, role, phone, created_at')
     .eq('id', user.id)
     .single()
 
@@ -37,7 +37,7 @@ export async function PATCH(request: Request) {
       updated_at: new Date().toISOString() 
     })
     .eq('id', user.id)
-    .select()
+    .select('id, full_name, phone, role, updated_at')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

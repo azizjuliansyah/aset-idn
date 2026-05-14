@@ -63,6 +63,21 @@ export function DataTable<T extends { id: string }>({
   onSelectedIdsChange: externalOnSelectedIdsChange,
 }: DataTableProps<T>) {
   const [internalSelectedIds, setInternalSelectedIds] = useState<string[]>([])
+  const [localSearch, setLocalSearch] = useState(searchValue || '')
+
+  useEffect(() => {
+    setLocalSearch(searchValue || '')
+  }, [searchValue])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== (searchValue || '')) {
+        onSearchChange?.(localSearch)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [localSearch, onSearchChange, searchValue])
+
   const isControlled = externalSelectedIds !== undefined
   const selectedIds = isControlled ? externalSelectedIds : internalSelectedIds
 
@@ -107,8 +122,8 @@ export function DataTable<T extends { id: string }>({
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
-                value={searchValue}
-                onChange={(e) => onSearchChange(e.target.value)}
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
                 className="pl-9 h-9"
               />
             </div>

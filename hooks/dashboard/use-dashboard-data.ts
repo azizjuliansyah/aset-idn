@@ -50,13 +50,13 @@ export function useDashboardData() {
       const [items, warehouses, ledger] = await Promise.all([
         supabase.from('items').select('id', { count: 'exact', head: true }),
         supabase.from('warehouses').select('id', { count: 'exact', head: true }),
-        supabase.from('stock_ledger').select('is_low_stock').eq('is_low_stock', true),
+        supabase.from('stock_ledger').select('is_low_stock', { count: 'exact', head: true }).eq('is_low_stock', true),
       ])
 
       return {
         totalItems: items.count ?? 0,
         totalWarehouses: warehouses.count ?? 0,
-        lowStockItems: ledger.data?.length ?? 0,
+        lowStockItems: ledger.count ?? 0,
       } as DashboardStats
     },
     refetchInterval: 30000,

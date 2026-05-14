@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
   let q = supabase
     .from('items')
-    .select('*, item_category(name), item_status(name), item_condition(name)', { count: 'exact' })
+    .select('id, name, description, item_category_id, item_status_id, item_condition_id, minimum_stock, price, status, note, created_at, created_by, item_category(name), item_status(name), item_condition(name)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(from, from + pageSize - 1)
 

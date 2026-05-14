@@ -20,7 +20,7 @@ export async function PATCH(
       is_default: body.is_default ?? false,
     })
     .eq('id', id)
-    .select()
+    .select('id, name, note, is_default, created_at, created_by')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

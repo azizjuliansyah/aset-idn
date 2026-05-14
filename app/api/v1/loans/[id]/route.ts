@@ -214,7 +214,7 @@ export async function PATCH(
       // Legacy full return for backward compatibility
       const { data: items } = await adminClient
         .from('loan_items')
-        .select('*, item:items(name)')
+        .select('id, item_id, warehouse_id, quantity, returned_quantity, item:items(name)')
         .eq('loan_request_id', id)
         .eq('status', 'approved')
 

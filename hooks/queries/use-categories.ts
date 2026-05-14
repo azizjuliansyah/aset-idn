@@ -16,6 +16,9 @@ export function useCategories() {
       if (error) throw error
       return (data ?? []) as ItemCategory[]
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 }

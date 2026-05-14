@@ -7,6 +7,7 @@ import * as z from 'zod'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import type { StockOpname } from '@/types/database'
 
 import {
   Dialog,
@@ -41,10 +42,17 @@ interface StockOpnameEntryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   groupId: string
-  initialData?: any // Added for editing
+  initialData?: StockOpname
+  existingEntries?: StockOpname[]
 }
 
-export function StockOpnameEntryDialog({ open, onOpenChange, groupId, initialData }: StockOpnameEntryDialogProps) {
+export function StockOpnameEntryDialog({ 
+  open, 
+  onOpenChange, 
+  groupId, 
+  initialData,
+  existingEntries
+}: StockOpnameEntryDialogProps) {
   const supabase = createClient()
   const { addEntry, updateEntry } = useStockOpnameMutations()
   const [items, setItems] = useState<any[]>([])
@@ -139,6 +147,18 @@ export function StockOpnameEntryDialog({ open, onOpenChange, groupId, initialDat
   }
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Check for duplicate item + warehouse
+    const isDuplicate = existingEntries?.some(entry => 
+      entry.item_id === values.item_id && 
+      entry.warehouse_id === values.warehouse_id &&
+      (!initialData || entry.id !== initialData.id)
+    )
+
+    if (isDuplicate) {
+      toast.error('Item ini sudah ada di daftar opname untuk gudang yang sama.')
+      return
+    }
+
     if (isEditing) {
       updateEntry.mutate({
         id: initialData.id,

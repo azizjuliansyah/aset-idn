@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     // 2. Get Company Settings
     const { data: settings } = await supabase
       .from('company_settings')
-      .select('*')
+      .select('is_wa_enabled, wa_overdue_cron_time, wa_overdue_message_format, wa_overdue_group_id, wa_overdue_group_message_format, wa_api_key, wa_number_key')
       .limit(1)
       .single<CompanySettings>()
 
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     let query = supabase
       .from('loan_requests')
       .select(`
-        *,
+        id, purpose, loan_date, return_date, status, requested_by,
         requester:requested_by(full_name, phone),
         items:loan_items(quantity, returned_quantity, item:item_id(name))
       `)

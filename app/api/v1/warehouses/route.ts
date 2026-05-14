@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   if (!user) return authError()
 
   const { page, pageSize, search, from, to } = paginateQuery(request)
-  let q = supabase.from('warehouses').select('*', { count: 'exact' })
+  let q = supabase.from('warehouses').select('id, name, note, is_default, created_at, created_by', { count: 'exact' })
     .order('created_at', { ascending: false }).range(from, to)
   if (search) q = q.ilike('name', `%${search}%`)
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     note: body.note ?? null,
     is_default: body.is_default ?? false,
     created_by: user.id,
-  }).select().single()
+  }).select('id, name, note, is_default, created_at, created_by').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 

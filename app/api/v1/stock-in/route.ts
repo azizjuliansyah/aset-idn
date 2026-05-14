@@ -21,8 +21,8 @@ export async function GET(request: Request) {
   const from = (page - 1) * pageSize
 
   const selectQuery = search
-    ? '*, item:items!inner(id,name), warehouse:warehouses(id,name)'
-    : '*, item:items(id,name), warehouse:warehouses(id,name)'
+    ? 'id, item_id, warehouse_id, quantity, date, note, created_at, created_by, item:items!inner(id,name), warehouse:warehouses(id,name)'
+    : 'id, item_id, warehouse_id, quantity, date, note, created_at, created_by, item:items(id,name), warehouse:warehouses(id,name)'
 
   let q = supabase
     .from('stock_in')
