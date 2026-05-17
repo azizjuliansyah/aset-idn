@@ -49,7 +49,7 @@ export function useStockOpnameGroups() {
 }
 
 export function useStockOpnameGroup(id: string) {
-  return useQuery<{ data: StockOpnameGroup & { entries: (StockOpname & { item: any, warehouse: any })[] } }>({
+  return useQuery<{ data: StockOpnameGroup }>({
     queryKey: ['stock-opname-group', id],
     queryFn: async () => {
       const res = await fetch(`/api/v1/stock-opname-groups/${id}`)
@@ -57,6 +57,36 @@ export function useStockOpnameGroup(id: string) {
       return res.json()
     },
     enabled: !!id
+  })
+}
+
+export function useStockOpnameEntries(groupId: string, params: any) {
+  return useQuery({
+    queryKey: ['stock-opname-entries', groupId, params],
+    queryFn: async () => {
+      const searchParams = new URLSearchParams()
+      if (params.page) searchParams.append('page', params.page.toString())
+      if (params.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+      if (params.search) searchParams.append('search', params.search)
+      if (params.warehouseId && params.warehouseId !== 'all') searchParams.append('warehouse_id', params.warehouseId)
+      if (params.categoryId && params.categoryId !== 'all') searchParams.append('category_id', params.categoryId)
+      if (params.filterType && params.filterType !== 'all') searchParams.append('filter_type', params.filterType)
+      
+      if (params.datePreset === 'custom') {
+        if (params.customStartDate) searchParams.append('start_date', params.customStartDate)
+        if (params.customEndDate) searchParams.append('end_date', params.customEndDate)
+      } else if (params.datePreset && params.datePreset !== 'all') {
+        const days = parseInt(params.datePreset)
+        const cutoff = new Date()
+        cutoff.setDate(cutoff.getDate() - days)
+        searchParams.append('start_date', cutoff.toISOString().split('T')[0])
+      }
+
+      const res = await fetch(`/api/v1/stock-opname-groups/${groupId}/entries?${searchParams}`)
+      if (!res.ok) throw new Error('Gagal mengambil data entries opname')
+      return res.json()
+    },
+    enabled: !!groupId
   })
 }
 
@@ -137,6 +167,7 @@ export function useStockOpnameMutations() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['stock-opname-group', variables.group_id] })
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-entries', variables.group_id] })
       toast.success('Item opname berhasil ditambahkan')
     },
     onError: (error: any) => {
@@ -152,6 +183,7 @@ export function useStockOpnameMutations() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['stock-opname-group', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-entries', variables.groupId] })
       toast.success('Item opname berhasil dihapus')
     },
     onError: (error: any) => {
@@ -174,6 +206,7 @@ export function useStockOpnameMutations() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['stock-opname-group', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-entries', variables.groupId] })
       toast.success('Data terpilih berhasil dihapus')
     },
     onError: (error: any) => {
@@ -196,6 +229,7 @@ export function useStockOpnameMutations() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['stock-opname-group', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-entries', variables.groupId] })
       toast.success('Item opname berhasil diubah')
     },
     onError: (error: any) => {
@@ -214,6 +248,7 @@ export function useStockOpnameMutations() {
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['stock-opname-group', id] })
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-entries', id] })
       queryClient.invalidateQueries({ queryKey: ['stock-opname-groups'] })
       toast.success('Opname berhasil difinalisasi. Stok telah disesuaikan.')
     },

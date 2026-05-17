@@ -15,19 +15,19 @@ import {
 import { LoanStatusBadge } from './loan-status-badge'
 import { GaLoansFilter } from './sub-components/ga-loans-filter'
 import { GaLoansDialogs } from './sub-components/ga-loans-dialogs'
-import { useGaLoans, type LoanWithJoins } from '@/hooks/loans/use-ga-loans'
+import { useGaLoans, type LoanWithJoins, type GaLoanMode } from '@/hooks/loans/use-ga-loans'
 import { LoanRequestDialog } from './loan-request-dialog'
 import { formatDateTime } from '@/lib/utils'
 
 interface GaLoansClientProps {
-  isHistory?: boolean
+  mode?: GaLoanMode
 }
 
 const EMPTY_LOANS: LoanWithJoins[] = []
 
-export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
+export function GaLoansClient({ mode = 'manage' }: GaLoansClientProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const { state, handlers, queries, mutations } = useGaLoans(isHistory, selectedIds)
+  const { state, handlers, queries, mutations } = useGaLoans(mode, selectedIds)
 
   const [detailLoan, setDetailLoan] = useState<LoanWithJoins | null>(null)
   const [approveTarget, setApproveTarget] = useState<LoanWithJoins | null>(null)
@@ -95,9 +95,9 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
           { key: 'loan_date', header: 'Waktu Pinjam', render: (v) => formatDateTime(v as string) },
           { 
             key: 'return_date', 
-            header: isHistory ? 'Waktu Dikembalikan' : 'Batas Kembali',
+            header: mode === 'history' ? 'Waktu Dikembalikan' : 'Batas Kembali',
             render: (_, item: LoanWithJoins) => {
-              if (isHistory) {
+              if (mode === 'history') {
                 return item.actual_return_date ? formatDateTime(item.actual_return_date) : '-'
               }
               
@@ -164,7 +164,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
                       <Eye size={14} className="mr-2 text-muted-foreground" /> Detail Peminjaman
                     </DropdownMenuItem>
                     
-                    {row.status === 'pending' && (
+                    {mode === 'requests' && row.status === 'pending' && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => setApproveTarget(row)} className="text-green-600 focus:text-green-600 focus:bg-green-50">
@@ -176,7 +176,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
                       </>
                     )}
                     
-                    {row.status === 'approved' && (
+                    {mode === 'manage' && row.status === 'approved' && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => setRemindTarget(row)} className="text-amber-600 focus:text-amber-600 focus:bg-amber-50">
@@ -191,7 +191,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
                       </>
                     )}
                     
-                    {row.status === 'returned' && (
+                    {mode === 'history' && row.status === 'returned' && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => setUndoTarget(row)}>
@@ -200,7 +200,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
                       </>
                     )}
                     
-                    {!isHistory && (
+                    {mode !== 'history' && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => setDeleteTarget(row)} className="text-destructive focus:text-destructive focus:bg-red-50">
@@ -223,16 +223,18 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         searchValue={state.search}
         onSearchChange={(v) => { handlers.setSearch(v); handlers.setPage(1) }}
         searchPlaceholder="Cari nama peminjam..."
-        actions={!isHistory && (
+        actions={mode !== 'history' && (
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setOverdueConfirm(true)} 
-              className="h-9 gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50" 
-              size="sm"
-            >
-              <MessageSquareWarning size={16} /> Kirim Pengingat Terlambat {queries.validSelectedCount > 0 && `(${queries.validSelectedCount})`}
-            </Button>
+            {mode === 'manage' && (
+              <Button 
+                variant="outline" 
+                onClick={() => setOverdueConfirm(true)} 
+                className="h-9 gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50" 
+                size="sm"
+              >
+                <MessageSquareWarning size={16} /> Kirim Pengingat Terlambat {queries.validSelectedCount > 0 && `(${queries.validSelectedCount})`}
+              </Button>
+            )}
             <Button onClick={() => setRequestOpen(true)} className="h-9 gap-1.5" size="sm">
               <Plus size={16} /> Pinjam Barang
             </Button>
@@ -240,7 +242,7 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
         )}
         filters={
           <GaLoansFilter 
-            isHistory={isHistory}
+            mode={mode}
             statusFilter={state.statusFilter}
             setStatusFilter={(v) => { handlers.setStatusFilter(v); handlers.setPage(1) }}
             actionedByFilter={state.actionedByFilter}
@@ -264,8 +266,8 @@ export function GaLoansClient({ isHistory = false }: GaLoansClientProps) {
             setDueFilter={(v) => { handlers.setDueFilter(v); handlers.setPage(1) }}
           />
         }
-        emptyText={isHistory ? "Belum ada riwayat peminjaman" : "Tidak ada peminjaman yang perlu ditangani"}
-        onBulkDelete={!isHistory ? (ids) => mutations.deleteBulkLoans.mutate(ids) : undefined}
+        emptyText={mode === 'history' ? "Belum ada riwayat peminjaman" : (mode === 'requests' ? "Tidak ada peminjaman yang perlu disetujui" : "Tidak ada peminjaman aktif yang perlu ditangani")}
+        onBulkDelete={mode !== 'history' ? (ids) => mutations.deleteBulkLoans.mutate(ids) : undefined}
         selectedIds={selectedIds}
         onSelectedIdsChange={setSelectedIds}
       />

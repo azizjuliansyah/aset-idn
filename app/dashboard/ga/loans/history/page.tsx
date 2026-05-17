@@ -10,7 +10,7 @@ export default function GaLoanHistoryPage() {
       title="Kelola Peminjaman"
       description="Daftar seluruh peminjaman yang telah ditangani (Ditolak, Kembali, Dibatalkan)"
     >
-      <GaLoansClient isHistory={true} />
+      <GaLoansClient mode="history" />
     </PageWrapper>
   )
 }

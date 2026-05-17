@@ -13,7 +13,9 @@ export type { LoanWithJoins }
 const PAGE_SIZE = 10
 const EMPTY_ARRAY: string[] = []
 
-export function useGaLoans(isHistory: boolean, selectedIds: string[] = EMPTY_ARRAY) {
+export type GaLoanMode = 'requests' | 'manage' | 'history'
+
+export function useGaLoans(mode: GaLoanMode, selectedIds: string[] = EMPTY_ARRAY) {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -54,7 +56,7 @@ export function useGaLoans(isHistory: boolean, selectedIds: string[] = EMPTY_ARR
       const json = await res.json()
       return { count: json.count || 0 }
     },
-    enabled: !isHistory,
+    enabled: mode !== 'history',
   })
 
   const { data: validSelectedCountData } = useQuery({
@@ -72,15 +74,17 @@ export function useGaLoans(isHistory: boolean, selectedIds: string[] = EMPTY_ARR
       const json = await res.json()
       return { count: json.count || 0 }
     },
-    enabled: !!selectedIds && selectedIds.length > 0 && !isHistory,
+    enabled: !!selectedIds && selectedIds.length > 0 && mode !== 'history',
   })
 
   const { data, isLoading } = useQuery({
-    queryKey: ['loans_ga', page, debouncedSearch, statusFilter, actionedByFilter, isHistory, warehouseId, datePreset, customStartDate, customEndDate, returnDatePreset, returnCustomStartDate, returnCustomEndDate, dueFilter],
+    queryKey: ['loans_ga', page, debouncedSearch, statusFilter, actionedByFilter, mode, warehouseId, datePreset, customStartDate, customEndDate, returnDatePreset, returnCustomStartDate, returnCustomEndDate, dueFilter],
     queryFn: async () => {
       let finalStatus = statusFilter
       if (statusFilter === 'all') {
-        finalStatus = isHistory ? 'rejected,returned,cancelled' : 'pending,approved'
+        if (mode === 'history') finalStatus = 'rejected,returned,cancelled'
+        else if (mode === 'requests') finalStatus = 'pending'
+        else if (mode === 'manage') finalStatus = 'approved'
       }
 
       const params = new URLSearchParams({

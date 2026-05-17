@@ -114,6 +114,25 @@ export async function POST(request: Request) {
     const { createActivityLog } = await import('@/lib/logger')
     let successCount = 0
     let failCount = 0
+    
+    const groupMessageBlocks: string[] = []
+    
+    // Parse Group Template for Header, Item, Footer
+    let groupHeader = ''
+    let groupFooter = ''
+    let groupItemTemplate = settings?.wa_overdue_group_message_format || ''
+
+    if (settings?.wa_overdue_group_message_format) {
+      const format = settings.wa_overdue_group_message_format
+      const startIndex = format.indexOf('[DATA_START]')
+      const endIndex = format.indexOf('[DATA_END]')
+      
+      if (startIndex !== -1 && endIndex !== -1) {
+        groupHeader = format.substring(0, startIndex).trim()
+        groupItemTemplate = format.substring(startIndex + '[DATA_START]'.length, endIndex).trim()
+        groupFooter = format.substring(endIndex + '[DATA_END]'.length).trim()
+      }
+    }
 
     // 4. Send Reminders
     for (const loan of overdueLoans) {
@@ -163,10 +182,9 @@ export async function POST(request: Request) {
         if (isPersonalSent) {
           successCount++
           
-          // Send to Group if configured
-          if (settings.wa_overdue_group_id && settings.wa_overdue_group_message_format) {
-            const groupIds = settings.wa_overdue_group_id.split(',').map(id => id.trim()).filter(Boolean)
-            const groupMessage = settings.wa_overdue_group_message_format
+          // Accumulate Group Message block if configured
+          if (settings.wa_overdue_group_id && groupItemTemplate) {
+            const groupMessageBlock = groupItemTemplate
               .replace(/{{nama_peminjam}}/g, requester.full_name || '')
               .replace(/{{nomor_peminjam}}/g, requester.phone ? `+62${requester.phone}` : '-')
               .replace(/{{nama_barang}}/g, itemNames)
@@ -175,22 +193,7 @@ export async function POST(request: Request) {
               .replace(/{{waktu_pinjam}}/g, loanDate)
               .replace(/{{batas_pengembalian}}/g, returnDate)
 
-            await Promise.all(groupIds.map(async (groupId) => {
-              try {
-                await fetch('https://api.watzap.id/v1/send_message_group', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    api_key: apiKey,
-                    number_key: numberKey,
-                    group_id: groupId,
-                    message: groupMessage,
-                  }),
-                })
-              } catch (e) {
-                console.error(`Failed to send overdue group reminder for loan ${loan.id} to group ${groupId}:`, e)
-              }
-            }))
+            groupMessageBlocks.push(groupMessageBlock)
           }
 
           // Log activity for each successful reminder
@@ -211,6 +214,36 @@ export async function POST(request: Request) {
         console.error(`Error processing overdue reminder for loan ${loan.id}:`, err)
         failCount++
       }
+    }
+
+    // 5. Send Group Messages (Aggregated)
+    if (groupMessageBlocks.length > 0 && settings.wa_overdue_group_id) {
+      const groupIds = settings.wa_overdue_group_id.split(',').map(id => id.trim()).filter(Boolean)
+      
+      let combinedGroupMessage = groupMessageBlocks.join('\n\n')
+      if (groupHeader) {
+        combinedGroupMessage = groupHeader + '\n\n' + combinedGroupMessage
+      }
+      if (groupFooter) {
+        combinedGroupMessage = combinedGroupMessage + '\n\n' + groupFooter
+      }
+
+      await Promise.all(groupIds.map(async (groupId) => {
+        try {
+          await fetch('https://api.watzap.id/v1/send_message_group', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              api_key: apiKey,
+              number_key: numberKey,
+              group_id: groupId,
+              message: combinedGroupMessage,
+            }),
+          })
+        } catch (e) {
+          console.error(`Failed to send combined overdue group reminder to group ${groupId}:`, e)
+        }
+      }))
     }
 
     return NextResponse.json({ 

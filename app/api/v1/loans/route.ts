@@ -127,7 +127,19 @@ export async function GET(request: Request) {
     if (profile.role === 'user') {
       q = q.ilike('purpose', `%${search}%`)
     } else {
-      q = q.ilike('requester.full_name', `%${search}%`)
+      // Pre-fetch matched profiles to perform a flat OR filter on local columns
+      const { data: matchedProfiles } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('full_name', `%${search}%`)
+      
+      const profileIds = matchedProfiles?.map(p => p.id) || []
+      
+      if (profileIds.length > 0) {
+        q = q.or(`atas_nama.ilike.%${search}%,requested_by.in.(${profileIds.join(',')})`)
+      } else {
+        q = q.ilike('atas_nama', `%${search}%`)
+      }
     }
   }
 

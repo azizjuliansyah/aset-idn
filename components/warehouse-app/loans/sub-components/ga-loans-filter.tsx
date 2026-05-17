@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input'
 import { UserCheck, Calendar as CalendarIcon, ChevronDown, AlarmClock, AlertCircle } from 'lucide-react'
 import { useWarehouses } from '@/hooks/queries/use-warehouses'
 
+import type { GaLoanMode } from '@/hooks/loans/use-ga-loans'
+
 interface GaLoansFilterProps {
-  isHistory: boolean
+  mode: GaLoanMode
   statusFilter: string
   setStatusFilter: (v: string) => void
   actionedByFilter: string
@@ -32,7 +34,7 @@ interface GaLoansFilterProps {
 }
 
 export function GaLoansFilter({
-  isHistory,
+  mode,
   statusFilter,
   setStatusFilter,
   actionedByFilter,
@@ -80,24 +82,9 @@ export function GaLoansFilter({
   }
 
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 ${isHistory ? 'lg:grid-cols-5' : 'lg:grid-cols-5'} gap-4`}>
-      {!isHistory && (
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status Peminjaman</Label>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder="Pilih status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Status</SelectItem>
-              <SelectItem value="pending">Menunggu Persetujuan</SelectItem>
-              <SelectItem value="approved">Sedang Dipinjam</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {isHistory && (
+    <div className={`grid grid-cols-1 md:grid-cols-2 ${mode === 'history' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
+      {/* Hide status filter for requests and manage as they have fixed status */}
+      {mode === 'history' && (
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status Peminjaman</Label>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -114,35 +101,39 @@ export function GaLoansFilter({
         </div>
       )}
 
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">PIC</Label>
-        <Select value={actionedByFilter} onValueChange={setActionedByFilter}>
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Pilih PIC" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua</SelectItem>
-            {handlers?.map((h) => (
-              <SelectItem key={h.id} value={h.id}>{h.full_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {mode !== 'requests' && (
+        <>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">PIC</Label>
+            <Select value={actionedByFilter} onValueChange={setActionedByFilter}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Pilih PIC" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
+                {handlers?.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>{h.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gudang</Label>
-        <Select value={warehouseId} onValueChange={setWarehouseId}>
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Pilih gudang" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Gudang</SelectItem>
-            {warehouses?.map((w) => (
-              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gudang</Label>
+            <Select value={warehouseId} onValueChange={setWarehouseId}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Pilih gudang" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Gudang</SelectItem>
+                {warehouses?.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      )}
 
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Waktu Peminjaman</Label>
@@ -209,7 +200,7 @@ export function GaLoansFilter({
         </Popover>
       </div>
 
-      {isHistory && (
+      {mode === 'history' && (
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Waktu Pengembalian</Label>
           <Popover>
@@ -276,7 +267,7 @@ export function GaLoansFilter({
         </div>
       )}
 
-      {!isHistory && (
+      {mode === 'manage' && (
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Batas Pengembalian</Label>
           <Select value={dueFilter} onValueChange={setDueFilter}>

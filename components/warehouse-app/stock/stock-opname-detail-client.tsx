@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Trash2, ArrowLeft, CheckCircle2, Filter, Eye, Clock, MoreHorizontal, Pencil } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, CheckCircle2, Filter, Eye, Clock, MoreHorizontal, Pencil, Download } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 import { DataTable } from '@/components/shared/data-table'
@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 
-import { useStockOpnameGroup, useStockOpnameMutations } from '../../../hooks/stock/use-stock-opname'
+import { useStockOpnameGroup, useStockOpnameMutations, useStockOpnameEntries } from '../../../hooks/stock/use-stock-opname'
 import { StockOpnameEntryDialog } from '@/components/warehouse-app/stock/sub-components/stock-opname-entry-dialog'
 import { StockOpnameDetailFilter } from './sub-components/stock-opname-detail-filter'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -84,65 +84,91 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
 
-  const filteredEntries = useMemo(() => {
-    if (!group?.entries) return []
-    
-    return group.entries.filter(entry => {
-      // Search logic (Name or SKU)
-      const nameMatch = entry.item?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-      const skuMatch = entry.item?.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesSearch = !searchTerm || nameMatch || skuMatch
+  // Pagination State
+  const [page, setPage] = useState(1)
+  const pageSize = 10
 
-      // Filter logic (Discrepancy)
-      let matchesFilter = true
-      if (filterType === 'discrepancy') {
-        matchesFilter = entry.difference !== 0
-      } else if (filterType === 'match') {
-        matchesFilter = entry.difference === 0
-      } else if (filterType === 'discrepancy_plus') {
-        matchesFilter = entry.difference > 0
-      } else if (filterType === 'discrepancy_minus') {
-        matchesFilter = entry.difference < 0
-      }
+  const { data: entriesRes, isLoading: isLoadingEntries } = useStockOpnameEntries(id, {
+    page,
+    pageSize,
+    search: searchTerm,
+    filterType,
+    categoryId: categoryFilter,
+    warehouseId: warehouseFilter,
+    datePreset,
+    customStartDate,
+    customEndDate
+  })
 
-      // Category filter
-      const matchesCategory = categoryFilter === 'all' || entry.item?.item_category_id === categoryFilter
-
-      // Warehouse filter
-      const matchesWarehouse = warehouseFilter === 'all' || entry.warehouse_id === warehouseFilter
-
-      // Date filter
-      let matchesDate = true
-      const entryDate = new Date(entry.created_at)
-      entryDate.setHours(0, 0, 0, 0)
-
-      if (datePreset === 'custom') {
-        if (customStartDate) {
-          const start = new Date(customStartDate)
-          start.setHours(0, 0, 0, 0)
-          if (entryDate < start) matchesDate = false
-        }
-        if (customEndDate) {
-          const end = new Date(customEndDate)
-          end.setHours(0, 0, 0, 0)
-          if (entryDate > end) matchesDate = false
-        }
-      } else if (datePreset !== 'all') {
-        const days = parseInt(datePreset)
-        const cutoff = new Date()
-        cutoff.setDate(cutoff.getDate() - days)
-        cutoff.setHours(0, 0, 0, 0)
-        if (entryDate < cutoff) matchesDate = false
-      }
-
-      return matchesSearch && matchesFilter && matchesCategory && matchesWarehouse && matchesDate
-    })
-  }, [group?.entries, searchTerm, filterType, categoryFilter, warehouseFilter, datePreset, customStartDate, customEndDate])
+  const entries = entriesRes?.data || []
+  const totalCount = entriesRes?.metadata?.totalCount || 0
 
   if (isLoading) return <StockOpnameDetailSkeleton />
   if (!group) return <div>Group tidak ditemukan</div>
 
   const isDraft = group.status === 'draft'
+
+  const handleExportCSV = async () => {
+    if (totalCount === 0) return
+
+    // Fetch all matching data for export
+    const searchParams = new URLSearchParams()
+    searchParams.append('page', '1')
+    searchParams.append('pageSize', '10000') // fetch up to 10k items
+    if (searchTerm) searchParams.append('search', searchTerm)
+    if (warehouseFilter && warehouseFilter !== 'all') searchParams.append('warehouse_id', warehouseFilter)
+    if (categoryFilter && categoryFilter !== 'all') searchParams.append('category_id', categoryFilter)
+    if (filterType && filterType !== 'all') searchParams.append('filter_type', filterType)
+    
+    if (datePreset === 'custom') {
+      if (customStartDate) searchParams.append('start_date', customStartDate)
+      if (customEndDate) searchParams.append('end_date', customEndDate)
+    } else if (datePreset && datePreset !== 'all') {
+      const days = parseInt(datePreset)
+      const cutoff = new Date()
+      cutoff.setDate(cutoff.getDate() - days)
+      searchParams.append('start_date', cutoff.toISOString().split('T')[0])
+    }
+
+    try {
+      const res = await fetch(`/api/v1/stock-opname-groups/${id}/entries?${searchParams}`)
+      if (!res.ok) throw new Error('Gagal memuat data untuk export')
+      const exportData = await res.json()
+      const entriesToExport = exportData.data || []
+
+      const headers = ['Barang', 'Kategori', 'Gudang', 'Stok Sistem', 'Stok Fisik', 'Selisih', 'Waktu', 'Catatan']
+      
+      const csvContent = [
+        headers.join(','),
+        ...entriesToExport.map((entry: any) => {
+          const item = entry.item?.name || '—'
+          const category = entry.item?.category?.name || '—'
+          const warehouse = entry.warehouse?.name || '—'
+          const systemStock = entry.system_stock
+          const actualStock = entry.actual_stock
+          const difference = entry.difference > 0 ? `+${entry.difference}` : entry.difference
+          const time = formatDateTime(entry.created_at)
+          const note = entry.note || ''
+
+          return [item, category, warehouse, systemStock, actualStock, difference, time, note]
+            .map(value => `"${String(value).replace(/"/g, '""')}"`)
+            .join(',')
+        })
+      ].join('\n')
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `Stock_Opname_${group.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error('Export Error:', err)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -162,7 +188,7 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
             Status: {isDraft ? 'Draft' : 'Selesai'}
           </Badge>
           <Badge variant="outline" className="h-7 px-3 border-dashed bg-muted/30 font-medium">
-            Total Item: {group.entries?.length || 0}
+            Total Item: {totalCount}
           </Badge>
           <Badge variant="outline" className="h-7 px-3 border-dashed bg-muted/30 font-medium text-muted-foreground">
             {formatDateTime(group.created_at)}
@@ -228,44 +254,54 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
             ),
           },
         ]}
-        data={filteredEntries}
-        isLoading={false}
-        page={1}
-        pageSize={filteredEntries.length || 10}
-        totalCount={filteredEntries.length}
-        onPageChange={() => { }}
+        data={entries}
+        isLoading={isLoadingEntries}
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={setPage}
         searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Cari nama barang atau SKU..."
+        onSearchChange={(v) => {
+          setSearchTerm(v)
+          setPage(1)
+        }}
+        searchPlaceholder="Cari nama barang..."
         filters={
           <StockOpnameDetailFilter
-            filterType={filterType} setFilterType={setFilterType}
-            warehouseId={warehouseFilter} setWarehouseId={setWarehouseFilter}
-            categoryId={categoryFilter} setCategoryId={setCategoryFilter}
-            datePreset={datePreset} setDatePreset={setDatePreset}
-            customStartDate={customStartDate} setCustomStartDate={setCustomStartDate}
-            customEndDate={customEndDate} setCustomEndDate={setCustomEndDate}
+            filterType={filterType} setFilterType={(v) => { setFilterType(v); setPage(1) }}
+            warehouseId={warehouseFilter} setWarehouseId={(v) => { setWarehouseFilter(v); setPage(1) }}
+            categoryId={categoryFilter} setCategoryId={(v) => { setCategoryFilter(v); setPage(1) }}
+            datePreset={datePreset} setDatePreset={(v) => { setDatePreset(v); setPage(1) }}
+            customStartDate={customStartDate} setCustomStartDate={(v) => { setCustomStartDate(v); setPage(1) }}
+            customEndDate={customEndDate} setCustomEndDate={(v) => { setCustomEndDate(v); setPage(1) }}
           />
         }
         onBulkDelete={isDraft ? (ids) => bulkDeleteEntries.mutate({ ids, groupId: id }) : undefined}
         emptyText="Belum ada item yang di-opname"
-        actions={isDraft && (
+        actions={
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setIsEntryDialogOpen(true)}>
-              <Plus size={14} className="mr-1.5" /> Tambah Item
+            <Button size="sm" variant="outline" onClick={handleExportCSV}>
+              <Download size={14} className="mr-1.5" /> Export CSV
             </Button>
-            <Button size="sm" onClick={() => setIsFinalizeOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
-              <CheckCircle2 size={14} className="mr-1.5" /> Finalisasi Opname
-            </Button>
+            {isDraft && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => setIsEntryDialogOpen(true)}>
+                  <Plus size={14} className="mr-1.5" /> Tambah Item
+                </Button>
+                <Button size="sm" onClick={() => setIsFinalizeOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
+                  <CheckCircle2 size={14} className="mr-1.5" /> Finalisasi Opname
+                </Button>
+              </>
+            )}
           </div>
-        )}
+        }
       />
 
       <StockOpnameEntryDialog
         open={isEntryDialogOpen}
         onOpenChange={setIsEntryDialogOpen}
         groupId={id}
-        existingEntries={group.entries}
+        existingEntries={[]} // Note: With pagination, we can't easily pass all existing entries for duplicate check locally
       />
 
       <StockOpnameEntryDialog
@@ -273,7 +309,7 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
         onOpenChange={(open) => !open && setEditEntryData(null)}
         groupId={id}
         initialData={editEntryData}
-        existingEntries={group.entries}
+        existingEntries={[]} 
       />
 
       <ConfirmDialog

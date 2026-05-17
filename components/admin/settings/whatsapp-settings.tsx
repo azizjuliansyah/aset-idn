@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2, Search, Users, Check, Smartphone, X, RotateCcw, Clock, AlertCircle, Settings2 } from 'lucide-react'
+import { Loader2, Search, Users, Check, Smartphone, X, RotateCcw, Clock, AlertCircle, Settings2, HelpCircle } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 
 // Sub-components
 import { WaVariableList } from './sub-components/wa-variable-list'
@@ -573,7 +573,17 @@ export function WhatsappSettings() {
                     <div className="flex items-center justify-between h-8">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Users size={14} />
-                        <Label className="text-[11px] font-medium uppercase tracking-widest">Template Grup</Label>
+                        <Label className="text-[11px] font-medium uppercase tracking-widest flex items-center gap-1.5">
+                          Template Grup
+                          <Tooltip>
+                            <TooltipTrigger type="button" className="cursor-help transition-colors hover:text-foreground">
+                              <HelpCircle size={14} />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[280px] p-3 text-[11px] leading-relaxed">
+                              Gunakan tag <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">[DATA_START]</code> dan <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">[DATA_END]</code> untuk mengapit format data peminjaman. Teks di luar tag ini akan menjadi pembuka dan penutup pesan, dan data di dalamnya akan diulang sebanyak jumlah orang yang terlambat, dikirim sekaligus dalam 1 pesan.
+                            </TooltipContent>
+                          </Tooltip>
+                        </Label>
                       </div>
                       <WaGroupSelector 
                         selectedGroups={selectedOverdueGroups}
@@ -588,8 +598,8 @@ export function WhatsappSettings() {
                     </div>
                     <Textarea 
                       id="s-wa-overdue-group-format" 
-                      className="h-[220px] resize-none focus:ring-1 focus:ring-primary overflow-y-auto"
-                      placeholder="Notifikasi Keterlambatan: {{nama_peminjam}} terlambat mengembalikan..." 
+                      className="h-[220px] resize-none focus:ring-1 focus:ring-primary overflow-y-auto font-mono text-[11px]"
+                      placeholder={`🚨 *Peringatan Keterlambatan*\n\n[DATA_START]\nNama: *{{nama_peminjam}}*\nBatas waktu: *{{batas_pengembalian}}*\nBarang yg *belum kembali*:\n{{barang_belum_kembali}}\n[DATA_END]\n\nMohon segera ditindaklanjuti.`}
                       {...form.register('wa_overdue_group_message_format')}
                       onFocus={() => setLastFocusedField('wa_overdue_group_message_format')}
                     />
@@ -630,6 +640,7 @@ export function WhatsappSettings() {
                     variables={['{{nama_peminjam}}', '{{nomor_peminjam}}', '{{list_barang}}', '{{barang_belum_kembali}}', '{{waktu_pinjam}}', '{{batas_pengembalian}}']}
                     onSelect={(v) => insertTemplate(v, lastFocusedField.includes('wa_overdue') ? lastFocusedField : 'wa_overdue_message_format')}
                   />
+
                 </div>
               </div>
             </div>
