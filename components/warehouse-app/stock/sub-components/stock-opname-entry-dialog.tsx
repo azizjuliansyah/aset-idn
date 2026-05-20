@@ -30,6 +30,7 @@ import {
 import { Combobox } from '@/components/ui/combobox'
 import { useStockOpnameMutations } from '@/hooks/stock/use-stock-opname'
 import { QRScanner } from '@/components/shared/qr-scanner'
+import { useWarehouses } from '@/hooks/queries/use-warehouses'
 
 const formSchema = z.object({
   item_id: z.string().min(1, 'Pilih barang'),
@@ -70,7 +71,7 @@ export function StockOpnameEntryDialog({
   const addEntry = mutations?.addEntry
   const updateEntry = mutations?.updateEntry
   const [items, setItems] = useState<any[]>([])
-  const [warehouses, setWarehouses] = useState<any[]>([])
+  const { data: warehouses = [] } = useWarehouses()
   const [systemStock, setSystemStock] = useState<number | null>(null)
   const [isLoadingStock, setIsLoadingStock] = useState(false)
 
@@ -86,43 +87,54 @@ export function StockOpnameEntryDialog({
     },
   })
 
-  // Set initial data when editing
+  // Load items when dialog opens
   useEffect(() => {
-    if (open && initialData) {
+    if (!open) return
+    supabase.from('items').select('id, name').order('name')
+      .then(({ data }) => setItems(data || []))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  // Init form when dialog opens - runs immediately using cached warehouses data
+  useEffect(() => {
+    if (!open) return
+
+    if (initialData) {
+      // Edit mode: populate form with existing data
       setValue('item_id', initialData.item_id)
       setValue('warehouse_id', initialData.warehouse_id)
       setValue('actual_stock', initialData.actual_stock)
       setValue('note', initialData.note || '')
       setSystemStock(initialData.system_stock)
-    } else if (open && !initialData) {
+    } else {
+      // Add mode: reset form, auto-select default warehouse if already in cache
+      const defaultWh = warehouses.find((w) => w.is_default)
       reset({
         item_id: '',
-        warehouse_id: '',
+        warehouse_id: defaultWh?.id || '',
         actual_stock: 0,
         note: '',
       })
       setSystemStock(null)
     }
-  }, [open, initialData, setValue, reset])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialData])
+
+  // Fallback: set default warehouse after warehouses data loads (first-ever load, cache miss)
+  useEffect(() => {
+    if (!open || initialData) return
+    const currentWarehouseId = watch('warehouse_id')
+    if (currentWarehouseId) return // already set
+
+    const defaultWh = warehouses.find((w) => w.is_default)
+    if (defaultWh) {
+      setValue('warehouse_id', defaultWh.id, { shouldValidate: false })
+    }
+  }, [warehouses, open, initialData, setValue, watch])
 
   const itemId = watch('item_id')
   const warehouseId = watch('warehouse_id')
   const actualStock = watch('actual_stock')
-
-  // Load items and warehouses
-  useEffect(() => {
-    if (open) {
-      const fetchData = async () => {
-        const [itemsRes, whRes] = await Promise.all([
-          supabase.from('items').select('id, name').order('name'),
-          supabase.from('warehouses').select('id, name').order('name')
-        ])
-        setItems(itemsRes.data || [])
-        setWarehouses(whRes.data || [])
-      }
-      fetchData()
-    }
-  }, [open, supabase])
 
   // Fetch system stock when item or warehouse changes (only if NOT editing, or if manually changed)
   useEffect(() => {

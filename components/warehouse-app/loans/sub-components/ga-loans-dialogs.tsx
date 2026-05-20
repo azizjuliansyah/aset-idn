@@ -94,7 +94,7 @@ export function GaLoansDialogs({
   // Set default warehouses, status and return date when approveTarget changes
   useEffect(() => {
     if (approveTarget && warehouses && warehouses.length > 0) {
-      const defaultWhId = warehouses.find(w => w.is_default)?.id || warehouses[0].id
+      const defaultWhId = warehouses.find(w => w.is_default)?.id || ''
       const initial: Record<string, { warehouse_id: string, status: 'approved' | 'rejected' }> = {}
       approveTarget.items?.forEach(item => {
         initial[item.item_id] = {

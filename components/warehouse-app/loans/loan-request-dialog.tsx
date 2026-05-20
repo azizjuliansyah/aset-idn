@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Loader2, ClipboardList, Plus, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useWarehouses } from '@/hooks/queries/use-warehouses'
 
 import type { Item, Warehouse, Profile } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -60,14 +61,7 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
     enabled: open,
   })
 
-  const { data: warehouses } = useQuery({
-    queryKey: ['warehouses_for_loan'],
-    queryFn: async () => {
-      const { data } = await supabase.from('warehouses').select('id, name, is_default').order('name')
-      return (data ?? []) as Pick<Warehouse, 'id' | 'name' | 'is_default'>[]
-    },
-    enabled: open,
-  })
+  const { data: warehouses } = useWarehouses()
 
   const { data: myProfile } = useQuery({
     queryKey: ['my_profile_for_loan'],
@@ -166,7 +160,7 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
     if (open && warehouses && warehouses.length > 0) {
       const currentItems = form.getValues('items')
       if (currentItems.length === 1 && currentItems[0].warehouse_id === '') {
-        const defaultWhId = warehouses.find(w => w.is_default)?.id || warehouses[0].id
+        const defaultWhId = warehouses.find(w => w.is_default)?.id || ''
         form.setValue('items.0.warehouse_id', defaultWhId)
       }
     }
@@ -180,7 +174,7 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
   // Set default warehouse when warehouses data is loaded or items added
   useEffect(() => {
     if (warehouses && warehouses.length > 0) {
-      const defaultWhId = warehouses.find(w => w.is_default)?.id || warehouses[0].id
+      const defaultWhId = warehouses.find(w => w.is_default)?.id || ''
       const currentItems = form.getValues('items')
       currentItems.forEach((item, idx) => {
         if (!item.warehouse_id) {
@@ -248,7 +242,7 @@ export function LoanRequestDialog({ open, onOpenChange }: Props) {
                 size="sm" 
                 className="h-7 text-[10px] gap-1"
                 onClick={() => {
-                  const defaultWhId = warehouses?.find(w => w.is_default)?.id || warehouses?.[0]?.id || ''
+                  const defaultWhId = warehouses?.find(w => w.is_default)?.id || ''
                   append({ 
                     item_id: '', 
                     quantity: 1, 

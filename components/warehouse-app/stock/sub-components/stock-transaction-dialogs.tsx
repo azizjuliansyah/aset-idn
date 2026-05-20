@@ -64,7 +64,7 @@ export function StockTransactionDialogs({
         note: editItem.note ?? '',
       })
     } else if (open) {
-      const defaultWhId = warehouses?.find(w => w.is_default)?.id || warehouses?.[0]?.id || ''
+      const defaultWhId = warehouses?.find(w => w.is_default)?.id || ''
       form.reset({ 
         item_id: '', 
         warehouse_id: defaultWhId, 
