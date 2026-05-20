@@ -204,8 +204,10 @@ export async function POST(request: Request) {
             details: { 
               name: requester.full_name, 
               type: 'Overdue WhatsApp Reminder',
-              status: 'Sent'
-            }
+              status: 'Sent',
+              triggered_by: isCron ? 'cron' : 'manual'
+            },
+            isSystem: isCron
           })
         } else {
           failCount++

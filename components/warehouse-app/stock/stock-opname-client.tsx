@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, Eye, MoreHorizontal, ClipboardList } from 'lucide-react'
+import { Plus, Trash2, Eye, MoreHorizontal, ClipboardList, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useDebounce } from '@/hooks/use-debounce'
 
@@ -38,6 +38,7 @@ export function StockOpnameClient() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [editData, setEditData] = useState<{ id: string, name: string, description?: string | null } | null>(null)
 
   return (
     <>
@@ -60,7 +61,7 @@ export function StockOpnameClient() {
             key: 'status',
             header: 'Status',
             render: (v) => (
-              <Badge variant={v === 'completed' ? 'default' : 'secondary'}>
+              <Badge variant={v === 'completed' ? 'success' : 'secondary'}>
                 {v === 'completed' ? 'Selesai' : 'Draft'}
               </Badge>
             )
@@ -84,12 +85,22 @@ export function StockOpnameClient() {
                         <Eye size={14} className="mr-2 text-muted-foreground" /> Lihat Detail
                       </DropdownMenuItem>
                       {group.status === 'draft' && (
-                        <DropdownMenuItem
-                          onClick={() => setDeleteId(group.id)}
-                          className="text-destructive focus:text-destructive focus:bg-red-50"
-                        >
-                          <Trash2 size={14} className="mr-2" /> Hapus Group
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditData({ id: group.id, name: group.name, description: group.description })
+                              setIsDialogOpen(true)
+                            }}
+                          >
+                            <Pencil size={14} className="mr-2 text-muted-foreground" /> Edit Group
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeleteId(group.id)}
+                            className="text-destructive focus:text-destructive focus:bg-red-50"
+                          >
+                            <Trash2 size={14} className="mr-2" /> Hapus Group
+                          </DropdownMenuItem>
+                        </>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -121,7 +132,10 @@ export function StockOpnameClient() {
         }
         onBulkDelete={(ids) => bulkDeleteGroups.mutate(ids)}
         actions={
-          <Button size="sm" onClick={() => setIsDialogOpen(true)}>
+          <Button size="sm" onClick={() => {
+            setEditData(null)
+            setIsDialogOpen(true)
+          }}>
             <Plus size={14} className="mr-1.5" /> Buat Group Baru
           </Button>
         }
@@ -130,7 +144,11 @@ export function StockOpnameClient() {
 
       <StockOpnameGroupDialog
         open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (!open) setEditData(null)
+        }}
+        initialData={editData}
       />
 
       <ConfirmDialog

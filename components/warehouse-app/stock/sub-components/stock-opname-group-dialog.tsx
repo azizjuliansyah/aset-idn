@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect } from 'react'
+
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -27,10 +29,12 @@ const formSchema = z.object({
 interface StockOpnameGroupDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialData?: { id: string, name: string, description?: string | null } | null
 }
 
-export function StockOpnameGroupDialog({ open, onOpenChange }: StockOpnameGroupDialogProps) {
-  const { createGroup } = useStockOpnameMutations()
+export function StockOpnameGroupDialog({ open, onOpenChange, initialData }: StockOpnameGroupDialogProps) {
+  const { createGroup, updateGroup } = useStockOpnameMutations()
+  const isEditing = !!initialData
   
   const { register, handleSubmit, formState: { errors }, reset } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -40,14 +44,37 @@ export function StockOpnameGroupDialog({ open, onOpenChange }: StockOpnameGroupD
     },
   })
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log('[StockOpname] Submitting group:', values)
-    createGroup.mutate(values, {
-      onSuccess: () => {
-        onOpenChange(false)
-        reset()
+  // Reset form when dialog opens/closes or initialData changes
+  useEffect(() => {
+    if (open) {
+      if (initialData) {
+        reset({
+          name: initialData.name,
+          description: initialData.description || '',
+        })
+      } else {
+        reset({ name: '', description: '' })
       }
-    })
+    }
+  }, [open, initialData, reset])
+
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (isEditing && initialData) {
+      console.log('[StockOpname] Editing group:', values)
+      updateGroup.mutate({ id: initialData.id, ...values }, {
+        onSuccess: () => {
+          onOpenChange(false)
+        }
+      })
+    } else {
+      console.log('[StockOpname] Submitting group:', values)
+      createGroup.mutate(values, {
+        onSuccess: () => {
+          onOpenChange(false)
+          reset()
+        }
+      })
+    }
   }
 
   const onInvalid = (err: any) => {
@@ -59,7 +86,7 @@ export function StockOpnameGroupDialog({ open, onOpenChange }: StockOpnameGroupD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Buat Group Stock Opname</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Group Stock Opname' : 'Buat Group Stock Opname'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
@@ -88,8 +115,8 @@ export function StockOpnameGroupDialog({ open, onOpenChange }: StockOpnameGroupD
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button type="submit" disabled={createGroup.isPending}>
-              {createGroup.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={createGroup.isPending || updateGroup.isPending}>
+              {(createGroup.isPending || updateGroup.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Simpan
             </Button>
           </DialogFooter>

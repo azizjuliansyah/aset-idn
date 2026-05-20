@@ -15,7 +15,7 @@ export async function GET(
 ) {
   const { id: groupId } = await params
   const supabase = await createClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
@@ -30,7 +30,11 @@ export async function GET(
       .single()
 
     if (groupError) {
-      console.error('[API] Group Fetch Error:', groupError)
+      console.error('[API DEBUG] Group Fetch Error:', {
+        groupId,
+        userId: user.id,
+        error: groupError
+      })
       // If group not found, return 404 instead of 500
       if (groupError.code === 'PGRST116') {
         return NextResponse.json({ error: 'Stock opname group not found' }, { status: 404 })
@@ -57,7 +61,7 @@ export async function DELETE(
 ) {
   const { id: groupId } = await params
   const supabase = await createClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 

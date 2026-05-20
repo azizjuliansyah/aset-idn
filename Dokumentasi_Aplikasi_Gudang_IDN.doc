@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>Dokumentasi Aplikasi Gudang IDN</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      margin: 40px;
+    }
+    .cover {
+      text-align: center;
+      margin-top: 100px;
+      margin-bottom: 150px;
+    }
+    .cover h1 {
+      font-size: 28pt;
+      color: #0f172a;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    .cover h2 {
+      font-size: 18pt;
+      color: #3b82f6;
+      margin-top: 0;
+      margin-bottom: 40px;
+      font-weight: normal;
+    }
+    .cover p {
+      font-size: 12pt;
+      color: #64748b;
+    }
+    .page-break {
+      page-break-before: always;
+    }
+    h1 {
+      color: #0f172a;
+      font-size: 20pt;
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 8px;
+      margin-top: 40px;
+    }
+    h2 {
+      color: #1e3a8a;
+      font-size: 15pt;
+      margin-top: 30px;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 5px;
+    }
+    h3 {
+      color: #2563eb;
+      font-size: 12pt;
+      margin-top: 20px;
+    }
+    p, li {
+      font-size: 11pt;
+      text-align: justify;
+    }
+    ul, ol {
+      margin-top: 5px;
+      margin-bottom: 15px;
+      padding-left: 25px;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #1e293b;
+      font-weight: bold;
+      border: 1px solid #cbd5e1;
+      padding: 10px;
+      text-align: left;
+      font-size: 10.5pt;
+    }
+    td {
+      border: 1px solid #cbd5e1;
+      padding: 10px;
+      vertical-align: top;
+      font-size: 10pt;
+    }
+    .highlight {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 12px 18px;
+      margin: 20px 0;
+      border-radius: 0 4px 4px 0;
+    }
+    .highlight p {
+      margin: 0;
+      font-size: 10.5pt;
+      color: #1e40af;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 9pt;
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    .role-admin {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+    .role-ga {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    .role-user {
+      background-color: #e0f2fe;
+      color: #075985;
+    }
+    .flow-card {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    .flow-step-num {
+      background-color: #3b82f6;
+      color: #ffffff;
+      width: 24px;
+      height: 24px;
+      display: inline-block;
+      text-align: center;
+      line-height: 24px;
+      border-radius: 50%;
+      font-weight: bold;
+      margin-right: 10px;
+      font-size: 10pt;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER PAGE -->
+  <div class="cover">
+    <br><br><br>
+    <h1>GUDANG IDN</h1>
+    <h2>Panduan Keterangan, Fitur, & Flow Kerja Aplikasi</h2>
+    <br><br>
+    <p><strong>Sistem Manajemen Inventaris & Peminjaman Barang Terintegrasi WhatsApp</strong></p>
+    <br><br><br><br>
+    <table style="width: 50%; margin: 0 auto; border: none;">
+      <tr style="border: none;">
+        <td style="border: none; text-align: right; width: 40%; color: #64748b;">Dibuat Untuk:</td>
+        <td style="border: none; text-align: left; font-weight: bold; color: #0f172a;">Tim Operasional & GA IDN</td>
+      </tr>
+      <tr style="border: none;">
+        <td style="border: none; text-align: right; color: #64748b;">Teknologi:</td>
+        <td style="border: none; text-align: left; font-weight: bold; color: #0f172a;">Next.js 16, Supabase, Tailwind, Watzap API</td>
+      </tr>
+      <tr style="border: none;">
+        <td style="border: none; text-align: right; color: #64748b;">Tanggal Rilis:</td>
+        <td style="border: none; text-align: left; font-weight: bold; color: #0f172a;">18 Mei 2026</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 1: OVERVIEW -->
+  <h1>1. TENTANG APLIKASI GUDANG IDN</h1>
+  <p>
+    <strong>Gudang IDN</strong> adalah platform web modern berbasis <em>Warehouse Management System</em> (WMS) dan <em>Asset Borrowing Management</em> yang dirancang khusus untuk mengelola persediaan fisik barang, transaksi mutasi stok antar-gudang, penyesuaian fisik (stock opname), serta siklus peminjaman barang oleh karyawan secara <em>end-to-end</em>.
+  </p>
+  <p>
+    Sistem ini dibangun dengan arsitektur modern berkinerja tinggi menggunakan teknologi terbaru untuk menjamin reliabilitas data dan pengalaman pengguna yang luar biasa:
+  </p>
+  <ul>
+    <li><strong>Next.js 16 & React 19:</strong> Framework frontend tercepat dengan fitur Server Components, dioptimalkan untuk meminimalkan waktu pemuatan halaman.</li>
+    <li><strong>Tailwind CSS v4:</strong> Framework desain utilitas tingkat tinggi yang menghasilkan visual premium, konsisten, adaptif, serta sangat responsif pada perangkat <em>mobile</em> maupun desktop.</li>
+    <li><strong>Supabase (PostgreSQL & Auth):</strong> Backend tangguh dengan integrasi Row Level Security (RLS) untuk keamanan data tingkat tinggi, otentikasi aman, serta performa kueri basis data relasional yang andal.</li>
+    <li><strong>TanStack React Query:</strong> Library sinkronisasi data yang memastikan data dashboard dan inventaris selalu terbarui (real-time) tanpa membebani server secara berlebih.</li>
+    <li><strong>Integrasi Watzap API:</strong> Otomatisasi pengiriman pesan notifikasi WhatsApp interaktif kepada peminjam barang serta grup tim General Affair (GA) untuk peringatan stok kritis, pengembalian barang, dan persetujuan peminjaman.</li>
+    <li><strong>QR Code & PDF Integration:</strong> Sistem dilengkapi dengan pemindaian barcode/QR untuk barang serta ekspor dokumen digital berformat PDF (menggunakan jspdf) untuk pembuatan tanda terima fisik.</li>
+  </ul>
+
+  <!-- SECTION 2: USER ROLES -->
+  <h1>2. STRUKTUR PENGGUNA & PERAN (RBAC)</h1>
+  <p>
+    Gudang IDN menerapkan kontrol akses berbasis peran (<em>Role-Based Access Control / RBAC</em>) yang membagi pengguna ke dalam tiga peran utama untuk menjaga integritas transaksi gudang:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Peran (Role)</th>
+        <th style="width: 25%;">Cakupan Akses</th>
+        <th style="width: 50%;">Deskripsi Tanggung Jawab</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="role-badge role-admin">Administrator</span>
+        </td>
+        <td>Pengaturan Sistem & Pengguna</td>
+        <td>
+          Bertanggung jawab atas administrasi tingkat tinggi seperti pembuatan/pemblokiran akun pengguna, pemantauan log aktivitas audit keamanan sistem, pengaturan data profil instansi, serta pengelolaan API Key WhatsApp dan penyusunan template pesan notifikasi.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <span class="role-badge role-ga">General Affair (GA)</span>
+        </td>
+        <td>Gudang & Operasional Transaksi</td>
+        <td>
+          Merupakan operator utama sistem. Memiliki akses penuh ke manajemen gudang fisik, input kategori barang, pembuatan profil barang, pencatatan transaksi masuk/keluar/pindah gudang, eksekusi stock opname bulanan, serta memproses persetujuan dan pengembalian barang yang dipinjam.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <span class="role-badge role-user">Karyawan (User)</span>
+        </td>
+        <td>Peminjaman Barang Mandiri</td>
+        <td>
+          Merupakan pengguna umum yang menggunakan sistem untuk melihat daftar ketersediaan aset kantor, mengajukan request peminjaman barang (input item, jumlah, tanggal pinjam, dan target pengembalian), serta memantau status peminjaman miliknya secara mandiri.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 3: FEATURES -->
+  <h1>3. PENJELASAN FITUR APLIKASI</h1>
+  <p>
+    Berikut adalah rincian fungsionalitas dari setiap modul dan menu yang tersedia di dalam aplikasi Gudang IDN berdasarkan hak akses masing-masing peran:
+  </p>
+
+  <h2>3.1. Modul Utama (Semua Peran)</h2>
+  <h3>A. Dashboard Interaktif</h3>
+  <ul>
+    <li><strong>Ringkasan Metrik Cepat:</strong> Menampilkan statistik jumlah item barang, persediaan total, peminjaman aktif yang belum dikembalikan, dan peringatan stok di bawah batas minimum (*low stock alert*).</li>
+    <li><strong>Grafik Tren (Recharts):</strong> Visualisasi diagram garis dan batang yang menunjukkan tren barang keluar-masuk serta frekuensi peminjaman barang dalam periode waktu tertentu.</li>
+    <li><strong>Notifikasi Cepat:</strong> Tampilan peringatan real-time bagi GA jika ada peminjaman yang *overdue* (terlambat dikembalikan) atau stok barang habis.</li>
+  </ul>
+
+  <h2>3.2. Modul Administrasi (Khusus Administrator)</h2>
+  <h3>A. Manajemen User</h3>
+  <ul>
+    <li><strong>Pendaftaran Pengguna:</strong> Admin dapat mendaftarkan karyawan baru ke dalam sistem, menentukan peran mereka (<span class="role-badge role-admin">admin</span>, <span class="role-badge role-ga">general_affair</span>, atau <span class="role-badge role-user">user</span>).</li>
+    <li><strong>Kontrol Status Akun:</strong> Admin dapat menonaktifkan akun yang sudah tidak aktif (misal karyawan resign) agar tidak dapat masuk ke sistem.</li>
+  </ul>
+  <h3>B. Log Aktivitas (Audit Log)</h3>
+  <ul>
+    <li><strong>Transparansi Audit:</strong> Mencatat setiap aksi krusial yang dilakukan oleh operator (seperti tambah barang, pengurangan stok, pemindahan barang, atau eksekusi stock opname).</li>
+    <li><strong>Detail Log:</strong> Mencatat waktu kejadian, pelaku aksi, tipe aksi (CREATE, UPDATE, DELETE), entitas yang diubah, beserta detail nilai sebelum dan sesudah perubahan untuk mencegah manipulasi data.</li>
+  </ul>
+  <h3>C. Pengaturan Sistem & WhatsApp</h3>
+  <ul>
+    <li><strong>Informasi Umum:</strong> Mengubah nama instansi, alamat kontak, dan mengunggah logo perusahaan yang akan tersemat pada tajuk laporan PDF.</li>
+    <li><strong>Konfigurasi WhatsApp (Watzap API):</strong> Menyimpan API Key dan Number Key Watzap untuk integrasi notifikasi pesan instan.</li>
+    <li><strong>Template Pesan Kustom:</strong> Menyediakan editor format pesan notifikasi dengan tag dinamis seperti <code>{{nama_peminjam}}</code>, <code>{{nama_barang}}</code>, <code>{{stok_saat_ini}}</code>, <code>{{barang_kembali}}</code>, dan <code>{{barang_belum_kembali}}</code> untuk notifikasi otomatis.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <h2>3.3. Modul Gudang & Inventaris (Khusus General Affair)</h2>
+  <h3>A. Manajemen Gudang</h3>
+  <ul>
+    <li>Pencatatan multi-gudang (misalnya: *Gudang IT*, *Gudang Alat Tulis Kantor*, *Gudang Pusat*). Setiap transaksi stok wajib merujuk pada gudang fisik tertentu untuk memastikan data lokasi yang akurat.</li>
+  </ul>
+  <h3>B. Kategori & Profil Barang</h3>
+  <ul>
+    <li><strong>Kategori:</strong> Pengelompokan barang untuk mempermudah pencarian (elektronik, furnitur, alat tulis, perlengkapan umum).</li>
+    <li><strong>Master Barang:</strong> GA dapat mendaftarkan barang baru dengan mendefinisikan nama, kode barang (barcode/QR), deskripsi spesifikasi, serta **Batas Minimum Stok (Minimum Stock Threshold)**.</li>
+  </ul>
+  <h3>C. Master Data Kondisi & Status</h3>
+  <ul>
+    <li>GA dapat menyesuaikan daftar kondisi fisik barang (seperti: *Sangat Baik, Rusak Ringan, Rusak Total*) serta status ketersediaan barang (seperti: *Tersedia, Sedang Dipinjam, Dalam Perbaikan*).</li>
+  </ul>
+
+  <h2>3.4. Modul Transaksi & Mutasi Stok (Khusus General Affair)</h2>
+  <h3>A. Barang Masuk (Stock In)</h3>
+  <ul>
+    <li>Mencatat penambahan stok barang ke gudang tujuan tertentu. Dilengkapi dengan catatan asal barang, nomor dokumen pendukung, dan log penanggung jawab.</li>
+  </ul>
+  <h3>B. Barang Keluar (Stock Out)</h3>
+  <ul>
+    <li>Mencatat pengurangan stok barang dari suatu gudang karena pemakaian habis-pakai, pemusnahan barang rusak, atau hibah barang.</li>
+  </ul>
+  <h3>C. Pindah Barang (Stock Transfer)</h3>
+  <ul>
+    <li>Memindahkan barang dari satu gudang ke gudang lainnya. Transaksi ini berjalan secara aman (*database transaction*) dengan mendebit stok di gudang asal dan mengkredit stok di gudang tujuan secara simultan untuk menghindari selisih.</li>
+  </ul>
+  <h3>D. Stock Opname (Audit Fisik)</h3>
+  <ul>
+    <li>Fitur berkala untuk menyamakan catatan sistem dengan barang riil di lapangan. Operator menginput jumlah barang fisik yang ditemukan, sistem menghitung selisih (*discrepancy*), dan saat difinalisasi, sistem secara otomatis melakukan jurnal penyesuaian stok basis data.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <h2>3.5. Modul Peminjaman Barang</h2>
+  <h3>A. Alur Karyawan/User</h3>
+  <ul>
+    <li><strong>Form Request Pinjam:</strong> User memilih barang dari katalog yang berstatus tersedia, menentukan jumlah barang yang ingin dipinjam, menginput tanggal peminjaman, serta estimasi tanggal pengembalian barang.</li>
+    <li><strong>Riwayat Mandiri:</strong> Karyawan dapat memantau apakah pengajuan mereka masih *Pending*, disetujui (*Approved*), telah dikembalikan (*Returned*), atau ditolak (*Rejected*).</li>
+  </ul>
+  <h3>B. Alur General Affair (GA)</h3>
+  <ul>
+    <li><strong>Persetujuan Peminjaman (Approval Requests):</strong> GA memantau seluruh antrean permintaan peminjaman baru dari karyawan. GA dapat memeriksa ketersediaan fisik barang sebelum menekan tombol *Approve* atau *Reject*.</li>
+    <li><strong>Kelola Peminjaman Aktif:</strong> GA memantau daftar barang yang sedang dipinjam secara aktif beserta batas waktu pengembaliannya.</li>
+    <li><strong>Pengembalian Barang Parsial (Partial Return):</strong> Fitur canggih yang memungkinkan peminjam mengembalikan sebagian dari jumlah barang yang dipinjam terlebih dahulu. Sistem akan menghitung sisa barang yang masih dipinjam secara akurat dan tidak akan menutup status peminjaman hingga seluruh jumlah barang kembali secara utuh.</li>
+    <li><strong>Riwayat Arsip:</strong> Menyimpan rekaman seluruh data peminjaman masa lalu sebagai bahan pelaporan berkala.</li>
+  </ul>
+
+  <h2>3.6. Integrasi Kode QR &amp; Teknologi Pemindaian (QR Code &amp; Scanning System)</h2>
+  <p>
+    Aplikasi Gudang IDN mengintegrasikan teknologi kode QR (QR Code) menggunakan pustaka <code>qrcode</code> (generasi kode) dan <code>html5-qrcode</code> (pemindaian kamera secara real-time) untuk mempercepat proses pencatatan dan meningkatkan akurasi operasional inventaris di lapangan.
+  </p>
+  <h3>A. Peran QR Code pada Aset/Barang</h3>
+  <ul>
+    <li><strong>Identitas Unik Terenkripsi:</strong> Setiap aset atau barang yang didaftarkan ke dalam sistem akan secara otomatis memiliki kode QR unik berdasarkan ID barang atau SKU (Stock Keeping Unit) yang terenkripsi.</li>
+    <li><strong>Pencetakan Label Fisik:</strong> GA dapat mencetak QR Code ini ke media kertas stiker untuk ditempelkan pada fisik barang (misalnya di bawah laptop, punggung kursi, atau boks penyimpanan barang).</li>
+    <li><strong>Digital Twin:</strong> QR Code ini berfungsi sebagai jembatan langsung antara wujud fisik barang di rak gudang dengan entri data digitalnya di dalam sistem Supabase.</li>
+  </ul>
+  <h3>B. Peran Pemindaian (Scan QR) pada Fitur Barang Masuk (Stock In) &amp; Keluar (Stock Out)</h3>
+  <ul>
+    <li><strong>Pencarian Instan Tanpa Mengetik:</strong> Saat mencatat barang masuk atau keluar dalam jumlah banyak, GA tidak perlu mengetik nama barang secara manual di form pencarian. GA cukup menekan tombol kamera "Scan QR".</li>
+    <li><strong>Input Otomatis Cepat:</strong> Kamera laptop/HP akan membaca QR Code fisik barang, memverifikasi kecocokan ID dengan database, dan langsung memuat item tersebut ke form mutasi stok. Hal ini memangkas waktu entri data hingga 80% dan mencegah kesalahan pemilihan barang yang mirip secara visual.</li>
+  </ul>
+  <h3>C. Peran Pemindaian (Scan QR) pada Fitur Stock Opname (Audit Fisik)</h3>
+  <ul>
+    <li><strong>Audit Rak Gudang Berjalan:</strong> Saat melakukan stock opname berkala di area gudang yang luas, tim GA dapat membawa tablet atau smartphone, lalu memindai kode QR dari barang yang mereka hitung secara langsung di rak.</li>
+    <li><strong>Pencatatan Selisih Akurat:</strong> Pemindaian QR Code langsung membuka dialog input stock opname untuk item bersangkutan secara real-time. Sistem langsung membandingkan *system stock* dengan jumlah fisik aktual yang diinput oleh auditor di tempat. Ini menjamin proses verifikasi fisik yang cepat, terlacak, dan bebas dari duplikasi input data.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 4: SYSTEM FLOWS -->
+  <h1>4. ALUR KERJA UTAMA SISTEM (WORKFLOW FLOWS)</h1>
+  <p>
+    Di bawah ini adalah penjelasan alur kerja sistem operasional harian yang berjalan di dalam aplikasi Gudang IDN.
+  </p>
+
+  <h2>4.1. Alur Siklus Peminjaman & Pengembalian Barang (Karyawan & GA)</h2>
+  <div class="flow-card">
+    <div class="flow-step-num">1</div><strong>Pengajuan:</strong> Karyawan masuk ke menu <em>Pinjam Barang</em>, memilih item dan jumlahnya, menginput tanggal pinjam & target kembali, lalu mengirim formulir. Status awal: <code>Pending</code>.<br><br>
+    <div class="flow-step-num">2</div><strong>Review & Notifikasi:</strong> Sistem mencatat transaksi di tabel <code>loan_requests</code> dan memicu WhatsApp notifikasi kepada tim GA bahwa ada pengajuan peminjaman baru.<br><br>
+    <div class="flow-step-num">3</div><strong>Persetujuan GA:</strong> GA meninjau pengajuan di menu <em>Request Peminjaman</em>. Jika disetujui (Approve), status berubah menjadi <code>Approved</code>, stok barang di gudang terkait otomatis berkurang secara real-time, dan sistem mengirim notifikasi WA persetujuan ke nomor personal karyawan.<br><br>
+    <div class="flow-step-num">4</div><strong>Penggunaan & Pengawasan:</strong> Aset berada di tangan karyawan. Sistem melacak status peminjaman ini di halaman <em>Kelola Peminjaman</em>. Jika melewati tanggal batas pengembalian, sistem menandainya sebagai terlambat (overdue).<br><br>
+    <div class="flow-step-num">5</div><strong>Proses Pengembalian:</strong> Karyawan membawa barang kembali ke GA. GA memproses pengembalian di menu pengembalian:
+    <ul>
+      <li><strong>Pengembalian Utuh:</strong> Jika semua barang kembali, status peminjaman diubah menjadi <code>Returned / Finished</code>. Stok gudang otomatis bertambah kembali sesuai jumlah barang.</li>
+      <li><strong>Pengembalian Parsial (Bertahap):</strong> Jika dipinjam 5 buah dan baru dikembalikan 3 buah, GA menginput angka 3. Sistem mencatat transaksi pengembalian di tabel <code>loan_item_returns</code>, mengubah status barang terkait menjadi "Kembali Sebagian", memperbarui kolom <code>returned_quantity</code> di tabel <code>loan_items</code> menjadi 3, dan menyisakan 2 barang yang masih harus dikembalikan.</li>
+    </ul><br>
+    <div class="flow-step-num">6</div><strong>Notifikasi Akhir:</strong> WhatsApp mengirimkan rincian pengembalian: daftar barang yang baru saja dikembalikan beserta sisa barang yang masih dipinjam oleh karyawan tersebut ke nomor personal karyawan dan grup pengawasan GA.
+  </div>
+
+  <h2>4.2. Alur Transaksi Stok & WhatsApp Alerting (Batas Minimum Stok)</h2>
+  <div class="flow-card">
+    <div class="flow-step-num">1</div><strong>Pencatatan Mutasi:</strong> GA menginput transaksi keluar barang (misalnya konsumsi kertas kantor sebanyak 10 rim) melalui menu <em>Barang Keluar</em>.<br><br>
+    <div class="flow-step-num">2</div><strong>Pengurangan Stok:</strong> Sistem menulis data ke tabel <code>stock_out</code> dan memicu pembaruan total stok barang di gudang tersebut.<br><br>
+    <div class="flow-step-num">3</div><strong>Pemeriksaan Batas Threshold:</strong> Logika server secara otomatis membandingkan stok gabungan barang tersebut dengan nilai <code>minimum_stock</code> di database.<br><br>
+    <div class="flow-step-num">4</div><strong>Notifikasi WhatsApp Otomatis:</strong> Jika stok akhir ternyata berada di bawah atau sama dengan batas minimum (misal batas minimum 5 rim, dan stok tersisa tinggal 3 rim), server otomatis memanggil API Watzap Group.<br><br>
+    <div class="flow-step-num">5</div><strong>Tindakan Pengadaan:</strong> Pesan peringatan (berisi nama barang, sisa stok, batas minimum, dan trigger transaksi penyebab) mendarat di grup WhatsApp pengadaan barang agar tim GA segera membuat pengajuan pembelian barang baru.
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2>4.3. Alur Proses Audit Stock Opname (Rekonsiliasi Stok Fisik)</h2>
+  <div class="flow-card">
+    <div class="flow-step-num">1</div><strong>Inisiasi Sesi:</strong> Tim GA membuat sesi audit baru di halaman <em>Stock Opname</em> (misalnya sesi audit "Sesi Opname Mei 2026"). Ini akan membuat entitas baru di tabel <code>stock_opname_groups</code> dengan status <code>draft</code>.<br><br>
+    <div class="flow-step-num">2</div><strong>Perhitungan Lapangan:</strong> Tim GA melakukan perhitungan fisik barang di gudang secara riil.<br><br>
+    <div class="flow-step-num">3</div><strong>Input Hasil Aktual:</strong> GA menginputkan jumlah fisik aktual dari setiap barang di sistem. Untuk setiap barang, sistem mencatat data ke tabel <code>stock_opnames</code> yang mencakup:<br>
+    - Stok yang tercatat di sistem saat ini (*system stock*).<br>
+    - Stok riil hasil hitungan fisik (*actual stock*).<br>
+    - Selisih hitung (*discrepancy* = aktual - sistem).<br><br>
+    <div class="flow-step-num">4</div><strong>Analisis Selisih:</strong> Sistem menampilkan status selisih secara visual (warna merah jika stok fisik kurang, warna hijau jika stok fisik berlebih, dan warna abu-abu jika stok pas). GA dapat mengedit catatan atau memberikan keterangan alasan selisih.<br><br>
+    <div class="flow-step-num">5</div><strong>Finalisasi Sesi:</strong> GA menekan tombol <strong>Finalisasi</strong>. Proses ini bersifat transaksi mutlak yang akan:<br>
+    - Mengubah status sesi grup opname menjadi <code>completed</code> (data terkunci dan tidak dapat diedit kembali).<br>
+    - Secara otomatis membuat entitas transaksi di tabel <code>stock_in</code> (jika aktual > sistem) atau di tabel <code>stock_out</code> (jika aktual < sistem) sebagai penyesuaian stok otomatis.<br>
+    - Menyelaraskan angka persediaan di database agar sama persis dengan angka aktual hasil perhitungan fisik di lapangan.
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 5: DATABASE SCHEMA -->
+  <h1>5. STRUKTUR DATA & SKEMA TABEL DATABASE</h1>
+  <p>
+    Seluruh proses bisnis aplikasi di atas disimpan dan dikelola dalam basis data relasional PostgreSQL Supabase yang terdiri dari 16 tabel berikut:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Nama Tabel</th>
+        <th style="width: 20%;">Jenis Data</th>
+        <th style="width: 55%;">Deskripsi & Relasi Kunci</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>profiles</strong></td>
+        <td>Master User</td>
+        <td>Menyimpan profil pengguna (nama lengkap, nomor telepon, peran) yang terhubung ke otentikasi inti Supabase Auth (<code>auth.users</code>).</td>
+      </tr>
+      <tr>
+        <td><strong>company_settings</strong></td>
+        <td>Konfigurasi</td>
+        <td>Menyimpan informasi instansi serta kunci rahasia API Key Watzap beserta draf template pesan WhatsApp untuk stok minim, peminjaman, dan pengembalian.</td>
+      </tr>
+      <tr>
+        <td><strong>warehouses</strong></td>
+        <td>Master Gudang</td>
+        <td>Daftar gudang fisik penyimpanan barang.</td>
+      </tr>
+      <tr>
+        <td><strong>item_category</strong></td>
+        <td>Master Kategori</td>
+        <td>Kategori pengelompokan barang.</td>
+      </tr>
+      <tr>
+        <td><strong>item_status</strong></td>
+        <td>Master Status</td>
+        <td>Menyimpan pilihan status ketersediaan barang.</td>
+      </tr>
+      <tr>
+        <td><strong>item_condition</strong></td>
+        <td>Master Kondisi</td>
+        <td>Menyimpan pilihan kondisi fisik barang.</td>
+      </tr>
+      <tr>
+        <td><strong>items</strong></td>
+        <td>Master Barang</td>
+        <td>Menyimpan nama barang, kode barang, batas minimum stok, kategori (relasi ke <code>item_category</code>), dan informasi spesifikasi barang.</td>
+      </tr>
+      <tr>
+        <td><strong>stock_in</strong></td>
+        <td>Transaksi Mutasi</td>
+        <td>Mencatat riwayat barang masuk per gudang. Relasi ke <code>items</code>, <code>warehouses</code>, dan <code>profiles</code> (pembuat transaksi).</td>
+      </tr>
+      <tr>
+        <td><strong>stock_out</strong></td>
+        <td>Transaksi Mutasi</td>
+        <td>Mencatat riwayat barang keluar per gudang. Relasi ke <code>items</code>, <code>warehouses</code>, dan <code>profiles</code> (pembuat transaksi).</td>
+      </tr>
+      <tr>
+        <td><strong>stock_transfers</strong></td>
+        <td>Transaksi Mutasi</td>
+        <td>Mencatat mutasi barang antar-gudang (asal ke tujuan). Menghubungkan relasi ganda ke <code>warehouses</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>loan_requests</strong></td>
+        <td>Transaksi Peminjaman</td>
+        <td>Data utama pengajuan peminjaman barang oleh karyawan. Menyimpan status (pending, approved, rejected, returned), tanggal pengajuan, tanggal harus kembali, serta tanda tangan persetujuan GA.</td>
+      </tr>
+      <tr>
+        <td><strong>loan_items</strong></td>
+        <td>Transaksi Peminjaman</td>
+        <td>Detail barang-barang yang ada di dalam satu nomor pengajuan peminjaman. Relasi ke <code>loan_requests</code>, <code>items</code>, mencatat jumlah dipinjam (<code>quantity</code>), dan jumlah yang sudah berhasil dikembalikan (<code>returned_quantity</code>).</td>
+      </tr>
+      <tr>
+        <td><strong>loan_item_returns</strong></td>
+        <td>Transaksi Peminjaman</td>
+        <td>Catatan transaksi setiap kali ada aktivitas pengembalian barang fisik (mendukung pencatatan pengembalian parsial). Mencatat kuantitas barang yang kembali, tanggal kembali, dan kondisi barang saat kembali.</td>
+      </tr>
+      <tr>
+        <td><strong>stock_opname_groups</strong></td>
+        <td>Transaksi Audit</td>
+        <td>Sesi grup besar stock opname berkala (misal opname bulanan). Menyimpan status sesi (draft, completed) dan tanggal eksekusi.</td>
+      </tr>
+      <tr>
+        <td><strong>stock_opnames</strong></td>
+        <td>Transaksi Audit</td>
+        <td>Detail audit barang per sesi opname. Relasi ke <code>stock_opname_groups</code> dan <code>items</code>. Menyimpan angka sistem, angka aktual lapangan, dan selisihnya.</td>
+      </tr>
+      <tr>
+        <td><strong>activity_logs</strong></td>
+        <td>Sistem Keamanan</td>
+        <td>Audit trail dari seluruh aktivitas administrasi dan mutasi inventaris.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <br><br>
+  <div style="text-align: center; color: #64748b; font-size: 9pt;">
+    Dokumentasi Gudang IDN - Versi 1.0 (Mei 2026) - Hak Cipta Dilindungi Undang-Undang.
+  </div>
+
+</body>
+</html>

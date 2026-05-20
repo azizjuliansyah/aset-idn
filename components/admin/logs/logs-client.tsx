@@ -107,11 +107,11 @@ export function LogsClient() {
             render: (_, row: any) => (
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                  {row.user?.full_name?.[0] || 'U'}
+                  {row.user?.full_name?.[0] || 'S'}
                 </div>
                 <div className="flex flex-col">
                   <span className="font-medium text-sm">{row.user?.full_name || 'System'}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase">{row.user?.role || 'user'}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase">{row.user?.role || 'system'}</span>
                 </div>
               </div>
             )

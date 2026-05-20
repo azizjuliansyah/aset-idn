@@ -11,7 +11,7 @@ export function useStockOpnameGroups() {
   const [search, setSearch] = useState('')
   const [warehouseId, setWarehouseId] = useState<string>('all')
   const [categoryId, setCategoryId] = useState<string>('all')
-  const [dateRange, setDateRange] = useState<{from?: Date, to?: Date}>({})
+  const [dateRange, setDateRange] = useState<{ from?: Date, to?: Date }>({})
 
   // Query
   const query = useQuery<PaginatedResponse<StockOpnameGroup>>({
@@ -71,7 +71,7 @@ export function useStockOpnameEntries(groupId: string, params: any) {
       if (params.warehouseId && params.warehouseId !== 'all') searchParams.append('warehouse_id', params.warehouseId)
       if (params.categoryId && params.categoryId !== 'all') searchParams.append('category_id', params.categoryId)
       if (params.filterType && params.filterType !== 'all') searchParams.append('filter_type', params.filterType)
-      
+
       if (params.datePreset === 'custom') {
         if (params.customStartDate) searchParams.append('start_date', params.customStartDate)
         if (params.customEndDate) searchParams.append('end_date', params.customEndDate)
@@ -257,5 +257,28 @@ export function useStockOpnameMutations() {
     }
   })
 
-  return { createGroup, deleteGroup, bulkDeleteGroups, addEntry, deleteEntry, bulkDeleteEntries, updateEntry, finalizeGroup }
+  const updateGroup = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; name: string; description?: string }) => {
+      const res = await fetch(`/api/v1/stock-opname-groups/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Gagal mengubah group opname')
+      }
+      return res.json()
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-group', variables.id] })
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-groups'] })
+      toast.success('Group opname berhasil diubah')
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Gagal mengubah group opname')
+    }
+  })
+
+  return { createGroup, updateGroup, deleteGroup, bulkDeleteGroups, addEntry, deleteEntry, bulkDeleteEntries, updateEntry, finalizeGroup }
 }

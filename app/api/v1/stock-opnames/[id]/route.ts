@@ -31,8 +31,7 @@ export async function PATCH(
     .from('stock_opnames')
     .update({
       actual_stock,
-      note,
-      updated_at: new Date().toISOString()
+      note
     })
     .eq('id', id)
     .select('id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, created_at, created_by')

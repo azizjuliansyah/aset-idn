@@ -1,4 +1,4 @@
-import { createClient } from './supabase/server'
+import { createClient, createAdminClient } from './supabase/server'
 import { headers } from 'next/headers'
 
 export type LogAction = 
@@ -33,6 +33,7 @@ interface ActivityLogParams {
   entityType: LogEntityType
   entityId?: string
   details?: any
+  isSystem?: boolean
 }
 
 /**
@@ -43,23 +44,38 @@ export async function createActivityLog({
   action,
   entityType,
   entityId,
-  details
+  details,
+  isSystem = false
 }: ActivityLogParams) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      console.warn('[Logger] No user session found, skipping log.')
-      return
+    let supabase
+    let userId = null
+
+    if (isSystem) {
+      supabase = createAdminClient()
+    } else {
+      supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        console.warn('[Logger] No user session found, skipping log.')
+        return
+      }
+      userId = user.id
     }
 
-    const headersList = await headers()
-    const ipAddress = headersList.get('x-forwarded-for') || headersList.get('x-real-ip')
-    const userAgent = headersList.get('user-agent')
+    let ipAddress = null
+    let userAgent = null
+    try {
+      const headersList = await headers()
+      ipAddress = headersList.get('x-forwarded-for') || headersList.get('x-real-ip')
+      userAgent = headersList.get('user-agent')
+    } catch (e) {
+      // safe catch for non-request contexts or static compilation
+    }
 
     const { error } = await supabase.from('activity_logs').insert({
-      user_id: user.id,
+      user_id: userId,
       action,
       entity_type: entityType,
       entity_id: entityId,
@@ -75,3 +91,4 @@ export async function createActivityLog({
     console.error('[Logger] Unexpected error:', err)
   }
 }
+

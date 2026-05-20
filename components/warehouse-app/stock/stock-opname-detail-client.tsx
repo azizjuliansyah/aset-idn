@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Trash2, ArrowLeft, CheckCircle2, Filter, Eye, Clock, MoreHorizontal, Pencil, Download } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, CheckCircle2, Filter, Eye, Clock, MoreHorizontal, Pencil, Download, Upload } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 import { DataTable } from '@/components/shared/data-table'
@@ -28,6 +28,7 @@ import {
 
 import { useStockOpnameGroup, useStockOpnameMutations, useStockOpnameEntries } from '../../../hooks/stock/use-stock-opname'
 import { StockOpnameEntryDialog } from '@/components/warehouse-app/stock/sub-components/stock-opname-entry-dialog'
+import { StockOpnameImportDialog } from '@/components/warehouse-app/stock/sub-components/stock-opname-import-dialog'
 import { StockOpnameDetailFilter } from './sub-components/stock-opname-detail-filter'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TableSkeleton } from '@/components/shared/table-skeleton'
@@ -63,13 +64,14 @@ interface StockOpnameDetailClientProps {
 
 export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
   const router = useRouter()
-  
+
   const { data: res, isLoading } = useStockOpnameGroup(id)
   const group = res?.data
 
   const { deleteEntry, bulkDeleteEntries, finalizeGroup } = useStockOpnameMutations()
 
   const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [editEntryData, setEditEntryData] = useState<any>(null)
   const [deleteEntryData, setDeleteEntryData] = useState<{ id: string, name: string } | null>(null)
   const [isFinalizeOpen, setIsFinalizeOpen] = useState(false)
@@ -119,7 +121,7 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
     if (warehouseFilter && warehouseFilter !== 'all') searchParams.append('warehouse_id', warehouseFilter)
     if (categoryFilter && categoryFilter !== 'all') searchParams.append('category_id', categoryFilter)
     if (filterType && filterType !== 'all') searchParams.append('filter_type', filterType)
-    
+
     if (datePreset === 'custom') {
       if (customStartDate) searchParams.append('start_date', customStartDate)
       if (customEndDate) searchParams.append('end_date', customEndDate)
@@ -137,7 +139,7 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
       const entriesToExport = exportData.data || []
 
       const headers = ['Barang', 'Kategori', 'Gudang', 'Stok Sistem', 'Stok Fisik', 'Selisih', 'Waktu', 'Catatan']
-      
+
       const csvContent = [
         headers.join(','),
         ...entriesToExport.map((entry: any) => {
@@ -172,27 +174,35 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
           <Button variant="outline" size="icon" className='cursor-pointer' onClick={() => router.back()}>
             <ArrowLeft size={16} />
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{group.name}</h1>
-            <p className="text-muted-foreground">{group.description || 'Tidak ada deskripsi'}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={isDraft ? 'secondary' : 'success'} className="h-7 px-3 flex items-center gap-1.5 font-medium">
+                Status: {isDraft ? 'Draft' : 'Selesai'}
+              </Badge>
+              <Badge variant="outline" className="h-7 px-3 border-dashed bg-muted/30 font-medium">
+                Total Item: {totalCount}
+              </Badge>
+              <Badge variant="outline" className="h-7 px-3 border-dashed bg-muted/30 font-medium text-muted-foreground">
+                {formatDateTime(group.created_at)}
+              </Badge>
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={isDraft ? 'secondary' : 'default'} className="h-7 px-3 flex items-center gap-1.5 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
-            Status: {isDraft ? 'Draft' : 'Selesai'}
-          </Badge>
-          <Badge variant="outline" className="h-7 px-3 border-dashed bg-muted/30 font-medium">
-            Total Item: {totalCount}
-          </Badge>
-          <Badge variant="outline" className="h-7 px-3 border-dashed bg-muted/30 font-medium text-muted-foreground">
-            {formatDateTime(group.created_at)}
-          </Badge>
+        <div className="flex items-center justify-end gap-2">
+          <Button size="sm" variant="outline" onClick={handleExportCSV} className="cursor-pointer">
+            <Download size={14} className="mr-1.5" /> Export CSV
+          </Button>
+          {isDraft && (
+            <Button size="sm" onClick={() => setIsFinalizeOpen(true)} className="bg-green-600 hover:bg-green-700 text-white cursor-pointer">
+              <CheckCircle2 size={14} className="mr-1.5" /> Finalisasi Opname
+            </Button>
+          )}
         </div>
       </div>
 
@@ -229,18 +239,18 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
                     <Eye size={14} className="mr-2" />
                     Lihat Detail
                   </DropdownMenuItem>
-                  
+
                   {isDraft && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => setEditEntryData(row)} 
+                      <DropdownMenuItem
+                        onClick={() => setEditEntryData(row)}
                         className="cursor-pointer"
                       >
                         <Pencil size={14} className="mr-2" />
                         Edit Item
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => setDeleteEntryData({ id: row.id, name: (row as any).item?.name })}
                         className="cursor-pointer text-destructive focus:text-destructive focus:bg-red-50"
                       >
@@ -279,21 +289,16 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
         onBulkDelete={isDraft ? (ids) => bulkDeleteEntries.mutate({ ids, groupId: id }) : undefined}
         emptyText="Belum ada item yang di-opname"
         actions={
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={handleExportCSV}>
-              <Download size={14} className="mr-1.5" /> Export CSV
-            </Button>
-            {isDraft && (
-              <>
-                <Button size="sm" variant="outline" onClick={() => setIsEntryDialogOpen(true)}>
-                  <Plus size={14} className="mr-1.5" /> Tambah Item
-                </Button>
-                <Button size="sm" onClick={() => setIsFinalizeOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
-                  <CheckCircle2 size={14} className="mr-1.5" /> Finalisasi Opname
-                </Button>
-              </>
-            )}
-          </div>
+          isDraft ? (
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setIsImportDialogOpen(true)} className="border-blue-200 hover:bg-blue-50 text-blue-700 hover:text-blue-800 cursor-pointer">
+                <Upload size={14} className="mr-1.5" /> Import CSV
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setIsEntryDialogOpen(true)}>
+                <Plus size={14} className="mr-1.5" /> Tambah Item
+              </Button>
+            </div>
+          ) : undefined
         }
       />
 
@@ -304,12 +309,19 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
         existingEntries={[]} // Note: With pagination, we can't easily pass all existing entries for duplicate check locally
       />
 
+      <StockOpnameImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        groupId={id}
+        groupName={group.name}
+      />
+
       <StockOpnameEntryDialog
         open={!!editEntryData}
         onOpenChange={(open) => !open && setEditEntryData(null)}
         groupId={id}
         initialData={editEntryData}
-        existingEntries={[]} 
+        existingEntries={[]}
       />
 
       <ConfirmDialog
@@ -325,23 +337,18 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
       <Dialog open={!!selectedEntryDetail} onOpenChange={(open) => !open && setSelectedEntryDetail(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Detail Stok Opname</DialogTitle>
-            <DialogDescription>
-              Informasi lengkap untuk entri opname ini.
-            </DialogDescription>
+            <DialogTitle>Detail Barang Stok Opname</DialogTitle>
           </DialogHeader>
-          
+
           {selectedEntryDetail && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground uppercase">Barang</div>
-                  <div className="text-sm font-semibold">{selectedEntryDetail.item?.name}</div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground uppercase">Gudang</div>
-                  <div className="text-sm font-semibold">{selectedEntryDetail.warehouse?.name}</div>
-                </div>
+            <div className="space-y-4 ">
+              <div>
+                <div className="text-xs font-medium text-muted-foreground uppercase">Barang</div>
+                <div className="text-sm font-semibold">{selectedEntryDetail.item?.name}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-muted-foreground uppercase">Gudang</div>
+                <div className="text-sm font-semibold">{selectedEntryDetail.warehouse?.name}</div>
               </div>
 
               <div className="grid grid-cols-3 gap-4 p-3 bg-muted/30 rounded-lg">

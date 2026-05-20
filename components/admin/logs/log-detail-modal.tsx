@@ -106,12 +106,12 @@ export function LogDetailModal({
                   value={
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black border border-primary/20">
-                        {log.user?.full_name?.[0] || 'U'}
+                        {log.user?.full_name?.[0] || 'S'}
                       </div>
                       <div className="flex flex-col">
                         <span className="font-semibold text-base leading-tight">{log.user?.full_name || 'System'}</span>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary" className="text-[9px] font-semibold bg-primary/10 text-primary uppercase h-4 px-1.5">{log.user?.role || 'user'}</Badge>
+                          <Badge variant="secondary" className="text-[9px] font-semibold bg-primary/10 text-primary uppercase h-4 px-1.5">{log.user?.role || 'system'}</Badge>
                           <span className="text-[11px] text-muted-foreground font-medium">{log.user?.email || ''}</span>
                         </div>
                       </div>

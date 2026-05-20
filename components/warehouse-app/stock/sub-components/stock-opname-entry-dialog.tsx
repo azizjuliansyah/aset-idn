@@ -42,19 +42,33 @@ interface StockOpnameEntryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   groupId: string
-  initialData?: StockOpname
-  existingEntries?: StockOpname[]
+  initialData?: any
+  existingEntries?: any[]
+  onSubmitOverride?: (values: {
+    item_id: string
+    item_name: string
+    warehouse_id: string
+    warehouse_name: string
+    actual_stock: number
+    note?: string
+    system_stock?: number
+  }) => void
+  titleOverride?: string
 }
 
-export function StockOpnameEntryDialog({ 
-  open, 
-  onOpenChange, 
-  groupId, 
+export function StockOpnameEntryDialog({
+  open,
+  onOpenChange,
+  groupId,
   initialData,
-  existingEntries
+  existingEntries,
+  onSubmitOverride,
+  titleOverride
 }: StockOpnameEntryDialogProps) {
   const supabase = createClient()
-  const { addEntry, updateEntry } = useStockOpnameMutations()
+  const mutations = useStockOpnameMutations()
+  const addEntry = mutations?.addEntry
+  const updateEntry = mutations?.updateEntry
   const [items, setItems] = useState<any[]>([])
   const [warehouses, setWarehouses] = useState<any[]>([])
   const [systemStock, setSystemStock] = useState<number | null>(null)
@@ -113,7 +127,7 @@ export function StockOpnameEntryDialog({
   // Fetch system stock when item or warehouse changes (only if NOT editing, or if manually changed)
   useEffect(() => {
     const fetchSystemStock = async () => {
-      if (itemId && warehouseId && !isEditing) {
+      if (itemId && warehouseId && (!isEditing || onSubmitOverride)) {
         setIsLoadingStock(true)
         try {
           const { data } = await supabase
@@ -132,10 +146,10 @@ export function StockOpnameEntryDialog({
       }
     }
     fetchSystemStock()
-  }, [itemId, warehouseId, supabase, isEditing])
+  }, [itemId, warehouseId, supabase, isEditing, onSubmitOverride])
 
   const handleScan = (decodedText: string) => {
-    if (isEditing) return // Disable scan when editing
+    if (isEditing && !onSubmitOverride) return // Disable scan when editing
 
     const item = items.find(i => i.id === decodedText)
     if (item) {
@@ -148,14 +162,30 @@ export function StockOpnameEntryDialog({
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Check for duplicate item + warehouse
-    const isDuplicate = existingEntries?.some(entry => 
-      entry.item_id === values.item_id && 
+    const isDuplicate = existingEntries?.some(entry =>
+      entry.item_id === values.item_id &&
       entry.warehouse_id === values.warehouse_id &&
       (!initialData || entry.id !== initialData.id)
     )
 
     if (isDuplicate) {
       toast.error('Item ini sudah ada di daftar opname untuk gudang yang sama.')
+      return
+    }
+
+    if (onSubmitOverride) {
+      const selectedItem = items.find(i => i.id === values.item_id)
+      const selectedWh = warehouses.find(w => w.id === values.warehouse_id)
+      onSubmitOverride({
+        item_id: values.item_id,
+        item_name: selectedItem?.name || '',
+        warehouse_id: values.warehouse_id,
+        warehouse_name: selectedWh?.name || '',
+        actual_stock: values.actual_stock,
+        note: values.note,
+        system_stock: systemStock ?? 0
+      })
+      onOpenChange(false)
       return
     }
 
@@ -190,13 +220,13 @@ export function StockOpnameEntryDialog({
   }
 
   const difference = systemStock !== null ? (actualStock || 0) - systemStock : 0
-  const isPending = addEntry.isPending || updateEntry.isPending
+  const isPending = addEntry?.isPending || updateEntry?.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Item Opname' : 'Tambah Item Opname'}</DialogTitle>
+          <DialogTitle>{titleOverride || (isEditing ? 'Edit Item Opname' : 'Tambah Item Opname')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
@@ -213,10 +243,10 @@ export function StockOpnameEntryDialog({
                     onValueChange={field.onChange}
                     placeholder="Pilih barang"
                     searchPlaceholder="Cari barang..."
-                    disabled={isEditing}
+                    disabled={isEditing && !onSubmitOverride}
                     className="flex-1 inline-flex items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   />
-                  {!isEditing && <QRScanner onScan={handleScan} />}
+                  {!isEditing && !onSubmitOverride && <QRScanner onScan={handleScan} />}
                 </div>
               )}
             />
@@ -229,7 +259,7 @@ export function StockOpnameEntryDialog({
               name="warehouse_id"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isEditing}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isEditing && !onSubmitOverride}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih gudang" />
                   </SelectTrigger>
@@ -284,7 +314,7 @@ export function StockOpnameEntryDialog({
             </Button>
             <Button type="submit" disabled={isPending || isLoadingStock || systemStock === null}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? 'Update Item' : 'Simpan Item'}
+              {onSubmitOverride ? 'Simpan Perubahan' : (isEditing ? 'Update Item' : 'Simpan Item')}
             </Button>
           </DialogFooter>
         </form>
