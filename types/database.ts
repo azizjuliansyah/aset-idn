@@ -166,6 +166,14 @@ export interface StockOpnameGroup {
   creator?: Profile
 }
 
+export interface StockOpnameDiffCategory {
+  id: string
+  name: string
+  note: string | null
+  created_by: string | null
+  created_at: string
+}
+
 export interface StockOpname {
   id: string
   group_id: string
@@ -175,11 +183,13 @@ export interface StockOpname {
   actual_stock: number
   difference: number
   note: string | null
+  diff_category_id: string | null
   created_by: string
   created_at: string
   // joined
   item?: Item
   warehouse?: Warehouse
+  diff_category?: StockOpnameDiffCategory | null
 }
 
 export interface LoanRequest {

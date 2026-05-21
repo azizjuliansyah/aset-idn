@@ -134,7 +134,8 @@ export async function POST(
         updateEntries.push({
           id: existingEntryId,
           actual_stock: actualStock,
-          note: note
+          note: note,
+          diff_category_id: row.diff_category_id || null
         })
       } else {
         newEntries.push({
@@ -144,7 +145,8 @@ export async function POST(
           system_stock: systemStock,
           actual_stock: actualStock,
           note: note,
-          created_by: user.id
+          created_by: user.id,
+          diff_category_id: row.diff_category_id || null
         })
       }
     }
@@ -171,7 +173,8 @@ export async function POST(
           .from('stock_opnames')
           .update({
             actual_stock: entry.actual_stock,
-            note: entry.note
+            note: entry.note,
+            diff_category_id: entry.diff_category_id
           })
           .eq('id', entry.id)
       )

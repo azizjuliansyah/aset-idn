@@ -217,12 +217,20 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
             key: 'difference',
             header: 'Selisih',
             className: 'text-right',
-            render: (v) => {
+            render: (v, row) => {
               const diff = v as number
+              const category = (row as any).diff_category?.name
               return (
-                <span className={`font-bold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                  {diff > 0 ? '+' : ''}{diff}
-                </span>
+                <div className="flex flex-col items-end">
+                  <span className={`font-bold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                    {diff > 0 ? '+' : ''}{diff}
+                  </span>
+                  {category && (
+                    <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded mt-1 max-w-[125px] truncate" title={category}>
+                      {category}
+                    </span>
+                  )}
+                </div>
               )
             }
           },
@@ -367,6 +375,15 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
                   </div>
                 </div>
               </div>
+
+              {selectedEntryDetail.diff_category && (
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground uppercase">Kategori Selisih</div>
+                  <div className="text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1 mt-1 inline-block">
+                    {selectedEntryDetail.diff_category.name}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <div className="text-xs font-medium text-muted-foreground uppercase mb-1">Catatan</div>

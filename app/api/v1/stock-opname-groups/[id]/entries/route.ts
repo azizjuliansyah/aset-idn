@@ -98,6 +98,11 @@ export async function GET(
       difference: row.difference,
       note: row.note,
       created_at: row.created_at,
+      diff_category_id: row.diff_category_id,
+      diff_category: row.diff_category_id ? {
+        id: row.diff_category_id,
+        name: row.diff_category_name
+      } : null,
       item: {
         id: row.item_id,
         name: row.item_name,

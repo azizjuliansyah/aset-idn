@@ -298,7 +298,8 @@
   </ul>
   <h3>D. Stock Opname (Audit Fisik)</h3>
   <ul>
-    <li>Fitur berkala untuk menyamakan catatan sistem dengan barang riil di lapangan. Operator menginput jumlah barang fisik yang ditemukan, sistem menghitung selisih (*discrepancy*), dan saat difinalisasi, sistem secara otomatis melakukan jurnal penyesuaian stok basis data.</li>
+    <li>Fitur berkala untuk menyamakan catatan sistem dengan barang riil di lapangan. Operator menginput jumlah barang fisik yang ditemukan, sistem menghitung selisih (<em>discrepancy</em>), dan saat difinalisasi, sistem secara otomatis melakukan jurnal penyesuaian stok basis data.</li>
+    <li><strong>Import CSV Massal:</strong> Selain input satu per satu, GA dapat mengimpor data opname secara massal dari file CSV. Fitur ini mendukung validasi otomatis baris data, pratinjau selisih stok sebelum diimpor, serta perbaikan baris yang tidak valid secara interaktif langsung di dalam dialog.</li>
   </ul>
 
   <div class="page-break"></div>
@@ -336,6 +337,70 @@
   <ul>
     <li><strong>Audit Rak Gudang Berjalan:</strong> Saat melakukan stock opname berkala di area gudang yang luas, tim GA dapat membawa tablet atau smartphone, lalu memindai kode QR dari barang yang mereka hitung secara langsung di rak.</li>
     <li><strong>Pencatatan Selisih Akurat:</strong> Pemindaian QR Code langsung membuka dialog input stock opname untuk item bersangkutan secara real-time. Sistem langsung membandingkan *system stock* dengan jumlah fisik aktual yang diinput oleh auditor di tempat. Ini menjamin proses verifikasi fisik yang cepat, terlacak, dan bebas dari duplikasi input data.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <h2>3.7. Fitur Import CSV pada Stock Opname</h2>
+  <p>
+    Untuk mendukung operasional stock opname skala besar (ratusan SKU), sistem menyediakan fitur <strong>Import CSV Massal</strong> yang dapat diakses melalui tombol <em>"Import CSV"</em> pada halaman detail sesi stock opname (status: Draft). Fitur ini memiliki alur kerja tiga langkah yang intuitif.
+  </p>
+  <h3>A. Template CSV Standar</h3>
+  <p>GA perlu menggunakan format kolom berikut pada file CSV:</p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Kolom</th>
+        <th style="width: 25%;">Nama Header</th>
+        <th style="width: 65%;">Keterangan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A</td>
+        <td><strong>Barang</strong></td>
+        <td>Nama barang yang harus sesuai persis (case-insensitive) dengan nama master barang di database.</td>
+      </tr>
+      <tr>
+        <td>B</td>
+        <td><strong>Gudang</strong></td>
+        <td>Nama gudang yang harus sesuai persis (case-insensitive) dengan nama gudang yang terdaftar di sistem.</td>
+      </tr>
+      <tr>
+        <td>C</td>
+        <td><strong>Stok Fisik</strong></td>
+        <td>Jumlah stok riil hasil perhitungan fisik. Harus berupa angka bulat positif (>= 0).</td>
+      </tr>
+      <tr>
+        <td>D</td>
+        <td><strong>Catatan</strong> (opsional)</td>
+        <td>Keterangan tambahan, misalnya kondisi barang, lokasi rak, atau alasan selisih. Boleh dikosongkan.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="highlight">
+    <p>&#9432; Sistem mendukung delimiter koma (<code>,</code>) maupun titik koma (<code>;</code>) secara otomatis. Jika membuat CSV dari Microsoft Excel dengan locale Indonesia (yang secara default menggunakan titik koma), file akan tetap terbaca dengan benar tanpa konfigurasi tambahan.</p>
+  </div>
+  <h3>B. Proses Validasi Otomatis</h3>
+  <p>Setelah file diunggah, setiap baris data divalidasi secara otomatis di sisi klien (sebelum data dikirim ke server). Baris dinyatakan <em>tidak valid</em> apabila:</p>
+  <ul>
+    <li>Kolom <strong>Barang</strong> atau <strong>Gudang</strong> kosong.</li>
+    <li>Kolom <strong>Stok Fisik</strong> kosong, bukan angka, atau bernilai negatif.</li>
+    <li>Nama barang tidak ditemukan di master data barang yang terdaftar.</li>
+    <li>Nama gudang tidak ditemukan di master data gudang yang terdaftar.</li>
+  </ul>
+  <h3>C. Tampilan Preview & Perbandingan Selisih</h3>
+  <ul>
+    <li><strong>Tabel Pratinjau:</strong> Menampilkan semua baris dari file CSV beserta status validasi (badge Hijau = Valid / Merah = Error).</li>
+    <li><strong>Stok Sistem Real-time:</strong> Untuk setiap baris yang valid, sistem secara otomatis mengambil data stok sistem (<em>system stock</em>) terkini dari database dan menampilkan kolom <strong>Selisih</strong> (positif/negatif) secara langsung di pratinjau.</li>
+    <li><strong>Edit Baris Interaktif:</strong> GA dapat menekan ikon pensil di kolom <em>Aksi</em> untuk membuka dialog edit baris. Dialog ini menggunakan komponen <code>StockOpnameEntryDialog</code> yang sama dengan fitur tambah manual — lengkap dengan <em>combobox</em> pencarian barang, dropdown gudang, perbandingan stok sistem, serta validasi formulir secara real-time.</li>
+    <li><strong>Baris Invalid Diabaikan:</strong> Saat proses impor dimulai, hanya baris yang berstatus Valid yang akan dikirim ke server. Baris yang masih bermasalah akan dilewati secara otomatis.</li>
+  </ul>
+  <h3>D. Hasil Import & Ringkasan Server</h3>
+  <ul>
+    <li>Setelah proses impor selesai, sistem menampilkan ringkasan hasil dalam tiga kartu: <strong>Item Baru</strong> (entri baru yang ditambahkan), <strong>Diperbarui</strong> (entri yang sudah ada dan di-<em>update</em> stok fisiknya), dan <strong>Gagal</strong> (baris yang ditolak sisi server).</li>
+    <li>Jika ada kegagalan di sisi server, detail pesan error per baris ditampilkan dalam panel log merah di bawah ringkasan, memudahkan GA untuk mengidentifikasi dan memperbaiki data yang bermasalah.</li>
+    <li>Data tabel di halaman detail sesi stock opname diperbarui secara otomatis (<em>React Query cache invalidation</em>) setelah import selesai tanpa perlu me-refresh halaman.</li>
   </ul>
 
   <div class="page-break"></div>
@@ -384,6 +449,16 @@
     - Mengubah status sesi grup opname menjadi <code>completed</code> (data terkunci dan tidak dapat diedit kembali).<br>
     - Secara otomatis membuat entitas transaksi di tabel <code>stock_in</code> (jika aktual > sistem) atau di tabel <code>stock_out</code> (jika aktual < sistem) sebagai penyesuaian stok otomatis.<br>
     - Menyelaraskan angka persediaan di database agar sama persis dengan angka aktual hasil perhitungan fisik di lapangan.
+  </div>
+
+  <h2>4.4. Alur Import CSV pada Stock Opname</h2>
+  <div class="flow-card">
+    <div class="flow-step-num">1</div><strong>Unduh Template:</strong> GA mengakses halaman detail sesi stock opname (status: <em>Draft</em>), lalu menekan tombol <strong>Import CSV</strong>. Di dalam dialog yang muncul, GA menekan tombol <em>"Download Template CSV"</em> untuk mendapatkan file contoh dengan format kolom yang benar (<code>Barang, Gudang, Stok Fisik, Catatan</code>).<br><br>
+    <div class="flow-step-num">2</div><strong>Isi &amp; Unggah File:</strong> GA mengisi template menggunakan Microsoft Excel atau aplikasi spreadsheet lainnya berdasarkan hasil perhitungan fisik di lapangan, kemudian menyimpannya dalam format <code>.csv</code>. File diunggah ke dalam area <em>drag &amp; drop</em> di dialog import.<br><br>
+    <div class="flow-step-num">3</div><strong>Pratinjau &amp; Validasi Otomatis:</strong> Sistem membaca dan mengurai isi CSV secara otomatis (mendukung delimiter koma dan titik koma). Setiap baris divalidasi terhadap master data barang dan gudang di database. Hasilnya ditampilkan dalam tabel pratinjau lengkap dengan kolom <em>Stok Sistem</em> dan <em>Selisih</em> yang dihitung secara real-time.<br><br>
+    <div class="flow-step-num">4</div><strong>Perbaikan Baris (Opsional):</strong> Jika ditemukan baris yang tidak valid (ditandai badge merah beserta keterangan error), GA dapat menekan ikon pensil di kolom <em>Aksi</em> untuk membuka dialog edit baris. GA memperbaiki data (memilih barang dan gudang yang benar dari dropdown, mengisikan stok fisik yang valid), lalu menyimpan. Status baris di tabel pratinjau diperbarui secara langsung menjadi Valid.<br><br>
+    <div class="flow-step-num">5</div><strong>Mulai Impor:</strong> Setelah meninjau, GA menekan tombol <strong>Mulai Impor (N Item)</strong> (di mana N adalah jumlah baris valid). Sistem hanya mengirimkan baris valid ke endpoint server <code>POST /api/v1/stock-opname-groups/{id}/import</code>. Baris yang masih berstatus invalid diabaikan secara otomatis.<br><br>
+    <div class="flow-step-num">6</div><strong>Lihat Ringkasan Hasil:</strong> Sistem menampilkan ringkasan akhir: jumlah entri baru, entri yang diperbarui, dan entri yang gagal diproses server. Tabel data di halaman detail sesi stock opname langsung diperbarui tanpa reload halaman.
   </div>
 
   <div class="page-break"></div>
@@ -488,7 +563,7 @@
 
   <br><br>
   <div style="text-align: center; color: #64748b; font-size: 9pt;">
-    Dokumentasi Gudang IDN - Versi 1.0 (Mei 2026) - Hak Cipta Dilindungi Undang-Undang.
+    Dokumentasi Gudang IDN - Versi 1.1 (Mei 2026) — Diperbarui: 21 Mei 2026 (Penambahan Fitur Import CSV Stock Opname) — Hak Cipta Dilindungi Undang-Undang.
   </div>
 
 </body>

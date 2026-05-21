@@ -70,6 +70,15 @@ interface ParsedRow {
   isValid: boolean
   validationError?: string
   system_stock?: number | null
+  diff_category_id?: string | null
+  diff_category_name?: string
+  isDuplicate?: boolean
+  existingRecord?: {
+    id: string
+    actual_stock: number
+    diff_category_name: string | null
+    note: string | null
+  } | null
 }
 
 interface ImportSummary {
@@ -88,7 +97,11 @@ function validateRowData(
   warehouseName: string,
   actualStock: string,
   dbItems?: { id: string; name: string }[],
-  dbWarehouses?: { id: string; name: string }[]
+  dbWarehouses?: { id: string; name: string }[],
+  systemStock?: number | null,
+  diffCategoryId?: string | null,
+  diffCategoryName?: string,
+  dbCategories?: { id: string; name: string }[]
 ): { isValid: boolean; validationError: string } {
   let isValid = true
   let validationError = ''
@@ -116,6 +129,26 @@ function validateRowData(
     } else if (dbWarehouses && dbWarehouses.length > 0 && !dbWarehouses.some(wh => wh.name.toLowerCase().trim() === trimmedWarehouseName.toLowerCase())) {
       isValid = false
       validationError = 'Gudang tidak terdaftar'
+    } else {
+      // Check category name validation if specified in CSV
+      if (diffCategoryName && diffCategoryName.trim()) {
+        const hasCategory = dbCategories?.some(
+          cat => cat.name.toLowerCase().trim() === diffCategoryName.toLowerCase().trim()
+        )
+        if (dbCategories && dbCategories.length > 0 && !hasCategory) {
+          isValid = false
+          validationError = 'Kategori Selisih tidak terdaftar'
+        }
+      }
+
+      // Check if discrepancy category is needed
+      if (systemStock !== undefined && systemStock !== null) {
+        const diff = parsedStock - systemStock
+        if (diff !== 0 && !diffCategoryId) {
+          isValid = false
+          validationError = 'Kategori Selisih wajib diisi jika terdapat selisih stok'
+        }
+      }
     }
   }
 
@@ -146,6 +179,7 @@ export function StockOpnameImportDialog({
 
   const [dbItems, setDbItems] = useState<{ id: string; name: string }[]>([])
   const [dbWarehouses, setDbWarehouses] = useState<{ id: string; name: string }[]>([])
+  const [dbCategories, setDbCategories] = useState<{ id: string; name: string }[]>([])
   const [isLoadingDbData, setIsLoadingDbData] = useState(false)
 
   const [systemStock, setSystemStock] = useState<number | null>(null)
@@ -158,15 +192,17 @@ export function StockOpnameImportDialog({
       const fetchData = async () => {
         setIsLoadingDbData(true)
         try {
-          const [itemsRes, whRes] = await Promise.all([
+          const [itemsRes, whRes, catRes] = await Promise.all([
             supabase.from('items').select('id, name').order('name'),
-            supabase.from('warehouses').select('id, name').order('name')
+            supabase.from('warehouses').select('id, name').order('name'),
+            supabase.from('stock_opname_diff_categories').select('id, name').order('name')
           ])
 
           setDbItems(itemsRes.data || [])
           setDbWarehouses(whRes.data || [])
+          setDbCategories(catRes.data || [])
         } catch (error) {
-          console.error('Gagal mengambil data barang/gudang untuk validasi:', error)
+          console.error('Gagal mengambil data barang/gudang/kategori untuk validasi:', error)
         } finally {
           setIsLoadingDbData(false)
         }
@@ -175,6 +211,7 @@ export function StockOpnameImportDialog({
     } else {
       setDbItems([])
       setDbWarehouses([])
+      setDbCategories([])
     }
   }, [open])
 
@@ -293,14 +330,24 @@ export function StockOpnameImportDialog({
             const warehouse_name = row[1]?.trim() || ''
             const actual_stock = row[2]?.trim() || ''
             const note = row[3]?.trim() || ''
+            const diff_category_name = row[4]?.trim() || ''
 
-            // Simple client-side validation
+            const categoryMatch = dbCategories.find(
+              c => c.name.toLowerCase().trim() === diff_category_name.toLowerCase().trim()
+            )
+            const diff_category_id = categoryMatch ? categoryMatch.id : null
+
+            // Simple client-side validation (initial phase)
             const { isValid, validationError } = validateRowData(
               item_name,
               warehouse_name,
               actual_stock,
               dbItems,
-              dbWarehouses
+              dbWarehouses,
+              null,
+              diff_category_id,
+              diff_category_name,
+              dbCategories
             )
 
             return {
@@ -308,6 +355,8 @@ export function StockOpnameImportDialog({
               warehouse_name,
               actual_stock,
               note,
+              diff_category_id,
+              diff_category_name,
               isValid,
               validationError
             }
@@ -322,11 +371,29 @@ export function StockOpnameImportDialog({
             const uniqueItemIds = [...new Set(itemIds)]
             const uniqueWhIds = [...new Set(whIds)]
 
-            const { data: stockData } = await supabase
-              .from('stock_ledger')
-              .select('item_id, warehouse_id, current_stock')
-              .in('item_id', uniqueItemIds)
-              .in('warehouse_id', uniqueWhIds)
+            const [stockRes, opnameRes] = await Promise.all([
+              supabase
+                .from('stock_ledger')
+                .select('item_id, warehouse_id, current_stock')
+                .in('item_id', uniqueItemIds)
+                .in('warehouse_id', uniqueWhIds),
+              supabase
+                .from('stock_opnames')
+                .select(`
+                  id,
+                  item_id,
+                  warehouse_id,
+                  actual_stock,
+                  note,
+                  diff_category:stock_opname_diff_categories(name)
+                `)
+                .eq('group_id', groupId)
+                .in('item_id', uniqueItemIds)
+                .in('warehouse_id', uniqueWhIds)
+            ])
+
+            const stockData = stockRes.data
+            const opnameData = opnameRes.data
 
             if (stockData) {
               mappedRows.forEach(row => {
@@ -334,13 +401,44 @@ export function StockOpnameImportDialog({
                   const itemId = dbItems.find(i => i.name.toLowerCase().trim() === row.item_name.toLowerCase().trim())?.id
                   const whId = dbWarehouses.find(w => w.name.toLowerCase().trim() === row.warehouse_name.toLowerCase().trim())?.id
                   const stockMatch = stockData.find(s => s.item_id === itemId && s.warehouse_id === whId)
-                  row.system_stock = stockMatch ? stockMatch.current_stock : 0
+                  const system_stock = stockMatch ? stockMatch.current_stock : 0
+                  row.system_stock = system_stock
+
+                  // Check if duplicate / existing in database opname list
+                  const opnameMatch = opnameData?.find(o => o.item_id === itemId && o.warehouse_id === whId)
+                  if (opnameMatch) {
+                    row.isDuplicate = true
+                    row.existingRecord = {
+                      id: opnameMatch.id,
+                      actual_stock: opnameMatch.actual_stock,
+                      note: opnameMatch.note,
+                      diff_category_name: (opnameMatch.diff_category as any)?.name || null
+                    }
+                  } else {
+                    row.isDuplicate = false
+                    row.existingRecord = null
+                  }
+
+                  // Re-validate now that system stock is known
+                  const { isValid, validationError } = validateRowData(
+                    row.item_name,
+                    row.warehouse_name,
+                    row.actual_stock,
+                    dbItems,
+                    dbWarehouses,
+                    system_stock,
+                    row.diff_category_id,
+                    row.diff_category_name,
+                    dbCategories
+                  )
+                  row.isValid = isValid
+                  row.validationError = validationError
                 }
               })
             }
           }
         } catch (e) {
-          console.error('Failed to fetch system stocks', e)
+          console.error('Failed to fetch system stocks or existing records', e)
         }
 
         setParsedRows(mappedRows)
@@ -355,7 +453,7 @@ export function StockOpnameImportDialog({
 
   const handleDownloadTemplate = () => {
     // Generate simple, beautiful standard template CSV
-    const csvContent = "\uFEFFBarang,Gudang,Stok Fisik,Catatan\nASUS VivoBook 14,Gudang Utama,12,Kondisi baik\nLogitech B100 Mouse,Gudang Utama,50,Aman\nSemen Tiga Roda,Gudang Bahan Baku,100,Bungkus utuh\n"
+    const csvContent = "\uFEFFBarang,Gudang,Stok Fisik,Catatan,Kategori Selisih\nASUS VivoBook 14,Gudang Utama,12,Hilang di rak A,Hilang\nLogitech B100 Mouse,Gudang Utama,50,Aman,\nSemen Tiga Roda,Gudang Bahan Baku,100,Rusak basah,Rusak\n"
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
@@ -388,7 +486,8 @@ export function StockOpnameImportDialog({
             item_name: r.item_name,
             warehouse_name: r.warehouse_name,
             actual_stock: r.actual_stock,
-            note: r.note
+            note: r.note,
+            diff_category_id: r.diff_category_id
           }))
         })
       })
@@ -439,7 +538,7 @@ export function StockOpnameImportDialog({
     setEditingRowData({ ...row })
   }
 
-  const handleSaveRowOverride = (values: {
+  const handleSaveRowOverride = async (values: {
     item_id: string
     item_name: string
     warehouse_id: string
@@ -447,16 +546,53 @@ export function StockOpnameImportDialog({
     actual_stock: number
     note?: string
     system_stock?: number
+    diff_category_id?: string | null
   }) => {
     if (editingRowIndex === null) return
+
+    const catObj = dbCategories.find(c => c.id === values.diff_category_id)
 
     const { isValid, validationError } = validateRowData(
       values.item_name,
       values.warehouse_name,
       String(values.actual_stock),
       dbItems,
-      dbWarehouses
+      dbWarehouses,
+      values.system_stock,
+      values.diff_category_id,
+      catObj?.name || '',
+      dbCategories
     )
+
+    let isDuplicate = false
+    let existingRecord = null
+
+    try {
+      const { data: opnameData } = await supabase
+        .from('stock_opnames')
+        .select(`
+          id,
+          actual_stock,
+          note,
+          diff_category:stock_opname_diff_categories(name)
+        `)
+        .eq('group_id', groupId)
+        .eq('item_id', values.item_id)
+        .eq('warehouse_id', values.warehouse_id)
+        .maybeSingle()
+
+      if (opnameData) {
+        isDuplicate = true
+        existingRecord = {
+          id: opnameData.id,
+          actual_stock: opnameData.actual_stock,
+          note: opnameData.note,
+          diff_category_name: (opnameData.diff_category as any)?.name || null
+        }
+      }
+    } catch (e) {
+      console.error('Failed to check duplicate during save override', e)
+    }
 
     const updatedRows = [...parsedRows]
     updatedRows[editingRowIndex] = {
@@ -466,7 +602,11 @@ export function StockOpnameImportDialog({
       note: values.note || '',
       isValid,
       validationError,
-      system_stock: values.system_stock ?? null
+      system_stock: values.system_stock ?? null,
+      diff_category_id: values.diff_category_id || null,
+      diff_category_name: catObj?.name || undefined,
+      isDuplicate,
+      existingRecord
     }
 
     setParsedRows(updatedRows)
@@ -486,7 +626,8 @@ export function StockOpnameImportDialog({
     warehouse_id: whObj?.id || '',
     actual_stock: parseInt(editingRowData.actual_stock) || 0,
     note: editingRowData.note || '',
-    system_stock: null
+    system_stock: editingRowData.system_stock ?? null,
+    diff_category_id: editingRowData.diff_category_id || null
   } : undefined
 
   return (
@@ -560,8 +701,14 @@ export function StockOpnameImportDialog({
             <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
               <div className="space-y-0.5">
                 <p className="text-xs text-muted-foreground">Nama Berkas: <span className="font-semibold text-foreground">{file?.name}</span></p>
-                <div className="flex gap-2 mt-1">
+                <div className="flex flex-wrap gap-2 mt-1">
                   <Badge variant="success" className="text-[10px] font-medium">{validCount} Siap Impor</Badge>
+                  <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 text-[10px] font-medium border-blue-200">
+                    {parsedRows.filter(r => r.isValid && !r.isDuplicate).length} Baru
+                  </Badge>
+                  <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400 text-[10px] font-medium border-amber-200">
+                    {parsedRows.filter(r => r.isValid && r.isDuplicate).length} Memperbarui
+                  </Badge>
                   {invalidCount > 0 && (
                     <Badge variant="destructive" className="text-[10px] font-medium">{invalidCount} Eror (Akan Diabaikan)</Badge>
                   )}
@@ -582,7 +729,9 @@ export function StockOpnameImportDialog({
                     <TableHead className="w-24 text-right">Stok Sistem</TableHead>
                     <TableHead className="w-24 text-right">Stok Fisik</TableHead>
                     <TableHead className="w-24 text-right">Selisih</TableHead>
+                    <TableHead className="w-32">Kategori Selisih</TableHead>
                     <TableHead>Catatan</TableHead>
+                    <TableHead className="w-24 text-center">Tipe</TableHead>
                     <TableHead className="w-28 text-center">Status</TableHead>
                     <TableHead className="w-16 text-center">Aksi</TableHead>
                   </TableRow>
@@ -607,10 +756,48 @@ export function StockOpnameImportDialog({
                           })()
                         ) : '—'}
                       </TableCell>
+                      <TableCell className="text-xs font-semibold text-amber-700 max-w-[120px] truncate" title={row.diff_category_name || undefined}>
+                        {row.diff_category_name || '—'}
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{row.note || '—'}</TableCell>
                       <TableCell className="text-center">
                         {row.isValid ? (
-                          <Badge variant="success" className="text-[10px] py-0.5">Valid</Badge>
+                          row.isDuplicate ? (
+                            <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900 text-[10px] py-0.5 font-medium">
+                              Memperbarui
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900 text-[10px] py-0.5 font-medium">
+                              Tambah Baru
+                            </Badge>
+                          )
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {row.isValid ? (
+                          row.isDuplicate ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <Badge variant="success" className="text-[10px] py-0.5">Valid</Badge>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    render={
+                                      <span className="inline-flex cursor-help items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400">
+                                        <HelpCircle size={9} /> Akan Update
+                                      </span>
+                                    }
+                                  />
+                                  <TooltipContent side="top" className="max-w-[220px] p-2 text-[10px] leading-snug bg-zinc-950 text-white shadow-xl rounded-md">
+                                    Barang ini sudah ada dalam sesi opname di database. Mengimpor baris ini akan memperbarui data fisik menjadi {row.actual_stock} unit.
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          ) : (
+                            <Badge variant="success" className="text-[10px] py-0.5">Valid</Badge>
+                          )
                         ) : (
                           <Badge variant="destructive" className="text-[10px] py-0.5 truncate max-w-[120px]" title={row.validationError}>
                             {row.validationError}

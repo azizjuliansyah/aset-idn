@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Loader2 } from 'lucide-react'
+import { Loader2, HelpCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { StockOpname } from '@/types/database'
@@ -31,12 +31,14 @@ import { Combobox } from '@/components/ui/combobox'
 import { useStockOpnameMutations } from '@/hooks/stock/use-stock-opname'
 import { QRScanner } from '@/components/shared/qr-scanner'
 import { useWarehouses } from '@/hooks/queries/use-warehouses'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 
 const formSchema = z.object({
   item_id: z.string().min(1, 'Pilih barang'),
   warehouse_id: z.string().min(1, 'Pilih gudang'),
   actual_stock: z.number().min(0, 'Minimal 0'),
   note: z.string().optional(),
+  diff_category_id: z.string().optional().nullable(),
 })
 
 interface StockOpnameEntryDialogProps {
@@ -53,6 +55,7 @@ interface StockOpnameEntryDialogProps {
     actual_stock: number
     note?: string
     system_stock?: number
+    diff_category_id?: string | null
   }) => void
   titleOverride?: string
 }
@@ -71,28 +74,34 @@ export function StockOpnameEntryDialog({
   const addEntry = mutations?.addEntry
   const updateEntry = mutations?.updateEntry
   const [items, setItems] = useState<any[]>([])
+  const [diffCategories, setDiffCategories] = useState<any[]>([])
   const { data: warehouses = [] } = useWarehouses()
   const [systemStock, setSystemStock] = useState<number | null>(null)
   const [isLoadingStock, setIsLoadingStock] = useState(false)
+  const [existingRecord, setExistingRecord] = useState<any | null>(null)
 
   const isEditing = !!initialData
 
-  const { register, handleSubmit, control, watch, formState: { errors }, reset, setValue } = useForm<z.infer<typeof formSchema>>({
+  const { register, handleSubmit, control, watch, formState: { errors }, reset, setValue, setError } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       item_id: '',
       warehouse_id: '',
       actual_stock: 0,
       note: '',
+      diff_category_id: '',
     },
   })
 
-  // Load items when dialog opens
+  // Load items and discrepancy categories when dialog opens
   useEffect(() => {
     if (!open) return
     supabase.from('items').select('id, name').order('name')
       .then(({ data }) => setItems(data || []))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    supabase.from('stock_opname_diff_categories').select('id, name').order('name')
+      .then(({ data }) => setDiffCategories(data || []))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Init form when dialog opens - runs immediately using cached warehouses data
@@ -105,7 +114,9 @@ export function StockOpnameEntryDialog({
       setValue('warehouse_id', initialData.warehouse_id)
       setValue('actual_stock', initialData.actual_stock)
       setValue('note', initialData.note || '')
+      setValue('diff_category_id', initialData.diff_category_id || '')
       setSystemStock(initialData.system_stock)
+      setExistingRecord(null)
     } else {
       // Add mode: reset form, auto-select default warehouse if already in cache
       const defaultWh = warehouses.find((w) => w.is_default)
@@ -114,10 +125,12 @@ export function StockOpnameEntryDialog({
         warehouse_id: defaultWh?.id || '',
         actual_stock: 0,
         note: '',
+        diff_category_id: '',
       })
       setSystemStock(null)
+      setExistingRecord(null)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialData])
 
   // Fallback: set default warehouse after warehouses data loads (first-ever load, cache miss)
@@ -136,29 +149,62 @@ export function StockOpnameEntryDialog({
   const warehouseId = watch('warehouse_id')
   const actualStock = watch('actual_stock')
 
-  // Fetch system stock when item or warehouse changes (only if NOT editing, or if manually changed)
+  // Fetch system stock and check for existing entry when item or warehouse changes (only if NOT editing, or if manually changed)
   useEffect(() => {
     const fetchSystemStock = async () => {
       if (itemId && warehouseId && (!isEditing || onSubmitOverride)) {
         setIsLoadingStock(true)
         try {
-          const { data } = await supabase
+          // 1. Fetch system stock
+          const { data: stockData } = await supabase
             .from('stock_ledger')
             .select('current_stock')
             .eq('item_id', itemId)
             .eq('warehouse_id', warehouseId)
-            .single()
+            .maybeSingle()
 
-          setSystemStock(data?.current_stock ?? 0)
+          setSystemStock(stockData?.current_stock ?? 0)
+
+          // 2. Fetch existing opname entry under current group (only if not normal editing, OR if custom submit like CSV import edit)
+          if (!isEditing || onSubmitOverride) {
+            const { data: opnameData } = await supabase
+              .from('stock_opnames')
+              .select(`
+                id,
+                actual_stock,
+                note,
+                diff_category:stock_opname_diff_categories(name)
+              `)
+              .eq('group_id', groupId)
+              .eq('item_id', itemId)
+              .eq('warehouse_id', warehouseId)
+              .maybeSingle()
+
+            if (opnameData) {
+              setExistingRecord({
+                id: opnameData.id,
+                actual_stock: opnameData.actual_stock,
+                note: opnameData.note,
+                diff_category_name: (opnameData.diff_category as any)?.name || null
+              })
+            } else {
+              setExistingRecord(null)
+            }
+          } else {
+            setExistingRecord(null)
+          }
         } catch (e) {
           setSystemStock(0)
+          setExistingRecord(null)
         } finally {
           setIsLoadingStock(false)
         }
+      } else {
+        setExistingRecord(null)
       }
     }
     fetchSystemStock()
-  }, [itemId, warehouseId, supabase, isEditing, onSubmitOverride])
+  }, [itemId, warehouseId, supabase, isEditing, onSubmitOverride, groupId])
 
   const handleScan = (decodedText: string) => {
     if (isEditing && !onSubmitOverride) return // Disable scan when editing
@@ -174,7 +220,7 @@ export function StockOpnameEntryDialog({
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Check for duplicate item + warehouse
-    const isDuplicate = existingEntries?.some(entry =>
+    const isDuplicate = !existingRecord && existingEntries?.some(entry =>
       entry.item_id === values.item_id &&
       entry.warehouse_id === values.warehouse_id &&
       (!initialData || entry.id !== initialData.id)
@@ -185,35 +231,53 @@ export function StockOpnameEntryDialog({
       return
     }
 
+    // Validate discrepancy category if there is a stock difference
+    if (difference !== 0 && !values.diff_category_id) {
+      setError('diff_category_id', {
+        type: 'manual',
+        message: 'Kategori selisih wajib dipilih jika ada perbedaan stok!',
+      })
+      toast.error('Kategori selisih wajib dipilih!')
+      return
+    }
+
+    const payload = {
+      ...values,
+      diff_category_id: difference === 0 ? null : values.diff_category_id || null,
+    }
+
     if (onSubmitOverride) {
       const selectedItem = items.find(i => i.id === values.item_id)
       const selectedWh = warehouses.find(w => w.id === values.warehouse_id)
       onSubmitOverride({
-        item_id: values.item_id,
+        item_id: payload.item_id,
         item_name: selectedItem?.name || '',
-        warehouse_id: values.warehouse_id,
+        warehouse_id: payload.warehouse_id,
         warehouse_name: selectedWh?.name || '',
-        actual_stock: values.actual_stock,
-        note: values.note,
-        system_stock: systemStock ?? 0
+        actual_stock: payload.actual_stock,
+        note: payload.note,
+        system_stock: systemStock ?? 0,
+        diff_category_id: payload.diff_category_id,
       })
       onOpenChange(false)
       return
     }
 
-    if (isEditing) {
+    if (isEditing || existingRecord) {
+      const entryId = isEditing ? initialData.id : existingRecord.id
       updateEntry.mutate({
-        id: initialData.id,
+        id: entryId,
         groupId,
-        ...values,
+        ...payload,
       }, {
         onSuccess: () => {
           onOpenChange(false)
+          setExistingRecord(null)
         }
       })
     } else {
       addEntry.mutate({
-        ...values,
+        ...payload,
         group_id: groupId,
         system_stock: systemStock ?? 0
       }, {
@@ -221,6 +285,7 @@ export function StockOpnameEntryDialog({
           onOpenChange(false)
           reset()
           setSystemStock(null)
+          setExistingRecord(null)
         }
       })
     }
@@ -236,97 +301,164 @@ export function StockOpnameEntryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col overflow-hidden p-0 gap-0 rounded-2xl sm:rounded-xl">
+        <DialogHeader className="m-0 border-b bg-muted/20 p-6 pb-4 shrink-0">
           <DialogTitle>{titleOverride || (isEditing ? 'Edit Item Opname' : 'Tambah Item Opname')}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Barang *</Label>
-            <Controller
-              name="item_id"
-              control={control}
-              render={({ field }) => (
-                <div className="flex items-center gap-2">
-                  <Combobox
-                    options={items.map((item) => ({ label: item.name, value: item.id }))}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder="Pilih barang"
-                    searchPlaceholder="Cari barang..."
-                    disabled={isEditing && !onSubmitOverride}
-                    className="flex-1 inline-flex items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                  {!isEditing && !onSubmitOverride && <QRScanner onScan={handleScan} />}
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="space-y-1.5">
+              <Label>Barang *</Label>
+              <Controller
+                name="item_id"
+                control={control}
+                render={({ field }) => (
+                  <div className="flex items-center gap-2">
+                    <Combobox
+                      options={items.map((item) => ({ label: item.name, value: item.id }))}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Pilih barang"
+                      searchPlaceholder="Cari barang..."
+                      disabled={isEditing && !onSubmitOverride}
+                      className="flex-1 inline-flex items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                    {!isEditing && !onSubmitOverride && <QRScanner onScan={handleScan} />}
+                  </div>
+                )}
+              />
+              {errors.item_id && <p className="text-destructive text-xs">{errors.item_id.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Gudang *</Label>
+              <Controller
+                name="warehouse_id"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isEditing && !onSubmitOverride}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih gudang" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses.map((wh) => (
+                        <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.warehouse_id && <p className="text-destructive text-xs">{errors.warehouse_id.message}</p>}
+            </div>
+
+            {existingRecord && (
+              <div className="p-3 bg-amber-50/80 border border-amber-200/65 rounded-lg text-amber-900 text-xs space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="flex items-center justify-between gap-1.5 font-bold text-amber-800">
+                  <span>Peringatan: Barang sudah terdaftar di gudang ini!</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger type="button" className="cursor-help transition-colors hover:text-amber-700 text-amber-500">
+                        <HelpCircle size={14} className="shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[280px] p-3 text-xs leading-relaxed bg-zinc-950 text-white shadow-xl rounded-lg">
+                        Barang ini sudah ada dalam sesi opname untuk gudang yang dipilih. Jika Anda menyimpan, data di atas akan memperbarui data eksisting berikut.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
-              )}
-            />
-            {errors.item_id && <p className="text-destructive text-xs">{errors.item_id.message}</p>}
-          </div>
+                <div className="grid grid-cols-2 gap-2 bg-white/70 p-2 rounded-lg border border-amber-100/80 text-amber-900 shadow-sm">
+                  <div>
+                    <span className="text-[9px] text-amber-600 block uppercase font-bold tracking-wider">Stok Fisik Tercatat</span>
+                    <span className="text-sm font-black">{existingRecord.actual_stock} unit</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-amber-600 block uppercase font-bold tracking-wider">Kategori Selisih</span>
+                    <span className="text-sm font-black">{existingRecord.diff_category_name || '-'}</span>
+                  </div>
+                  <div className="col-span-2 border-t border-amber-100/50 pt-1.5 mt-0.5">
+                    <span className="text-[9px] text-amber-600 block uppercase font-bold tracking-wider">Catatan</span>
+                    <span className="text-xs italic leading-tight block">{existingRecord.note || '-'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
-          <div className="space-y-1.5">
-            <Label>Gudang *</Label>
-            <Controller
-              name="warehouse_id"
-              control={control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isEditing && !onSubmitOverride}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih gudang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {warehouses.map((wh) => (
-                      <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.warehouse_id && <p className="text-destructive text-xs">{errors.warehouse_id.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border border-border/50">
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Stok Sistem</p>
-              <p className="text-xl font-black">{isLoadingStock ? '...' : systemStock ?? '-'}</p>
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border border-border/50">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Stok Sistem</p>
+                <p className="text-xl font-black">{isLoadingStock ? '...' : systemStock ?? '-'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Selisih</p>
+                <p className={`text-xl font-black ${difference > 0 ? 'text-green-600' : difference < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                  {systemStock !== null ? (difference > 0 ? `+${difference}` : difference) : '-'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Selisih</p>
-              <p className={`text-xl font-black ${difference > 0 ? 'text-green-600' : difference < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                {systemStock !== null ? (difference > 0 ? `+${difference}` : difference) : '-'}
-              </p>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="actual-stock">Stok Fisik (Hasil Hitung) *</Label>
+              <Input
+                id="actual-stock"
+                type="number"
+                {...register('actual_stock', { valueAsNumber: true })}
+              />
+              {errors.actual_stock && <p className="text-destructive text-xs">{errors.actual_stock.message}</p>}
+            </div>
+
+            {difference !== 0 && (
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                <Label>Kategori Selisih *</Label>
+                <Controller
+                  name="diff_category_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <SelectTrigger className={errors.diff_category_id ? 'border-destructive focus:ring-destructive' : ''}>
+                        <SelectValue placeholder="Pilih alasan/kategori selisih" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {diffCategories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.diff_category_id && (
+                  <p className="text-destructive text-xs">{errors.diff_category_id.message}</p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="opname-entry-note">Catatan (Opsional)</Label>
+              <Textarea
+                id="opname-entry-note"
+                placeholder="Contoh: Barang rusak, hilang, dsb."
+                className="resize-none"
+                {...register('note')}
+              />
+              {errors.note && <p className="text-destructive text-xs">{errors.note.message}</p>}
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="actual-stock">Stok Fisik (Hasil Hitung) *</Label>
-            <Input
-              id="actual-stock"
-              type="number"
-              {...register('actual_stock', { valueAsNumber: true })}
-            />
-            {errors.actual_stock && <p className="text-destructive text-xs">{errors.actual_stock.message}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="opname-entry-note">Catatan (Opsional)</Label>
-            <Textarea
-              id="opname-entry-note"
-              placeholder="Contoh: Barang rusak, hilang, dsb."
-              className="resize-none"
-              {...register('note')}
-            />
-            {errors.note && <p className="text-destructive text-xs">{errors.note.message}</p>}
-          </div>
-
-          <DialogFooter>
+          <DialogFooter className="m-0 border-t bg-muted/50 p-5 shrink-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
             <Button type="submit" disabled={isPending || isLoadingStock || systemStock === null}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {onSubmitOverride ? 'Simpan Perubahan' : (isEditing ? 'Update Item' : 'Simpan Item')}
+              {onSubmitOverride
+                ? 'Simpan Perubahan'
+                : (isEditing
+                  ? 'Update Item'
+                  : (existingRecord ? 'Perbarui & Lanjutkan' : 'Simpan Item')
+                )
+              }
             </Button>
           </DialogFooter>
         </form>

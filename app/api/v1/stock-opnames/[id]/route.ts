@@ -14,7 +14,7 @@ export async function PATCH(
   if (!user) return authError()
 
   const body = await request.json()
-  const { actual_stock, note } = body
+  const { actual_stock, note, diff_category_id } = body
 
   // Check if group is still draft before updating
   const { data: entry } = await supabase
@@ -31,10 +31,11 @@ export async function PATCH(
     .from('stock_opnames')
     .update({
       actual_stock,
-      note
+      note,
+      diff_category_id: diff_category_id || null
     })
     .eq('id', id)
-    .select('id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, created_at, created_by')
+    .select('id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, diff_category_id, created_at, created_by')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

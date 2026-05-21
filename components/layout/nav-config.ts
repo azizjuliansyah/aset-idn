@@ -66,19 +66,45 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: 'Gudang',
-    roles: ['general_affair'],
+    title: 'Master Data',
+    roles: ['admin'],
     items: [
       {
         title: 'Gudang',
         href: '/dashboard/warehouse',
         icon: Warehouse,
+        roles: ['admin'],
       },
       {
         title: 'Kategori Barang',
         href: '/dashboard/item-category',
         icon: FolderOpen,
+        roles: ['admin'],
       },
+      {
+        title: 'Status Barang',
+        href: '/dashboard/admin/item-status',
+        icon: CheckCircle,
+        roles: ['admin'],
+      },
+      {
+        title: 'Kondisi Barang',
+        href: '/dashboard/admin/item-condition',
+        icon: Tag,
+        roles: ['admin'],
+      },
+      {
+        title: 'Kategori Selisih',
+        href: '/dashboard/admin/stock-opname-diff-category',
+        icon: ClipboardList,
+        roles: ['admin'],
+      },
+    ],
+  },
+  {
+    title: 'Gudang',
+    roles: ['general_affair'],
+    items: [
       {
         title: 'Barang',
         href: '/dashboard/items',
@@ -150,18 +176,14 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: 'Master Data',
-    roles: ['general_affair'],
+    title: 'Peminjaman',
+    roles: ['admin'],
     items: [
       {
-        title: 'Status Barang',
-        href: '/dashboard/admin/item-status',
-        icon: CheckCircle,
-      },
-      {
-        title: 'Kondisi Barang',
-        href: '/dashboard/admin/item-condition',
-        icon: Tag,
+        title: 'Riwayat Peminjaman',
+        href: '/dashboard/ga/loans/history',
+        icon: ClipboardCheck,
+        roles: ['admin'],
       },
     ],
   },

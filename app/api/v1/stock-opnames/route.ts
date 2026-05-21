@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   if (!user) return authError()
 
   const body = await request.json()
-  const { group_id, item_id, warehouse_id, system_stock, actual_stock, note } = body
+  const { group_id, item_id, warehouse_id, system_stock, actual_stock, note, diff_category_id } = body
 
   if (!group_id || !item_id || !warehouse_id || typeof actual_stock !== 'number') {
     return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 })
@@ -27,6 +27,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Group sudah selesai, tidak bisa menambah item lagi' }, { status: 400 })
   }
 
+  // Check if item in this warehouse is already recorded in the opname session
+  const { data: existing } = await supabase
+    .from('stock_opnames')
+    .select('id')
+    .eq('group_id', group_id)
+    .eq('item_id', item_id)
+    .eq('warehouse_id', warehouse_id)
+    .maybeSingle()
+
+  if (existing) {
+    return NextResponse.json({ error: 'Barang ini sudah ada di daftar opname untuk gudang yang sama.' }, { status: 400 })
+  }
+
   const { data, error } = await supabase
     .from('stock_opnames')
     .insert({
@@ -36,9 +49,10 @@ export async function POST(request: Request) {
       system_stock,
       actual_stock,
       note,
+      diff_category_id: diff_category_id || null,
       created_by: user.id
     })
-    .select('id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, created_at, created_by')
+    .select('id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, diff_category_id, created_at, created_by')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
