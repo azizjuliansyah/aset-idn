@@ -88,6 +88,10 @@ export function GaLoansDialogs({
   const [itemsExtra, setItemsExtra] = useState<Record<string, { warehouse_id: string, status: 'approved' | 'rejected' | 'no_stock' }>>({})
   const [partialReturns, setPartialReturns] = useState<Record<string, { quantity: number, note: string }>>({})
 
+  const displayItems = returnTarget?.items || []
+  const returnableItems = displayItems.filter(i => i.status === 'approved' || i.status === 'pending')
+  const allReturned = returnableItems.length > 0 && returnableItems.every(item => (item.quantity || 0) - (item.returned_quantity || 0) <= 0)
+
   const { data: warehouses } = useWarehouses()
   const supabase = createClient()
 
@@ -115,11 +119,12 @@ export function GaLoansDialogs({
   useEffect(() => {
     if (returnTarget) {
       const initial: Record<string, { quantity: number, note: string }> = {}
-      returnTarget.items?.filter(i => i.status === 'approved').forEach(item => {
-        const remaining = (item.quantity || 0) - (item.returned_quantity || 0)
-        initial[item.id] = {
-          quantity: 0,
-          note: ''
+      returnTarget.items?.forEach(item => {
+        if (item.status === 'approved' || item.status === 'pending') {
+          initial[item.id] = {
+            quantity: 0,
+            note: ''
+          }
         }
       })
       setPartialReturns(initial)
@@ -533,100 +538,200 @@ export function GaLoansDialogs({
 
             <Separator className="opacity-50" />
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Daftar Barang</p>
-                <Badge variant="outline" className="text-[9px] font-black uppercase opacity-60">Sisa Qty</Badge>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Daftar Barang</p>
+                <Badge variant="outline" className="text-[9px] font-bold uppercase opacity-60">Sisa Qty</Badge>
               </div>
 
               <div className="space-y-3">
-                {returnTarget?.items?.filter(i => i.status === 'approved').map((item) => {
-                  const remaining = (item.quantity || 0) - (item.returned_quantity || 0)
-                  if (remaining <= 0) return null
-
-                  return (
-                    <div key={item.id} className="p-4 rounded-xl border border-muted-foreground/10 bg-muted/5 space-y-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold truncate">{item.item?.name}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                            <WarehouseIcon size={10} /> {item.warehouse?.name}
-                          </p>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <span className="text-lg font-black text-primary leading-none">{remaining}</span>
-                          <span className="text-[8px] font-bold text-muted-foreground uppercase block">Unit</span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-12 gap-3 pt-3 border-t border-muted-foreground/5">
-                        <div className="col-span-4 space-y-1">
-                          <Label className="text-[9px] font-bold uppercase opacity-60">Jml Kembali</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={remaining}
-                            className="h-8 text-xs font-bold"
-                            value={partialReturns[item.id]?.quantity || 0}
-                            onChange={(e) => {
-                              const val = Math.min(remaining, Math.max(0, parseInt(e.target.value) || 0))
-                              setPartialReturns(prev => ({
-                                ...prev,
-                                [item.id]: { ...prev[item.id], quantity: val }
-                              }))
-                            }}
-                          />
-                        </div>
-                        <div className="col-span-8 space-y-1">
-                          <Label className="text-[9px] font-bold uppercase opacity-60">Catatan Kondisi</Label>
-                          <Input
-                            placeholder="Kondisi barang..."
-                            className="h-8 text-xs"
-                            value={partialReturns[item.id]?.note || ''}
-                            onChange={(e) => {
-                              setPartialReturns(prev => ({
-                                ...prev,
-                                [item.id]: { ...prev[item.id], note: e.target.value }
-                              }))
-                            }}
-                          />
-                        </div>
-                      </div>
+                {allReturned || returnableItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 px-4 text-center border border-dashed border-emerald-500/20 bg-emerald-500/5 rounded-xl space-y-3">
+                    <div className="p-3 bg-emerald-500/10 text-emerald-600 rounded-full">
+                      {returnableItems.length === 0 ? (
+                        <XCircle size={36} className="text-muted-foreground animate-pulse" />
+                      ) : (
+                        <CheckCircle2 size={36} className="text-emerald-500 animate-bounce" />
+                      )}
                     </div>
-                  )
-                })}
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-bold text-foreground">
+                        {returnableItems.length === 0 ? "Tidak Ada Barang yang Dapat Dikembalikan" : "Semua Barang Sudah Dikembalikan"}
+                      </h3>
+                      <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                        {returnableItems.length === 0 
+                          ? "Peminjaman ini tidak memiliki item yang disetujui atau aktif untuk dikembalikan."
+                          : "Seluruh item dalam peminjaman ini telah sepenuhnya dikembalikan ke gudang masing-masing."}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  displayItems.map((item) => {
+                    const remaining = (item.quantity || 0) - (item.returned_quantity || 0)
+                    const isFullyReturned = remaining <= 0
+                    const isReturnable = item.status === 'approved' || item.status === 'pending'
+
+                    let badgeColor = "bg-muted text-muted-foreground"
+                    let badgeLabel: string = item.status || "Peminjaman"
+                    if (item.status === 'approved') {
+                      badgeLabel = "Disetujui"
+                      badgeColor = "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                    } else if (item.status === 'pending') {
+                      badgeLabel = "Menunggu"
+                      badgeColor = "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                    } else if (item.status === 'rejected') {
+                      badgeLabel = "Ditolak"
+                      badgeColor = "bg-red-500/10 text-red-600 border-red-500/20"
+                    } else if (item.status === 'no_stock') {
+                      badgeLabel = "Stok Kosong"
+                      badgeColor = "bg-orange-500/10 text-orange-600 border-orange-500/20"
+                    }
+
+                    return (
+                      <div 
+                        key={item.id} 
+                        className={cn(
+                          "p-4 rounded-xl border transition-all space-y-3",
+                          !isReturnable
+                            ? "bg-red-500/[0.02] border-red-500/10 opacity-60"
+                            : isFullyReturned 
+                              ? "bg-emerald-500/[0.02] border-emerald-500/10 opacity-75" 
+                              : "bg-muted/5 border-muted-foreground/10"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className={cn(
+                              "text-sm font-bold truncate", 
+                              (isFullyReturned || !isReturnable) && "text-muted-foreground line-through"
+                            )}>
+                              {item.item?.name}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <WarehouseIcon size={10} /> {item.warehouse?.name}
+                              </p>
+                              {isFullyReturned && isReturnable && (
+                                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[9px] font-bold uppercase tracking-tight py-0 px-1.5 h-4">
+                                  Lunas / Selesai
+                                </Badge>
+                              )}
+                              {!isReturnable && (
+                                <Badge variant="outline" className={cn("text-[9px] font-bold uppercase tracking-tight py-0 px-1.5 h-4", badgeColor)}>
+                                  {badgeLabel}
+                                </Badge>
+                              )}
+                              {isReturnable && !isFullyReturned && item.status === 'pending' && (
+                                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[9px] font-bold uppercase tracking-tight py-0 px-1.5 h-4">
+                                  Pending
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <span className={cn(
+                              "text-lg font-black leading-none", 
+                              (isFullyReturned || !isReturnable) ? "text-muted-foreground" : "text-primary"
+                            )}>
+                              {isReturnable ? remaining : 0}
+                            </span>
+                            <span className="text-[8px] font-bold text-muted-foreground uppercase block">Unit</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-3 pt-3 border-t border-muted-foreground/5">
+                          <div className="col-span-4 space-y-1">
+                            <Label className="text-[9px] font-bold uppercase opacity-60">Jml Kembali</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={isReturnable ? remaining : 0}
+                              disabled={isFullyReturned || !isReturnable}
+                              className="h-8 text-xs font-bold"
+                              value={!isReturnable ? 0 : isFullyReturned ? 0 : (partialReturns[item.id]?.quantity || 0)}
+                              onChange={(e) => {
+                                if (!isReturnable) return
+                                const val = Math.min(remaining, Math.max(0, parseInt(e.target.value) || 0))
+                                setPartialReturns(prev => ({
+                                  ...prev,
+                                  [item.id]: { ...prev[item.id], quantity: val }
+                                }))
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-8 space-y-1">
+                            <Label className="text-[9px] font-bold uppercase opacity-60">Catatan Kondisi</Label>
+                            <Input
+                              placeholder={
+                                !isReturnable
+                                  ? `Tidak dapat dikembalikan (${badgeLabel})`
+                                  : isFullyReturned 
+                                    ? "Sudah dikembalikan" 
+                                    : "Kondisi barang..."
+                              }
+                              disabled={isFullyReturned || !isReturnable}
+                              className="h-8 text-xs"
+                              value={
+                                !isReturnable 
+                                  ? "" 
+                                  : isFullyReturned 
+                                    ? "Barang sudah dikembalikan lengkap" 
+                                    : (partialReturns[item.id]?.note || '')
+                              }
+                              onChange={(e) => {
+                                if (!isReturnable) return
+                                setPartialReturns(prev => ({
+                                  ...prev,
+                                  [item.id]: { ...prev[item.id], note: e.target.value }
+                                }))
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
           </div>
 
           <DialogFooter className="px-6 py-4 bg-muted/5 border-t flex flex-row items-center justify-end gap-2 m-0">
-            <Button variant="outline" onClick={() => setReturnTarget(null)} className="h-9 px-4">
-              Batal
-            </Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 px-6"
-              onClick={() => {
-                const finalReturns: Record<string, any> = {}
-                Object.entries(partialReturns).forEach(([id, data]) => {
-                  if (data.quantity > 0) {
-                    finalReturns[id] = data
+            {!(allReturned || returnableItems.length === 0) && (
+              <Button variant="outline" onClick={() => setReturnTarget(null)} className="h-9 px-4">
+                Batal
+              </Button>
+            )}
+            {allReturned || returnableItems.length === 0 ? (
+              <Button onClick={() => setReturnTarget(null)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 px-6">
+                Tutup
+              </Button>
+            ) : (
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 px-6"
+                onClick={() => {
+                  const finalReturns: Record<string, any> = {}
+                  Object.entries(partialReturns).forEach(([id, data]) => {
+                    if (data.quantity > 0) {
+                      finalReturns[id] = data
+                    }
+                  })
+
+                  if (Object.keys(finalReturns).length === 0) {
+                    toast.error('Pilih minimal 1 barang untuk dikembalikan')
+                    return
                   }
-                })
 
-                if (Object.keys(finalReturns).length === 0) {
-                  toast.error('Pilih minimal 1 barang untuk dikembalikan')
-                  return
-                }
-
-                onAction(returnTarget!.id, 'partial_return', {
-                  returns: finalReturns,
-                  actual_return_date: actualReturnDate
-                })
-              }}
-              disabled={isPending || Object.values(partialReturns).every(v => v.quantity <= 0)}
-            >
-              {isPending ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Memproses...</> : 'Simpan Pengembalian'}
-            </Button>
+                  onAction(returnTarget!.id, 'partial_return', {
+                    returns: finalReturns,
+                    actual_return_date: actualReturnDate
+                  })
+                }}
+                disabled={isPending || Object.values(partialReturns).every(v => v.quantity <= 0)}
+              >
+                {isPending ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Memproses...</> : 'Simpan Pengembalian'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
