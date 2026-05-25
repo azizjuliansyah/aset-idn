@@ -65,8 +65,9 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     const response = NextResponse.redirect(url)
-    // IMPORTANT: Forward cookies to the redirect response
-    supabaseResponse.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value))
+    // IMPORTANT: Forward both original request cookies and updated response cookies to prevent session loss
+    request.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value))
+    supabaseResponse.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value, c.options))
     return response
   }
 
@@ -80,8 +81,9 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     const response = NextResponse.redirect(url)
-    // IMPORTANT: Forward cookies to the redirect response
-    supabaseResponse.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value))
+    // IMPORTANT: Forward both original request cookies and updated response cookies to prevent session loss
+    request.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value))
+    supabaseResponse.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value, c.options))
     return response
   }
 

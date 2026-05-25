@@ -18,7 +18,7 @@ export async function PATCH(
 
   // Check if group is still draft before updating
   const { data: entry } = await supabase
-    .from('stock_opnames')
+    .from('stock_opname_group_items')
     .select('group:stock_opname_groups(status)')
     .eq('id', id)
     .single()
@@ -28,7 +28,7 @@ export async function PATCH(
   }
 
   const { data, error } = await supabase
-    .from('stock_opnames')
+    .from('stock_opname_group_items')
     .update({
       actual_stock,
       note,
@@ -55,7 +55,7 @@ export async function DELETE(
 
   // Check if group is still draft before deleting
   const { data: entry } = await supabase
-    .from('stock_opnames')
+    .from('stock_opname_group_items')
     .select('group:stock_opname_groups(status)')
     .eq('id', id)
     .single()
@@ -65,7 +65,7 @@ export async function DELETE(
   }
 
   const { error } = await supabase
-    .from('stock_opnames')
+    .from('stock_opname_group_items')
     .delete()
     .eq('id', id)
 

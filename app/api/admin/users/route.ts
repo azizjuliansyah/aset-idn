@@ -49,11 +49,21 @@ export async function POST(request: Request) {
   const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
     email,
     password,
-    email_confirm: true,
+    email_confirm: false,
     user_metadata: { full_name, role },
   })
 
   if (createError) return NextResponse.json({ error: createError.message }, { status: 400 })
+
+  // Confirm the user's email safely via database RPC
+  if (newUser.user) {
+    const { error: confirmError } = await adminClient.rpc('confirm_user_email', {
+      user_id: newUser.user.id
+    })
+    if (confirmError) {
+      console.error('[API Admin Users] Error confirming user email via RPC:', confirmError)
+    }
+  }
 
   // Update profile role for non-default roles (trigger defaults to 'user')
   if (newUser.user && role !== 'user') {

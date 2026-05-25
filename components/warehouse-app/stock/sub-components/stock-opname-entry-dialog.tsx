@@ -58,6 +58,7 @@ interface StockOpnameEntryDialogProps {
     diff_category_id?: string | null
   }) => void
   titleOverride?: string
+  lockedWarehouseId?: string
 }
 
 export function StockOpnameEntryDialog({
@@ -67,7 +68,8 @@ export function StockOpnameEntryDialog({
   initialData,
   existingEntries,
   onSubmitOverride,
-  titleOverride
+  titleOverride,
+  lockedWarehouseId
 }: StockOpnameEntryDialogProps) {
   const supabase = createClient()
   const mutations = useStockOpnameMutations()
@@ -77,10 +79,11 @@ export function StockOpnameEntryDialog({
   const [diffCategories, setDiffCategories] = useState<any[]>([])
   const { data: warehouses = [] } = useWarehouses()
   const [systemStock, setSystemStock] = useState<number | null>(null)
+  const [currentSystemStock, setCurrentSystemStock] = useState<number | null>(null)
   const [isLoadingStock, setIsLoadingStock] = useState(false)
   const [existingRecord, setExistingRecord] = useState<any | null>(null)
 
-  const isEditing = !!initialData
+  const isEditing = !!initialData && !initialData.id?.startsWith('unrecorded-')
 
   const { register, handleSubmit, control, watch, formState: { errors }, reset, setValue, setError } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -116,18 +119,20 @@ export function StockOpnameEntryDialog({
       setValue('note', initialData.note || '')
       setValue('diff_category_id', initialData.diff_category_id || '')
       setSystemStock(initialData.system_stock)
+      setCurrentSystemStock(initialData.current_system_stock !== undefined ? initialData.current_system_stock : initialData.system_stock)
       setExistingRecord(null)
     } else {
       // Add mode: reset form, auto-select default warehouse if already in cache
       const defaultWh = warehouses.find((w) => w.is_default)
       reset({
         item_id: '',
-        warehouse_id: defaultWh?.id || '',
+        warehouse_id: lockedWarehouseId || defaultWh?.id || '',
         actual_stock: 0,
         note: '',
         diff_category_id: '',
       })
       setSystemStock(null)
+      setCurrentSystemStock(null)
       setExistingRecord(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,22 +142,28 @@ export function StockOpnameEntryDialog({
   useEffect(() => {
     if (!open || initialData) return
     const currentWarehouseId = watch('warehouse_id')
+    if (lockedWarehouseId) {
+      if (currentWarehouseId !== lockedWarehouseId) {
+        setValue('warehouse_id', lockedWarehouseId, { shouldValidate: false })
+      }
+      return
+    }
     if (currentWarehouseId) return // already set
 
     const defaultWh = warehouses.find((w) => w.is_default)
     if (defaultWh) {
       setValue('warehouse_id', defaultWh.id, { shouldValidate: false })
     }
-  }, [warehouses, open, initialData, setValue, watch])
+  }, [warehouses, open, initialData, setValue, watch, lockedWarehouseId])
 
   const itemId = watch('item_id')
   const warehouseId = watch('warehouse_id')
   const actualStock = watch('actual_stock')
 
-  // Fetch system stock and check for existing entry when item or warehouse changes (only if NOT editing, or if manually changed)
+  // Fetch system stock and check for existing entry when item or warehouse changes (fetch live ledger stock for currentSystemStock in both add & edit)
   useEffect(() => {
     const fetchSystemStock = async () => {
-      if (itemId && warehouseId && (!isEditing || onSubmitOverride)) {
+      if (itemId && warehouseId) {
         setIsLoadingStock(true)
         try {
           // 1. Fetch system stock
@@ -163,12 +174,17 @@ export function StockOpnameEntryDialog({
             .eq('warehouse_id', warehouseId)
             .maybeSingle()
 
-          setSystemStock(stockData?.current_stock ?? 0)
+          const liveStock = stockData?.current_stock ?? 0
+          setCurrentSystemStock(liveStock)
+
+          if (!isEditing || onSubmitOverride) {
+            setSystemStock(liveStock)
+          }
 
           // 2. Fetch existing opname entry under current group (only if not normal editing, OR if custom submit like CSV import edit)
           if (!isEditing || onSubmitOverride) {
             const { data: opnameData } = await supabase
-              .from('stock_opnames')
+              .from('stock_opname_group_items')
               .select(`
                 id,
                 actual_stock,
@@ -194,7 +210,10 @@ export function StockOpnameEntryDialog({
             setExistingRecord(null)
           }
         } catch (e) {
-          setSystemStock(0)
+          setCurrentSystemStock(0)
+          if (!isEditing || onSubmitOverride) {
+            setSystemStock(0)
+          }
           setExistingRecord(null)
         } finally {
           setIsLoadingStock(false)
@@ -331,26 +350,28 @@ export function StockOpnameEntryDialog({
               {errors.item_id && <p className="text-destructive text-xs">{errors.item_id.message}</p>}
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Gudang *</Label>
-              <Controller
-                name="warehouse_id"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isEditing && !onSubmitOverride}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih gudang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {warehouses.map((wh) => (
-                        <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.warehouse_id && <p className="text-destructive text-xs">{errors.warehouse_id.message}</p>}
-            </div>
+            {!lockedWarehouseId && (
+              <div className="space-y-1.5">
+                <Label>Gudang *</Label>
+                <Controller
+                  name="warehouse_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!!lockedWarehouseId || (isEditing && !onSubmitOverride)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih gudang" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {warehouses.map((wh) => (
+                          <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.warehouse_id && <p className="text-destructive text-xs">{errors.warehouse_id.message}</p>}
+              </div>
+            )}
 
             {existingRecord && (
               <div className="p-3 bg-amber-50/80 border border-amber-200/65 rounded-lg text-amber-900 text-xs space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -369,33 +390,22 @@ export function StockOpnameEntryDialog({
                 </div>
                 <div className="grid grid-cols-2 gap-2 bg-white/70 p-2 rounded-lg border border-amber-100/80 text-amber-900 shadow-sm">
                   <div>
-                    <span className="text-[9px] text-amber-600 block uppercase font-bold tracking-wider">Stok Fisik Tercatat</span>
-                    <span className="text-sm font-black">{existingRecord.actual_stock} unit</span>
+                    <span className="text-[9px] text-amber-600 block uppercase font-semibold tracking-wider">Stok Fisik Tercatat</span>
+                    <span className="text-sm font-bold">{existingRecord.actual_stock} unit</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-amber-600 block uppercase font-bold tracking-wider">Kategori Selisih</span>
-                    <span className="text-sm font-black">{existingRecord.diff_category_name || '-'}</span>
+                    <span className="text-[9px] text-amber-600 block uppercase font-semibold tracking-wider">Kategori Selisih</span>
+                    <span className="text-sm font-bold">{existingRecord.diff_category_name || '-'}</span>
                   </div>
                   <div className="col-span-2 border-t border-amber-100/50 pt-1.5 mt-0.5">
-                    <span className="text-[9px] text-amber-600 block uppercase font-bold tracking-wider">Catatan</span>
+                    <span className="text-[9px] text-amber-600 block uppercase font-semibold tracking-wider">Catatan</span>
                     <span className="text-xs italic leading-tight block">{existingRecord.note || '-'}</span>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border border-border/50">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Stok Sistem</p>
-                <p className="text-xl font-black">{isLoadingStock ? '...' : systemStock ?? '-'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Selisih</p>
-                <p className={`text-xl font-black ${difference > 0 ? 'text-green-600' : difference < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                  {systemStock !== null ? (difference > 0 ? `+${difference}` : difference) : '-'}
-                </p>
-              </div>
-            </div>
+            
 
             <div className="space-y-1.5">
               <Label htmlFor="actual-stock">Stok Fisik (Hasil Hitung) *</Label>
@@ -405,6 +415,27 @@ export function StockOpnameEntryDialog({
                 {...register('actual_stock', { valueAsNumber: true })}
               />
               {errors.actual_stock && <p className="text-destructive text-xs">{errors.actual_stock.message}</p>}
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 p-4 bg-muted/40 rounded-xl border border-border/50 shadow-inner">
+              <div className="flex flex-col justify-center">
+                <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Sistem (Tercatat)</span>
+                <span className="text-lg font-extrabold text-muted-foreground/80 mt-1">
+                  {isLoadingStock ? '...' : systemStock ?? '-'}
+                </span>
+              </div>
+              <div className="flex flex-col justify-center border-x border-border/60 px-3">
+                <span className="text-[9px] text-indigo-900 uppercase font-bold tracking-wider">Sistem (Saat Ini)</span>
+                <span className="text-lg font-black text-indigo-700 mt-1">
+                  {isLoadingStock ? '...' : currentSystemStock ?? '-'}
+                </span>
+              </div>
+              <div className="flex flex-col justify-center pl-1">
+                <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Selisih</span>
+                <span className={`text-lg font-black mt-1 ${difference > 0 ? 'text-green-600' : difference < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                  {systemStock !== null ? (difference > 0 ? `+${difference}` : difference) : '-'}
+                </span>
+              </div>
             </div>
 
             {difference !== 0 && (

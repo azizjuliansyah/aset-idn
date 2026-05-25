@@ -52,6 +52,49 @@ export async function GET(
 }
 
 /**
+ * PATCH /api/v1/stock-opname-groups/[id]
+ * Updates the stock opname group metadata (name, description).
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: groupId } = await params
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return unauthorized()
+
+  // Admin role check
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  try {
+    const body = await request.json()
+    const { name, description } = body
+
+    const { data, error } = await supabase
+      .from('stock_opname_groups')
+      .update({ name, description })
+      .eq('id', groupId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[API] Patch Error:', error)
+      return serverError(error.message)
+    }
+
+    return NextResponse.json({ success: true, data })
+  } catch (err: any) {
+    console.error('[API] Unexpected Error in PATCH:', err)
+    return serverError(err.message || 'Internal Server Error')
+  }
+}
+
+/**
  * DELETE /api/v1/stock-opname-groups/[id]
  * Deletes the stock opname group.
  */
@@ -64,6 +107,12 @@ export async function DELETE(
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+
+  // Admin role check
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   try {
     const { error } = await supabase

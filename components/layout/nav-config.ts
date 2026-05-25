@@ -114,27 +114,31 @@ export const navGroups: NavGroup[] = [
   },
   {
     title: 'Transaksi',
-    roles: ['general_affair'],
+    roles: ['general_affair', 'admin'],
     items: [
       {
         title: 'Barang Masuk',
         href: '/dashboard/stock-in',
         icon: ArrowDownToLine,
+        roles: ['general_affair'],
       },
       {
         title: 'Barang Keluar',
         href: '/dashboard/stock-out',
         icon: ArrowUpFromLine,
+        roles: ['general_affair'],
       },
       {
         title: 'Pindah Barang',
         href: '/dashboard/stock-transfer',
         icon: Repeat,
+        roles: ['general_affair'],
       },
       {
         title: 'Stock Opname',
         href: '/dashboard/stock-opname',
         icon: ClipboardCheck,
+        roles: ['admin', 'general_affair'],
       },
     ],
   },

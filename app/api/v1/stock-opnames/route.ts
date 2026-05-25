@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
   // Check if item in this warehouse is already recorded in the opname session
   const { data: existing } = await supabase
-    .from('stock_opnames')
+    .from('stock_opname_group_items')
     .select('id')
     .eq('group_id', group_id)
     .eq('item_id', item_id)
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   }
 
   const { data, error } = await supabase
-    .from('stock_opnames')
+    .from('stock_opname_group_items')
     .insert({
       group_id,
       item_id,
@@ -73,7 +73,7 @@ export async function DELETE(request: Request) {
 
   // Check if all entries belong to groups that are still draft
   const { data: entries, error: fetchError } = await supabase
-    .from('stock_opnames')
+    .from('stock_opname_group_items')
     .select('id, group:stock_opname_groups(status)')
     .in('id', ids)
 
@@ -87,7 +87,7 @@ export async function DELETE(request: Request) {
   }
   
   const { error: deleteError } = await supabase
-    .from('stock_opnames')
+    .from('stock_opname_group_items')
     .delete()
     .in('id', ids)
 

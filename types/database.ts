@@ -180,6 +180,7 @@ export interface StockOpname {
   item_id: string
   warehouse_id: string
   system_stock: number
+  current_system_stock?: number
   actual_stock: number
   difference: number
   note: string | null

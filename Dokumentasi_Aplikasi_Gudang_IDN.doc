@@ -440,7 +440,7 @@
   <div class="flow-card">
     <div class="flow-step-num">1</div><strong>Inisiasi Sesi:</strong> Tim GA membuat sesi audit baru di halaman <em>Stock Opname</em> (misalnya sesi audit "Sesi Opname Mei 2026"). Ini akan membuat entitas baru di tabel <code>stock_opname_groups</code> dengan status <code>draft</code>.<br><br>
     <div class="flow-step-num">2</div><strong>Perhitungan Lapangan:</strong> Tim GA melakukan perhitungan fisik barang di gudang secara riil.<br><br>
-    <div class="flow-step-num">3</div><strong>Input Hasil Aktual:</strong> GA menginputkan jumlah fisik aktual dari setiap barang di sistem. Untuk setiap barang, sistem mencatat data ke tabel <code>stock_opnames</code> yang mencakup:<br>
+    <div class="flow-step-num">3</div><strong>Input Hasil Aktual:</strong> GA menginputkan jumlah fisik aktual dari setiap barang di sistem. Untuk setiap barang, sistem mencatat data ke tabel <code>stock_opname_group_items</code> yang mencakup:<br>
     - Stok yang tercatat di sistem saat ini (*system stock*).<br>
     - Stok riil hasil hitungan fisik (*actual stock*).<br>
     - Selisih hitung (*discrepancy* = aktual - sistem).<br><br>
@@ -549,7 +549,7 @@
         <td>Sesi grup besar stock opname berkala (misal opname bulanan). Menyimpan status sesi (draft, completed) dan tanggal eksekusi.</td>
       </tr>
       <tr>
-        <td><strong>stock_opnames</strong></td>
+        <td><strong>stock_opname_group_items</strong></td>
         <td>Transaksi Audit</td>
         <td>Detail audit barang per sesi opname. Relasi ke <code>stock_opname_groups</code> dan <code>items</code>. Menyimpan angka sistem, angka aktual lapangan, dan selisihnya.</td>
       </tr>

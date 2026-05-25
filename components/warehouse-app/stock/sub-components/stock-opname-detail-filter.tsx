@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Calendar as CalendarIcon, ChevronDown, Filter } from 'lucide-react'
+import { Calendar as CalendarIcon, ChevronDown, Filter, ClipboardList, Scale } from 'lucide-react'
 import { useCategories } from '@/hooks/queries/use-categories'
 import { useWarehouses } from '@/hooks/queries/use-warehouses'
 
@@ -22,6 +22,7 @@ interface StockOpnameDetailFilterProps {
   setCustomStartDate: (v: string) => void
   customEndDate: string
   setCustomEndDate: (v: string) => void
+  hideWarehouseFilter?: boolean
 }
 
 export function StockOpnameDetailFilter({
@@ -30,10 +31,53 @@ export function StockOpnameDetailFilter({
   filterType, setFilterType,
   datePreset, setDatePreset,
   customStartDate, setCustomStartDate,
-  customEndDate, setCustomEndDate
+  customEndDate, setCustomEndDate,
+  hideWarehouseFilter
 }: StockOpnameDetailFilterProps) {
   const { data: categories } = useCategories()
   const { data: warehouses } = useWarehouses()
+
+  // Derive stateless values from filterType
+  let recordingStatus = 'all'
+  let discrepancyStatus = 'all'
+
+  if (filterType === 'unrecorded') {
+    recordingStatus = 'unrecorded'
+    discrepancyStatus = 'all'
+  } else if (filterType === 'recorded') {
+    recordingStatus = 'recorded'
+    discrepancyStatus = 'all'
+  } else if (['discrepancy', 'discrepancy_plus', 'discrepancy_minus', 'match'].includes(filterType)) {
+    recordingStatus = 'recorded'
+    discrepancyStatus = filterType
+  } else {
+    recordingStatus = 'all'
+    discrepancyStatus = 'all'
+  }
+
+  const handleRecordingStatusChange = (val: string) => {
+    if (val === 'all') {
+      setFilterType('all')
+    } else if (val === 'recorded') {
+      setFilterType('recorded')
+    } else if (val === 'unrecorded') {
+      setFilterType('unrecorded')
+    }
+  }
+
+  const handleDiscrepancyStatusChange = (val: string) => {
+    if (val === 'all') {
+      if (recordingStatus === 'unrecorded') {
+        setFilterType('unrecorded')
+      } else if (recordingStatus === 'recorded') {
+        setFilterType('recorded')
+      } else {
+        setFilterType('all')
+      }
+    } else {
+      setFilterType(val)
+    }
+  }
 
   const getDateLabel = () => {
     if (datePreset === 'all') return 'Semua Tanggal'
@@ -46,41 +90,68 @@ export function StockOpnameDetailFilter({
     return `${datePreset} Hari Terakhir`
   }
 
+  const isUnrecorded = recordingStatus === 'unrecorded'
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${hideWarehouseFilter ? 'lg:grid-cols-4' : 'lg:grid-cols-5'} gap-4`}>
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Selisih</Label>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="h-9">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status Pencatatan</Label>
+        <Select value={recordingStatus} onValueChange={handleRecordingStatusChange}>
+          <SelectTrigger className="h-9 bg-white">
             <div className="flex items-center gap-2">
-              <Filter size={14} className="text-muted-foreground" />
-              <SelectValue placeholder="Semua Selisih" />
+              <ClipboardList size={14} className="text-muted-foreground shrink-0" />
+              <SelectValue placeholder="Semua Status Pencatatan" />
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Semua Selisih</SelectItem>
-            <SelectItem value="discrepancy">Ada Selisih</SelectItem>
-            <SelectItem value="discrepancy_plus">Selisih (+)</SelectItem>
-            <SelectItem value="discrepancy_minus">Selisih (-)</SelectItem>
-            <SelectItem value="match">Sesuai</SelectItem>
+            <SelectItem value="all">Semua Status Pencatatan</SelectItem>
+            <SelectItem value="recorded">Sudah Tercatat</SelectItem>
+            <SelectItem value="unrecorded">Belum Dicatat</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gudang</Label>
-        <Select value={warehouseId} onValueChange={setWarehouseId}>
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Semua Gudang" />
+        <Label className={`text-xs font-semibold uppercase tracking-wider transition-colors duration-200 ${isUnrecorded ? 'text-muted-foreground/50' : 'text-muted-foreground'}`}>
+          Kondisi Selisih
+        </Label>
+        <Select 
+          value={discrepancyStatus} 
+          onValueChange={handleDiscrepancyStatusChange}
+          disabled={isUnrecorded}
+        >
+          <SelectTrigger className={`h-9 bg-white transition-opacity duration-200 ${isUnrecorded ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}>
+            <div className="flex items-center gap-2">
+              <Scale size={14} className="text-muted-foreground shrink-0" />
+              <SelectValue placeholder="Semua Kondisi Selisih" />
+            </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Semua Gudang</SelectItem>
-            {warehouses?.map((w) => (
-              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-            ))}
+            <SelectItem value="all">Semua Kondisi Selisih</SelectItem>
+            <SelectItem value="discrepancy">Ada Selisih</SelectItem>
+            <SelectItem value="match">Sesuai</SelectItem>
+            <SelectItem value="discrepancy_plus">Selisih Lebih (+)</SelectItem>
+            <SelectItem value="discrepancy_minus">Selisih Kurang (-)</SelectItem>
           </SelectContent>
         </Select>
       </div>
+
+      {!hideWarehouseFilter && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gudang</Label>
+          <Select value={warehouseId} onValueChange={setWarehouseId}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Semua Gudang" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Gudang</SelectItem>
+              {warehouses?.map((w) => (
+                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kategori</Label>

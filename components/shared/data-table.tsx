@@ -41,6 +41,7 @@ interface DataTableProps<T> {
   bulkActions?: (selectedIds: string[], selectedRows: T[]) => React.ReactNode
   selectedIds?: string[]
   onSelectedIdsChange?: (ids: string[]) => void
+  rowClassName?: (row: T) => string
 }
 
 export function DataTable<T extends { id: string }>({
@@ -61,6 +62,7 @@ export function DataTable<T extends { id: string }>({
   bulkActions,
   selectedIds: externalSelectedIds,
   onSelectedIdsChange: externalOnSelectedIdsChange,
+  rowClassName,
 }: DataTableProps<T>) {
   const [internalSelectedIds, setInternalSelectedIds] = useState<string[]>([])
   const [localSearch, setLocalSearch] = useState(searchValue || '')
@@ -211,7 +213,7 @@ export function DataTable<T extends { id: string }>({
               </TableRow>
             ) : (
               data.map((row, idx) => (
-                <TableRow key={row.id} className={cn("hover:bg-muted/20 transition-colors", selectedIds.includes(row.id) && "bg-muted/30")}>
+                <TableRow key={row.id} className={cn("hover:bg-muted/20 transition-colors", selectedIds.includes(row.id) && "bg-muted/30", rowClassName?.(row))}>
                   <TableCell className="text-center">
                     {onBulkDelete && (
                       <input 

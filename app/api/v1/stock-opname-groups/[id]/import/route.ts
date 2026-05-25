@@ -15,6 +15,10 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
+  // Role check: Admin or General Affair
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin' && profile?.role !== 'general_affair') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   try {
     // Check group status
     const { data: group, error: groupError } = await supabase
@@ -76,7 +80,7 @@ export async function POST(
 
     // 4. Fetch existing entries in this group to know whether to insert or update
     const { data: existingEntries, error: entriesError } = await supabase
-      .from('stock_opnames')
+      .from('stock_opname_group_items')
       .select('id, item_id, warehouse_id')
       .eq('group_id', groupId)
 
@@ -157,7 +161,7 @@ export async function POST(
     // Perform database insertions
     if (newEntries.length > 0) {
       const { error: insertError } = await supabase
-        .from('stock_opnames')
+        .from('stock_opname_group_items')
         .insert(newEntries)
 
       if (insertError) {
@@ -170,7 +174,7 @@ export async function POST(
     if (updateEntries.length > 0) {
       const updatePromises = updateEntries.map(entry => 
         supabase
-          .from('stock_opnames')
+          .from('stock_opname_group_items')
           .update({
             actual_stock: entry.actual_stock,
             note: entry.note,

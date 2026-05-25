@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { Plus, Trash2, Eye, MoreHorizontal, ClipboardList, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
 
 import { DataTable } from '@/components/shared/data-table'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
@@ -24,6 +26,20 @@ import { StockListFilter } from '@/components/warehouse-app/stock/sub-components
 
 export function StockOpnameClient() {
   const router = useRouter()
+  const supabase = createClient()
+  
+  const { data: profile } = useQuery({
+    queryKey: ['user_profile_for_opname'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return null
+      const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      return data
+    }
+  })
+
+  const isAdmin = profile?.role === 'admin'
+
   const {
     page, setPage,
     search, setSearch,
@@ -47,14 +63,17 @@ export function StockOpnameClient() {
           { 
             key: 'name', 
             header: 'Nama Group',
-            render: (v, row) => (
-              <button 
-                onClick={() => router.push(`/dashboard/stock-opname/${row.id}`)}
-                className="font-bold text-red-600 hover:underline cursor-pointer text-left"
-              >
-                {v as string}
-              </button>
-            )
+            render: (v, row) => {
+              const query = warehouseId && warehouseId !== 'all' ? `?warehouseId=${warehouseId}` : ''
+              return (
+                <button 
+                  onClick={() => router.push(`/dashboard/stock-opname/${row.id}${query}`)}
+                  className="font-bold text-red-600 hover:underline cursor-pointer text-left"
+                >
+                  {v as string}
+                </button>
+              )
+            }
           },
           { key: 'description', header: 'Deskripsi', render: (v) => v || '—' },
           {
@@ -81,10 +100,13 @@ export function StockOpnameClient() {
                       <MoreHorizontal size={16} />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => router.push(`/dashboard/stock-opname/${group.id}`)}>
+                      <DropdownMenuItem onClick={() => {
+                        const query = warehouseId && warehouseId !== 'all' ? `?warehouseId=${warehouseId}` : ''
+                        router.push(`/dashboard/stock-opname/${group.id}${query}`)
+                      }}>
                         <Eye size={14} className="mr-2 text-muted-foreground" /> Lihat Detail
                       </DropdownMenuItem>
-                      {group.status === 'draft' && (
+                      {group.status === 'draft' && isAdmin && (
                         <>
                           <DropdownMenuItem
                             onClick={() => {
@@ -130,14 +152,16 @@ export function StockOpnameClient() {
             setDatePreset={setDatePreset}
           />
         }
-        onBulkDelete={(ids) => bulkDeleteGroups.mutate(ids)}
+        onBulkDelete={isAdmin ? (ids) => bulkDeleteGroups.mutate(ids) : undefined}
         actions={
-          <Button size="sm" onClick={() => {
-            setEditData(null)
-            setIsDialogOpen(true)
-          }}>
-            <Plus size={14} className="mr-1.5" /> Buat Group Baru
-          </Button>
+          isAdmin ? (
+            <Button size="sm" onClick={() => {
+              setEditData(null)
+              setIsDialogOpen(true)
+            }}>
+              <Plus size={14} className="mr-1.5" /> Buat Group Baru
+            </Button>
+          ) : undefined
         }
         emptyText="Belum ada group stock opname"
       />

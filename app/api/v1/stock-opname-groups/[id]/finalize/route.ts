@@ -15,10 +15,14 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return authError()
 
+  // Admin role check
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   // 1. Fetch group and its entries
   const { data: group, error: groupError } = await supabase
     .from('stock_opname_groups')
-    .select('id, name, description, status, created_by, created_at, entries:stock_opnames(id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, created_at)')
+    .select('id, name, description, status, created_by, created_at, entries:stock_opname_group_items(id, group_id, item_id, warehouse_id, system_stock, actual_stock, note, created_at)')
     .eq('id', id)
     .single()
 

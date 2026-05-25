@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
   let selectStr = 'id, name, description, status, created_by, created_at, creator:profiles(full_name)'
   if (warehouseId || categoryId) {
-    selectStr += ', stock_opnames!inner(warehouse_id, item:items!inner(item_category_id))'
+    selectStr += ', stock_opname_group_items!inner(warehouse_id, item:items!inner(item_category_id))'
   }
 
   let q = supabase
@@ -32,8 +32,8 @@ export async function GET(request: Request) {
     .range(from, from + pageSize - 1)
 
   if (search) q = q.ilike('name', `%${search}%`)
-  if (warehouseId) q = q.eq('stock_opnames.warehouse_id', warehouseId)
-  if (categoryId) q = q.eq('stock_opnames.item.item_category_id', categoryId)
+  if (warehouseId) q = q.eq('stock_opname_group_items.warehouse_id', warehouseId)
+  if (categoryId) q = q.eq('stock_opname_group_items.item.item_category_id', categoryId)
   if (startDate) q = q.gte('created_at', startDate)
   if (endDate) q = q.lte('created_at', endDate)
 
@@ -54,6 +54,10 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return authError()
+
+  // Admin role check
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
   const { name, description } = body
@@ -90,6 +94,10 @@ export async function DELETE(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return authError()
+
+  // Admin role check
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { ids } = await request.json()
   if (!ids || !Array.isArray(ids) || ids.length === 0) {

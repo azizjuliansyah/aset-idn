@@ -60,6 +60,7 @@ interface StockOpnameImportDialogProps {
   onOpenChange: (open: boolean) => void
   groupId: string
   groupName: string
+  lockedWarehouseId?: string
 }
 
 interface ParsedRow {
@@ -159,7 +160,8 @@ export function StockOpnameImportDialog({
   open,
   onOpenChange,
   groupId,
-  groupName
+  groupName,
+  lockedWarehouseId
 }: StockOpnameImportDialogProps) {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -323,11 +325,13 @@ export function StockOpnameImportDialog({
 
         // Remove header row
         const dataRows = parsed.slice(1)
+        const lockedWh = lockedWarehouseId ? dbWarehouses.find(w => w.id === lockedWarehouseId) : null
+
         const mappedRows: ParsedRow[] = dataRows
           .filter(row => row.length > 0 && row.some(cell => cell.trim() !== ''))
           .map((row) => {
             const item_name = row[0]?.trim() || ''
-            const warehouse_name = row[1]?.trim() || ''
+            const warehouse_name = lockedWh ? lockedWh.name : (row[1]?.trim() || '')
             const actual_stock = row[2]?.trim() || ''
             const note = row[3]?.trim() || ''
             const diff_category_name = row[4]?.trim() || ''
@@ -378,7 +382,7 @@ export function StockOpnameImportDialog({
                 .in('item_id', uniqueItemIds)
                 .in('warehouse_id', uniqueWhIds),
               supabase
-                .from('stock_opnames')
+                .from('stock_opname_group_items')
                 .select(`
                   id,
                   item_id,
@@ -453,7 +457,9 @@ export function StockOpnameImportDialog({
 
   const handleDownloadTemplate = () => {
     // Generate simple, beautiful standard template CSV
-    const csvContent = "\uFEFFBarang,Gudang,Stok Fisik,Catatan,Kategori Selisih\nASUS VivoBook 14,Gudang Utama,12,Hilang di rak A,Hilang\nLogitech B100 Mouse,Gudang Utama,50,Aman,\nSemen Tiga Roda,Gudang Bahan Baku,100,Rusak basah,Rusak\n"
+    const lockedWh = lockedWarehouseId ? dbWarehouses.find(w => w.id === lockedWarehouseId) : null
+    const whName = lockedWh ? lockedWh.name : 'Gudang Utama'
+    const csvContent = `\uFEFFBarang,Gudang,Stok Fisik,Catatan,Kategori Selisih\nASUS VivoBook 14,${whName},12,Hilang di rak A,Hilang\nLogitech B100 Mouse,${whName},50,Aman,\nSemen Tiga Roda,${whName},100,Rusak basah,Rusak\n`
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
@@ -569,8 +575,8 @@ export function StockOpnameImportDialog({
 
     try {
       const { data: opnameData } = await supabase
-        .from('stock_opnames')
-        .select(`
+                .from('stock_opname_group_items')
+                .select(`
           id,
           actual_stock,
           note,
@@ -920,6 +926,7 @@ export function StockOpnameImportDialog({
           initialData={entryInitialData}
           onSubmitOverride={handleSaveRowOverride}
           titleOverride={`Edit Baris ${editingRowIndex !== null ? editingRowIndex + 1 : ''}`}
+          lockedWarehouseId={lockedWarehouseId}
         />
       )}
     </Dialog>
