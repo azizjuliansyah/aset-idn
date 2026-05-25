@@ -67,7 +67,7 @@ export async function updateSession(request: NextRequest) {
     const response = NextResponse.redirect(url)
     // IMPORTANT: Forward both original request cookies and updated response cookies to prevent session loss
     request.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value))
-    supabaseResponse.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value, c.options))
+    supabaseResponse.cookies.getAll().forEach(c => response.cookies.set(c))
     return response
   }
 
@@ -83,7 +83,7 @@ export async function updateSession(request: NextRequest) {
     const response = NextResponse.redirect(url)
     // IMPORTANT: Forward both original request cookies and updated response cookies to prevent session loss
     request.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value))
-    supabaseResponse.cookies.getAll().forEach(c => response.cookies.set(c.name, c.value, c.options))
+    supabaseResponse.cookies.getAll().forEach(c => response.cookies.set(c))
     return response
   }
 
