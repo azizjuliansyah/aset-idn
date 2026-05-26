@@ -84,10 +84,10 @@ export function ItemInfoCard({ item, stockStats, isStatsLoading }: ItemInfoCardP
       <div className="space-y-3 bg-muted/20 p-5 rounded-lg border border-dashed border-muted-foreground/10">
         <div className="flex items-center gap-2">
           <Info size={13} className="text-muted-foreground/40" />
-          <span className="text-[10px] font-medium uppercase text-muted-foreground/50 tracking-widest">Catatan Tambahan</span>
+          <span className="text-[10px] font-medium uppercase text-muted-foreground/50 tracking-widest">Deskripsi Barang</span>
         </div>
         <p className="text-sm font-normal italic text-muted-foreground/70 leading-relaxed">
-          {item.note || 'Tidak ada catatan khusus.'}
+          {item.description || 'Tidak ada deskripsi khusus.'}
         </p>
       </div>
 

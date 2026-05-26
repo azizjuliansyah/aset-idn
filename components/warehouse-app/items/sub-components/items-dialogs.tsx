@@ -45,7 +45,7 @@ export function ItemsDialogs({
 
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
-    defaultValues: { name: '', price: 0, status: 'active', minimum_stock: 0, note: '' },
+    defaultValues: { name: '', price: 0, status: 'active', minimum_stock: 0, description: '' },
   })
 
   useEffect(() => {
@@ -57,11 +57,11 @@ export function ItemsDialogs({
         item_condition_id: editItem.item_condition_id ?? '',
         price: editItem.price,
         status: editItem.status,
-        note: editItem.note ?? '',
+        description: editItem.description ?? '',
         minimum_stock: editItem.minimum_stock,
       })
     } else if (dialogOpen) {
-      form.reset({ name: '', price: 0, status: 'active', minimum_stock: 0, note: '', item_category_id: '', item_status_id: '', item_condition_id: '' })
+      form.reset({ name: '', price: 0, status: 'active', minimum_stock: 0, description: '', item_category_id: '', item_status_id: '', item_condition_id: '' })
     }
   }, [editItem, dialogOpen, form])
 
@@ -150,8 +150,8 @@ export function ItemsDialogs({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="i-note">Catatan</Label>
-              <Textarea id="i-note" rows={2} {...form.register('note')} />
+              <Label htmlFor="i-description">Deskripsi</Label>
+              <Textarea id="i-description" rows={2} {...form.register('description')} />
             </div>
 
             <DialogFooter>

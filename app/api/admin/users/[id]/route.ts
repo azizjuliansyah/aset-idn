@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { createActivityLog } from '@/lib/logger'
 
 export async function PATCH(
   request: Request,
@@ -15,13 +14,35 @@ export async function PATCH(
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const { full_name, role, phone } = body
+  const { full_name, role, phone, email, password } = body
 
-  // Update Auth Metadata if needed
+  // Update Auth Metadata, Email and Password if provided
   const adminClient = await createAdminClient()
-  await adminClient.auth.admin.updateUserById(id, {
+  const updatePayload: any = {
     user_metadata: { full_name, role, phone }
-  })
+  }
+
+  if (email) {
+    updatePayload.email = email
+    updatePayload.email_confirm = true
+  }
+
+  if (password) {
+    updatePayload.password = password
+  }
+
+  const { data: updatedUser, error: authUpdateError } = await adminClient.auth.admin.updateUserById(id, updatePayload)
+  if (authUpdateError) return NextResponse.json({ error: authUpdateError.message }, { status: 400 })
+
+  // Ensure updated email is fully confirmed in database
+  if (email && updatedUser?.user) {
+    const { error: confirmError } = await adminClient.rpc('confirm_user_email', {
+      user_id: updatedUser.user.id
+    })
+    if (confirmError) {
+      console.error('[API Admin Users PATCH] Error confirming updated email:', confirmError)
+    }
+  }
 
   // Update Profiles table
   const { error } = await supabase
@@ -30,12 +51,6 @@ export async function PATCH(
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  await createActivityLog({
-    action: 'UPDATE',
-    entityType: 'USER',
-    entityId: id,
-    details: { full_name, role, phone }
-  })
 
   return NextResponse.json({ success: true })
 }
@@ -58,11 +73,6 @@ export async function DELETE(
   const { error } = await adminClient.auth.admin.deleteUser(id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  await createActivityLog({
-    action: 'DELETE',
-    entityType: 'USER',
-    entityId: id
-  })
 
   return NextResponse.json({ success: true })
 }

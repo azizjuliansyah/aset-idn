@@ -60,6 +60,8 @@ const schema = z.object({
   wa_overdue_group_names: z.string().optional(),
   wa_overdue_group_message_format: z.string().optional(),
   wa_overdue_cron_time: z.string().optional(),
+  wa_approved_message_format: z.string().optional(),
+  wa_rejected_message_format: z.string().optional(),
   wa_number_key: z.string().optional(),
   wa_api_key: z.string().optional(),
 })
@@ -101,6 +103,8 @@ export function WhatsappSettings() {
       wa_overdue_group_names: '',
       wa_overdue_group_message_format: '',
       wa_overdue_cron_time: '08:00',
+      wa_approved_message_format: '',
+      wa_rejected_message_format: '',
       wa_number_key: '',
       wa_api_key: '',
     },
@@ -124,6 +128,8 @@ export function WhatsappSettings() {
           wa_overdue_group_names: settings.wa_overdue_group_names ?? '',
           wa_overdue_group_message_format: settings.wa_overdue_group_message_format ?? '',
           wa_overdue_cron_time: settings.wa_overdue_cron_time ?? '08:00',
+          wa_approved_message_format: settings.wa_approved_message_format ?? '',
+          wa_rejected_message_format: settings.wa_rejected_message_format ?? '',
           wa_number_key: settings.wa_number_key ?? '',
           wa_api_key: settings.wa_api_key ?? '',
         }
@@ -184,7 +190,9 @@ export function WhatsappSettings() {
       'wa_return_finished_message_format': 's-wa-return-finished-format',
       'wa_return_finished_group_message_format': 's-wa-return-finished-group-format',
       'wa_overdue_message_format': 's-wa-overdue-format',
-      'wa_overdue_group_message_format': 's-wa-overdue-group-format'
+      'wa_overdue_group_message_format': 's-wa-overdue-group-format',
+      'wa_approved_message_format': 's-wa-approved-format',
+      'wa_rejected_message_format': 's-wa-rejected-format',
     }
     const id = ids[field]
     const textarea = document.getElementById(id) as HTMLTextAreaElement
@@ -372,6 +380,59 @@ export function WhatsappSettings() {
                   />
                   <p className="text-[10px] text-muted-foreground mt-2 italic">
                     * Klik variabel untuk menyisipkan ke bagian yang sedang difokuskan.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Persetujuan & Penolakan Card */}
+            <div className="rounded-xl border bg-card shadow-sm mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="p-6 space-y-6">
+                <div className="flex items-center gap-2 text-primary">
+                  <Smartphone size={16} />
+                  <Label className="text-sm font-bold uppercase tracking-widest">Status Persetujuan & Penolakan (Personal)</Label>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* Approval Column */}
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-2 text-muted-foreground h-8">
+                      <Check size={14} className="text-emerald-500" />
+                      <Label className="text-[11px] font-medium uppercase tracking-widest">Template Disetujui (Approved)</Label>
+                    </div>
+                    <Textarea 
+                      id="s-wa-approved-format" 
+                      className="h-[200px] resize-none focus:ring-1 focus:ring-primary overflow-y-auto"
+                      placeholder="Halo {{nama_peminjam}}, peminjaman Anda telah DISETUJUI..." 
+                      {...form.register('wa_approved_message_format')}
+                      onFocus={() => setLastFocusedField('wa_approved_message_format')}
+                    />
+                  </div>
+
+                  {/* Rejection Column */}
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-2 text-muted-foreground h-8">
+                      <X size={14} className="text-rose-500" />
+                      <Label className="text-[11px] font-medium uppercase tracking-widest">Template Ditolak (Rejected)</Label>
+                    </div>
+                    <Textarea 
+                      id="s-wa-rejected-format" 
+                      className="h-[200px] resize-none focus:ring-1 focus:ring-primary overflow-y-auto"
+                      placeholder="Halo {{nama_peminjam}}, mohon maaf peminjaman Anda DITOLAK..." 
+                      {...form.register('wa_rejected_message_format')}
+                      onFocus={() => setLastFocusedField('wa_rejected_message_format')}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest mb-3 block">Variabel Tersedia</Label>
+                  <WaVariableList 
+                    variables={['{{nama_peminjam}}', '{{nomor_peminjam}}', '{{list_barang}}', '{{waktu_pinjam}}', '{{batas_pengembalian}}', '{{alasan_penolakan}}']}
+                    onSelect={(v) => insertTemplate(v, lastFocusedField === 'wa_approved_message_format' || lastFocusedField === 'wa_rejected_message_format' ? lastFocusedField : 'wa_approved_message_format')}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-2 italic">
+                    * Klik variabel untuk menyisipkan ke bagian status yang sedang difokuskan (default: Template Disetujui).
                   </p>
                 </div>
               </div>
@@ -663,9 +724,6 @@ export function WhatsappSettings() {
                   </div>
                   <DialogTitle>Koneksi Watzap</DialogTitle>
                 </div>
-                <DialogDescription>
-                  Masukkan Number Key dari dashboard Watzap Anda.
-                </DialogDescription>
               </DialogHeader>
               
               <div className="space-y-4 py-4">

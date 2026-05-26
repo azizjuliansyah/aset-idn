@@ -68,6 +68,13 @@ export function LoginForm() {
       return
     }
 
+    // Call background login logging API route
+    try {
+      await fetch('/api/auth/login-log', { method: 'POST' })
+    } catch (e) {
+      console.error('Failed to log login:', e)
+    }
+
     toast.success('Login berhasil!')
     router.push('/dashboard')
     router.refresh()

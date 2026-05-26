@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createActivityLog } from '@/lib/logger'
 
 function authError() { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
@@ -19,7 +18,7 @@ export async function GET(request: Request) {
 
   let q = supabase
     .from('items')
-    .select('id, name, description, item_category_id, item_status_id, item_condition_id, minimum_stock, price, status, note, created_at, created_by, item_category(name), item_status(name), item_condition(name)', { count: 'exact' })
+    .select('id, name, description, item_category_id, item_status_id, item_condition_id, minimum_stock, price, status, created_at, created_by, item_category(name), item_status(name), item_condition(name)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(from, from + pageSize - 1)
 
@@ -46,19 +45,12 @@ export async function POST(request: Request) {
     item_condition_id: body.item_condition_id ?? null,
     price: body.price ?? 0,
     status: body.status ?? 'active',
-    note: body.note ?? null,
+    description: body.description ?? null,
     minimum_stock: body.minimum_stock ?? 0,
     created_by: user.id,
   }).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-
-  await createActivityLog({
-    action: 'CREATE',
-    entityType: 'ITEM',
-    entityId: data.id,
-    details: { name: data.name }
-  })
 
   return NextResponse.json({ data }, { status: 201 })
 }

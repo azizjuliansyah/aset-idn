@@ -1,12 +1,26 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST() {
   try {
-    const apiKey = process.env.WATZAP_API_KEY
-    const numberKey = process.env.WATZAP_NUMBER_KEY
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    // Fetch credentials from DB settings
+    const { data: settings } = await supabase
+      .from('company_settings')
+      .select('wa_api_key, wa_number_key')
+      .single()
+
+    const apiKey = settings?.wa_api_key || process.env.WATZAP_API_KEY
+    const numberKey = settings?.wa_number_key || process.env.WATZAP_NUMBER_KEY
 
     if (!apiKey || !numberKey) {
-      return NextResponse.json({ error: 'API Key atau Number Key Watzap belum dikonfigurasi di .env' }, { status: 400 })
+      return NextResponse.json({ error: 'API Key atau Number Key Watzap belum dikonfigurasi di Pengaturan WhatsApp' }, { status: 400 })
     }
 
     const res = await fetch('https://api.watzap.id/v1/groups', {

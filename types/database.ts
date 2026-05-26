@@ -9,6 +9,7 @@ export interface Profile {
   avatar_url: string | null
   phone: string | null
   role: Role
+  email?: string
   created_at: string
   updated_at: string
 }
@@ -39,6 +40,8 @@ export interface CompanySettings {
   wa_overdue_group_names: string | null
   wa_overdue_group_message_format: string | null
   wa_overdue_cron_time: string | null
+  wa_approved_message_format: string | null
+  wa_rejected_message_format: string | null
   wa_number_key: string | null
   wa_api_key: string | null
   updated_at: string
@@ -82,7 +85,7 @@ export interface Item {
   name: string
   price: number
   status: ItemStatus_Status
-  note: string | null
+  description: string | null
   minimum_stock: number
   created_by: string | null
   created_at: string

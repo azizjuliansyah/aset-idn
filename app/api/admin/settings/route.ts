@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createActivityLog } from '@/lib/logger'
 
 export async function PATCH(request: Request) {
   const supabase = await createClient()
@@ -24,6 +23,8 @@ export async function PATCH(request: Request) {
       wa_stock_low_group_names: updateData.wa_stock_low_group_names ?? null,
       wa_stock_low_message_format: updateData.wa_stock_low_message_format ?? null,
       wa_return_message_format: updateData.wa_return_message_format ?? null,
+      wa_approved_message_format: updateData.wa_approved_message_format ?? null,
+      wa_rejected_message_format: updateData.wa_rejected_message_format ?? null,
       wa_number_key: updateData.wa_number_key ?? null,
       wa_api_key: updateData.wa_api_key ?? null,
       updated_at: new Date().toISOString(),
@@ -31,13 +32,6 @@ export async function PATCH(request: Request) {
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-
-  await createActivityLog({
-    action: 'UPDATE',
-    entityType: 'SETTING',
-    entityId: id,
-    details: updateData
-  })
 
   return NextResponse.json({ success: true })
 }

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createActivityLog } from '@/lib/logger'
 
 function paginateQuery(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -47,13 +46,6 @@ export async function POST(request: Request) {
   }).select('id, name, note, is_default, created_at, created_by').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-
-  await createActivityLog({
-    action: 'CREATE',
-    entityType: 'WAREHOUSE',
-    entityId: data.id,
-    details: { name: data.name }
-  })
 
   return NextResponse.json({ data }, { status: 201 })
 }

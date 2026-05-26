@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createActivityLog } from '@/lib/logger'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -15,13 +14,6 @@ export async function POST(request: Request) {
   }).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-
-  await createActivityLog({
-    action: 'CREATE',
-    entityType: 'ITEM_STATUS',
-    entityId: data.id,
-    details: { name: data.name, type: 'Status' }
-  })
 
   return NextResponse.json({ data }, { status: 201 })
 }

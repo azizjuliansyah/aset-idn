@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createActivityLog } from '@/lib/logger'
 
 function authError() { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
@@ -79,13 +78,6 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  await createActivityLog({
-    action: 'CREATE',
-    entityType: 'STOCK_OPNAME_GROUP',
-    entityId: data.id,
-    details: { name: data.name }
-  })
-
   return NextResponse.json({ data }, { status: 201 })
 }
 
@@ -125,12 +117,6 @@ export async function DELETE(request: Request) {
     .in('id', ids)
 
   if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
-
-  await createActivityLog({
-    action: 'DELETE',
-    entityType: 'STOCK_OPNAME_GROUP',
-    details: { ids, count: ids.length, notes: 'Bulk delete stock opname groups' }
-  })
 
   return NextResponse.json({ message: 'Berhasil menghapus group opname' })
 }

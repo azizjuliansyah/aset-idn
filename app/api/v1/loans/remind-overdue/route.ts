@@ -28,6 +28,9 @@ export async function POST(request: Request) {
       if (!profile || (profile.role !== 'admin' && profile.role !== 'general_affair')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
+
+      // Switch to admin client to bypass RLS for subsequent queue operations
+      supabase = createAdminClient()
     } else {
       // Use admin client for cron to bypass RLS
       supabase = createAdminClient()
@@ -104,37 +107,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Template pesan terlambat belum diatur di Pengaturan WhatsApp' }, { status: 400 })
     }
 
-    const apiKey = settings?.wa_api_key || process.env.WATZAP_API_KEY
-    const numberKey = settings?.wa_number_key || process.env.WATZAP_NUMBER_KEY
+    let enqueuedCount = 0
 
-    if (!apiKey || !numberKey) {
-      return NextResponse.json({ error: 'Kredensial Watzap belum dikonfigurasi di server atau database' }, { status: 500 })
-    }
-
-    const { createActivityLog } = await import('@/lib/logger')
-    let successCount = 0
-    let failCount = 0
-    
-    const groupMessageBlocks: string[] = []
-    
-    // Parse Group Template for Header, Item, Footer
-    let groupHeader = ''
-    let groupFooter = ''
-    let groupItemTemplate = settings?.wa_overdue_group_message_format || ''
-
-    if (settings?.wa_overdue_group_message_format) {
-      const format = settings.wa_overdue_group_message_format
-      const startIndex = format.indexOf('[DATA_START]')
-      const endIndex = format.indexOf('[DATA_END]')
-      
-      if (startIndex !== -1 && endIndex !== -1) {
-        groupHeader = format.substring(0, startIndex).trim()
-        groupItemTemplate = format.substring(startIndex + '[DATA_START]'.length, endIndex).trim()
-        groupFooter = format.substring(endIndex + '[DATA_END]'.length).trim()
-      }
-    }
-
-    // 4. Send Reminders
+    // 4. Queue Overdue Reminders
     for (const loan of overdueLoans) {
       try {
         const requester = loan.requester as any
@@ -155,102 +130,58 @@ export async function POST(request: Request) {
         const loanDate = new Date(loan.loan_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
         const returnDate = loan.return_date ? new Date(loan.return_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'
 
-        // Format personal message
-        const personalMessage = settings.wa_overdue_message_format
-          .replace(/{{nama_peminjam}}/g, requester.full_name || '')
-          .replace(/{{nomor_peminjam}}/g, requester.phone ? `+62${requester.phone}` : '-')
-          .replace(/{{nama_barang}}/g, itemNames)
-          .replace(/{{list_barang}}/g, itemList)
-          .replace(/{{barang_belum_kembali}}/g, unreturnedList)
-          .replace(/{{waktu_pinjam}}/g, loanDate)
-          .replace(/{{batas_pengembalian}}/g, returnDate)
-
-        // Send to Borrower
-        const personalRes = await fetch('https://api.watzap.id/v1/send_message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            api_key: apiKey,
-            number_key: numberKey,
-            phone_no: '62' + requester.phone,
-            message: personalMessage,
-          }),
-        })
-        const personalResult = await personalRes.json()
-        const isPersonalSent = personalResult.status === '200' || personalResult.status === 200
-
-        if (isPersonalSent) {
-          successCount++
-          
-          // Accumulate Group Message block if configured
-          if (settings.wa_overdue_group_id && groupItemTemplate) {
-            const groupMessageBlock = groupItemTemplate
-              .replace(/{{nama_peminjam}}/g, requester.full_name || '')
-              .replace(/{{nomor_peminjam}}/g, requester.phone ? `+62${requester.phone}` : '-')
-              .replace(/{{nama_barang}}/g, itemNames)
-              .replace(/{{list_barang}}/g, itemList)
-              .replace(/{{barang_belum_kembali}}/g, unreturnedList)
-              .replace(/{{waktu_pinjam}}/g, loanDate)
-              .replace(/{{batas_pengembalian}}/g, returnDate)
-
-            groupMessageBlocks.push(groupMessageBlock)
+        // Insert task to whatsapp_queue
+        const { error: insertError } = await supabase.from('whatsapp_queue').insert({
+          type: 'overdue',
+          payload: {
+            loan_request_id: loan.id,
+            requester_name: requester.full_name || 'Peminjam',
+            requester_phone: requester.phone,
+            barang_belum_kembali: unreturnedList,
+            waktu_pinjam: loanDate,
+            batas_pengembalian: returnDate,
+            item_names: itemNames,
+            item_list: itemList,
+            is_cron: isCron
           }
+        })
 
-          // Log activity for each successful reminder
-          await createActivityLog({
-            action: 'REMINDER',
-            entityType: 'LOAN_REQUEST',
-            entityId: loan.id,
-            details: { 
-              name: requester.full_name, 
-              type: 'Overdue WhatsApp Reminder',
-              status: 'Sent',
-              triggered_by: isCron ? 'cron' : 'manual'
-            },
-            isSystem: isCron
-          })
+        if (insertError) {
+          console.error(`Failed to queue overdue reminder for loan ${loan.id}:`, insertError)
         } else {
-          failCount++
+          enqueuedCount++
         }
       } catch (err) {
-        console.error(`Error processing overdue reminder for loan ${loan.id}:`, err)
-        failCount++
+        console.error(`Error queuing overdue reminder for loan ${loan.id}:`, err)
       }
     }
 
-    // 5. Send Group Messages (Aggregated)
-    if (groupMessageBlocks.length > 0 && settings.wa_overdue_group_id) {
-      const groupIds = settings.wa_overdue_group_id.split(',').map(id => id.trim()).filter(Boolean)
-      
-      let combinedGroupMessage = groupMessageBlocks.join('\n\n')
-      if (groupHeader) {
-        combinedGroupMessage = groupHeader + '\n\n' + combinedGroupMessage
+    // 5. Trigger WhatsApp Queue Dispatcher to immediately process the queued notifications
+    if (enqueuedCount > 0) {
+      try {
+        const cronSecret = process.env.CRON_SECRET || ''
+        const dispatcherUrl = new URL('/api/v1/webhooks/whatsapp-dispatcher', request.url)
+        dispatcherUrl.searchParams.set('secret', cronSecret)
+        
+        console.log(`[Overdue API] Enqueued ${enqueuedCount} reminders. Invoking WA Dispatcher...`)
+        
+        const dispatcherRes = await fetch(dispatcherUrl.toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-cron-secret': cronSecret
+          }
+        })
+        const dispatcherResult = await dispatcherRes.json()
+        console.log('[Overdue API] WA Dispatcher response:', dispatcherResult)
+      } catch (e) {
+        console.error('[Overdue API] Error triggering WA Dispatcher:', e)
       }
-      if (groupFooter) {
-        combinedGroupMessage = combinedGroupMessage + '\n\n' + groupFooter
-      }
-
-      await Promise.all(groupIds.map(async (groupId) => {
-        try {
-          await fetch('https://api.watzap.id/v1/send_message_group', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              api_key: apiKey,
-              number_key: numberKey,
-              group_id: groupId,
-              message: combinedGroupMessage,
-            }),
-          })
-        } catch (e) {
-          console.error(`Failed to send combined overdue group reminder to group ${groupId}:`, e)
-        }
-      }))
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: `Berhasil mengirim ${successCount} pengingat. ${failCount > 0 ? `Gagal: ${failCount}` : ''}`
+      message: `Berhasil mengantrekan ${enqueuedCount} pengingat keterlambatan untuk diproses dispatcher.`
     })
 
   } catch (error: any) {
@@ -258,3 +189,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || 'Terjadi kesalahan internal' }, { status: 500 })
   }
 }
+

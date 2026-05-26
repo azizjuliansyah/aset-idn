@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, ShieldCheck, User, Briefcase, MoreHorizontal } from 'lucide-react'
+import { Plus, Pencil, Trash2, ShieldCheck, User, Briefcase, MoreHorizontal, KeyRound } from 'lucide-react'
 import { DataTable } from '@/components/shared/data-table'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { UsersDialogs } from './sub-components/users-dialogs'
+import { UsersDialogs, ChangePasswordDialog } from './sub-components/users-dialogs'
 import { useUsersManager } from '@/hooks/admin/use-users-manager'
 import { formatDate } from '@/lib/utils'
 import type { Profile } from '@/types/database'
@@ -24,6 +24,7 @@ export function UsersClient() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editUser, setEditUser] = useState<Profile | null>(null)
   const [deleteUser, setDeleteUser] = useState<Profile | null>(null)
+  const [passwordUser, setPasswordUser] = useState<Profile | null>(null)
 
   const openCreate = () => {
     setEditUser(null)
@@ -35,11 +36,21 @@ export function UsersClient() {
     setDialogOpen(true)
   }
 
+  const openChangePassword = (user: Profile) => {
+    setPasswordUser(user)
+  }
+
   return (
     <>
       <DataTable
         columns={[
           { key: 'full_name', header: 'Nama' },
+          { key: 'email', header: 'Email' },
+          {
+            key: 'phone',
+            header: 'No. Telepon',
+            render: (v) => v ? `+62 ${v}` : <span className="text-muted-foreground italic text-xs">-</span>
+          },
           {
             key: 'role', header: 'Role',
             render: (v) => (
@@ -66,6 +77,9 @@ export function UsersClient() {
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem onClick={() => openEdit(row)}>
                       <Pencil size={14} className="mr-2 text-muted-foreground" /> Edit User
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openChangePassword(row)}>
+                      <KeyRound size={14} className="mr-2 text-muted-foreground" /> Ubah Password
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setDeleteUser(row)} className="text-destructive focus:text-destructive focus:bg-red-50">
@@ -116,9 +130,24 @@ export function UsersClient() {
         onCreate={(values) => mutations.create.mutate(values, { onSuccess: () => setDialogOpen(false) })}
         onEdit={(values) => mutations.edit.mutate({ id: editUser!.id, values }, { onSuccess: () => setDialogOpen(false) })}
         onDelete={() => mutations.delete.mutate(deleteUser!.id, { onSuccess: () => setDeleteUser(null) })}
+        onChangePasswordClick={(user) => {
+          setDialogOpen(false)
+          openChangePassword(user)
+        }}
         isCreating={mutations.create.isPending}
         isEditing={mutations.edit.isPending}
         isDeleting={mutations.delete.isPending}
+      />
+
+      <ChangePasswordDialog
+        user={passwordUser}
+        open={!!passwordUser}
+        onOpenChange={(o) => !o && setPasswordUser(null)}
+        onConfirm={(password) => mutations.edit.mutate(
+          { id: passwordUser!.id, values: { password } },
+          { onSuccess: () => setPasswordUser(null) }
+        )}
+        loading={mutations.edit.isPending}
       />
     </>
   )

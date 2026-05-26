@@ -13,7 +13,9 @@ import {
   Info,
   Eye,
   Globe,
-  Smartphone
+  Smartphone,
+  ArrowLeftRight,
+  ClipboardList
 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -56,6 +58,10 @@ export function LogsClient() {
       case 'USER': return <User size={12} className="mr-1" />
       case 'WAREHOUSE': return <Globe size={12} className="mr-1" />
       case 'SETTING': return <Smartphone size={12} className="mr-1" />
+      case 'STOCK_TRANSFER': return <ArrowLeftRight size={12} className="mr-1" />
+      case 'STOCK_OPNAME_GROUP':
+      case 'STOCK_OPNAME_DIFF_CATEGORY':
+        return <ClipboardList size={12} className="mr-1" />
       default: return <Info size={12} className="mr-1" />
     }
   }
@@ -184,6 +190,7 @@ export function LogsClient() {
                   <SelectItem value="LOAN">LOAN</SelectItem>
                   <SelectItem value="RETURN">RETURN</SelectItem>
                   <SelectItem value="REMINDER">REMINDER</SelectItem>
+                  <SelectItem value="LOGIN">LOGIN</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -201,6 +208,9 @@ export function LogsClient() {
                   <SelectItem value="WAREHOUSE">WAREHOUSE</SelectItem>
                   <SelectItem value="STOCK_IN">STOCK_IN</SelectItem>
                   <SelectItem value="STOCK_OUT">STOCK_OUT</SelectItem>
+                  <SelectItem value="STOCK_TRANSFER">STOCK_TRANSFER</SelectItem>
+                  <SelectItem value="STOCK_OPNAME_GROUP">STOCK_OPNAME_GROUP</SelectItem>
+                  <SelectItem value="STOCK_OPNAME_DIFF_CATEGORY">STOCK_OPNAME_DIFF_CATEGORY</SelectItem>
                   <SelectItem value="USER">USER</SelectItem>
                   <SelectItem value="SETTING">SETTING</SelectItem>
                 </SelectContent>

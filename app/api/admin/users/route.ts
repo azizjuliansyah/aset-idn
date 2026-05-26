@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { createActivityLog } from '@/lib/logger'
 
 // GET /api/admin/users
 export async function GET(request: Request) {
@@ -29,7 +28,25 @@ export async function GET(request: Request) {
   const { data, count, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ data, count })
+  // Fetch emails from auth.users via adminClient
+  let mappedData = data
+  try {
+    const adminClient = await createAdminClient()
+    const { data: authData, error: listError } = await adminClient.auth.admin.listUsers()
+    if (!listError && authData?.users) {
+      mappedData = data.map((p: any) => {
+        const authUser = authData.users.find((u: any) => u.id === p.id)
+        return {
+          ...p,
+          email: authUser?.email || ''
+        }
+      })
+    }
+  } catch (err) {
+    console.error('[API Admin Users GET] Failed to fetch auth users:', err)
+  }
+
+  return NextResponse.json({ data: mappedData, count })
 }
 
 // POST /api/admin/users
@@ -42,7 +59,7 @@ export async function POST(request: Request) {
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const { email, password, full_name, role } = body
+  const { email, password, full_name, role, phone } = body
 
   const adminClient = await createAdminClient()
 
@@ -50,7 +67,7 @@ export async function POST(request: Request) {
     email,
     password,
     email_confirm: false,
-    user_metadata: { full_name, role },
+    user_metadata: { full_name, role, phone },
   })
 
   if (createError) return NextResponse.json({ error: createError.message }, { status: 400 })
@@ -65,17 +82,20 @@ export async function POST(request: Request) {
     }
   }
 
-  // Update profile role for non-default roles (trigger defaults to 'user')
-  if (newUser.user && role !== 'user') {
-    await supabase.from('profiles').update({ role }).eq('id', newUser.user.id)
-  }
+  // Update profile details (role and phone) in profiles table
+  if (newUser.user) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        role,
+        phone: phone || null,
+      })
+      .eq('id', newUser.user.id)
 
-  await createActivityLog({
-    action: 'CREATE',
-    entityType: 'USER',
-    entityId: newUser.user.id,
-    details: { full_name, role, email }
-  })
+    if (profileError) {
+      console.error('[API Admin Users] Error updating profile details:', profileError)
+    }
+  }
 
   return NextResponse.json({ success: true })
 }
@@ -99,12 +119,6 @@ export async function DELETE(request: Request) {
     if (id === user.id) continue
     await adminClient.auth.admin.deleteUser(id)
   }
-
-  await createActivityLog({
-    action: 'BULK_DELETE',
-    entityType: 'USER',
-    details: { ids }
-  })
 
   return NextResponse.json({ success: true })
 }

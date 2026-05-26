@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createActivityLog } from '@/lib/logger'
 import { addStock, reduceStock } from '@/lib/stock-service'
 
 function authError() { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
@@ -82,14 +81,6 @@ export async function POST(
       .eq('id', id)
 
     if (updateError) throw updateError
-
-    // 4. Log activity
-    await createActivityLog({
-      action: 'UPDATE',
-      entityType: 'STOCK_OPNAME_GROUP',
-      entityId: group.id,
-      details: { name: group.name, status: 'completed', message: 'Finalized opname and adjusted stock' }
-    })
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

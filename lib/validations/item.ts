@@ -7,7 +7,7 @@ export const itemSchema = z.object({
   item_condition_id: z.string().optional(),
   price: z.number().min(0),
   status: z.enum(['active', 'inactive']),
-  note: z.string().optional(),
+  description: z.string().optional(),
   minimum_stock: z.number().min(0),
 })
 

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createActivityLog } from '@/lib/logger'
 
 function authError() { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
