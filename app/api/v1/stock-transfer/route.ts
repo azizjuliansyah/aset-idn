@@ -48,18 +48,22 @@ export async function POST(request: Request) {
   if (!user) return authError()
 
   const body = await request.json()
-  
+
   try {
     const { transferStock } = await import('@/lib/stock-service')
-    const data = await transferStock({
-      itemId: body.item_id,
-      fromWarehouseId: body.from_warehouse_id,
-      toWarehouseId: body.to_warehouse_id,
-      quantity: body.quantity,
-      note: body.note,
-      userId: user.id
-    })
-    return NextResponse.json({ data }, { status: 201 })
+    const results = []
+    for (const item of body.items as { item_id: string; quantity: number }[]) {
+      const result = await transferStock({
+        itemId: item.item_id,
+        fromWarehouseId: body.from_warehouse_id,
+        toWarehouseId: body.to_warehouse_id,
+        quantity: item.quantity,
+        note: body.note,
+        userId: user.id
+      })
+      results.push(result)
+    }
+    return NextResponse.json({ data: results }, { status: 201 })
   } catch (error: any) {
     console.error('[API][StockTransfer] Error:', error)
     return NextResponse.json({ error: error.message }, { status: 400 })
