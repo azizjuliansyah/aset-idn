@@ -12,7 +12,9 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isApiRoute = pathname.startsWith('/api')
   const isAuthPage = pathname.startsWith('/login') || 
-                     pathname.startsWith('/forgot-password')
+                     pathname.startsWith('/forgot-password') ||
+                     pathname.startsWith('/reset-password')
+  const isPublicRoute = pathname === '/' || pathname === '/company-logo'
 
   // Early return for API routes and OPTIONS requests to avoid breaking fetch/CORS
   if (request.method === 'OPTIONS') {
@@ -55,7 +57,7 @@ export async function updateSession(request: NextRequest) {
     console.error('[Middleware] Auth error:', e)
   }
 
-  const isDashboard = !isAuthPage && !isApiRoute && pathname !== '/'
+  const isDashboard = !isAuthPage && !isApiRoute && !isPublicRoute
 
   // Debug logging
   console.log(`[Proxy] Path: ${pathname}, Method: ${request.method}, User: ${user ? 'Yes' : 'No'}`)
@@ -72,8 +74,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && (isAuthPage || pathname === '/')) {
-    // Prevent redirect loop if redirected back to login due to missing profile
-    if (request.nextUrl.searchParams.get('error') === 'no_profile') {
+    // Prevent redirect loop if redirected back to login due to missing profile or session error
+    const errorParam = request.nextUrl.searchParams.get('error')
+    if (errorParam === 'no_profile' || errorParam === 'no_session') {
       return supabaseResponse
     }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { StockOpnameGroup, StockOpname, PaginatedResponse } from '@/types/database'
+import type { StockOpnameGroup, StockOpname, PaginatedResponse, StockOpnameTemplate } from '@/types/database'
 import { toast } from 'sonner'
 
 const PAGE_SIZE = 10
@@ -94,7 +94,7 @@ export function useStockOpnameMutations() {
   const queryClient = useQueryClient()
 
   const createGroup = useMutation({
-    mutationFn: async (data: { name: string; description?: string }) => {
+    mutationFn: async (data: { name: string; description?: string; template_id?: string }) => {
       const res = await fetch('/api/v1/stock-opname-groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -280,5 +280,122 @@ export function useStockOpnameMutations() {
     }
   })
 
-  return { createGroup, updateGroup, deleteGroup, bulkDeleteGroups, addEntry, deleteEntry, bulkDeleteEntries, updateEntry, finalizeGroup }
+  const createTemplate = useMutation({
+    mutationFn: async (data: { name: string; description?: string; warehouse_id: string; item_ids: string[] }) => {
+      const res = await fetch('/api/v1/stock-opname-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Gagal membuat template opname')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-templates'] })
+      toast.success('Template opname berhasil dibuat')
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Gagal membuat template opname')
+    }
+  })
+
+  const updateTemplate = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; warehouse_id?: string; item_ids?: string[] }) => {
+      const res = await fetch(`/api/v1/stock-opname-templates/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Gagal mengubah template opname')
+      }
+      return res.json()
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-template', variables.id] })
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-templates'] })
+      toast.success('Template opname berhasil diubah')
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Gagal mengubah template opname')
+    }
+  })
+
+  const deleteTemplate = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/v1/stock-opname-templates/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Gagal menghapus template opname')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock-opname-templates'] })
+      toast.success('Template opname berhasil dihapus')
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Gagal menghapus template opname')
+    }
+  })
+
+  return { 
+    createGroup, 
+    updateGroup, 
+    deleteGroup, 
+    bulkDeleteGroups, 
+    addEntry, 
+    deleteEntry, 
+    bulkDeleteEntries, 
+    updateEntry, 
+    finalizeGroup,
+    // templates
+    createTemplate,
+    updateTemplate,
+    deleteTemplate
+  }
+}
+
+export function useStockOpnameTemplates() {
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [warehouseId, setWarehouseId] = useState<string>('all')
+
+  const query = useQuery<PaginatedResponse<StockOpnameTemplate>>({
+    queryKey: ['stock-opname-templates', page, search, warehouseId],
+    queryFn: async () => {
+      const searchParams = new URLSearchParams({
+        page: page.toString(),
+        pageSize: PAGE_SIZE.toString(),
+        search: search || '',
+      })
+      if (warehouseId && warehouseId !== 'all') searchParams.append('warehouse_id', warehouseId)
+
+      const res = await fetch(`/api/v1/stock-opname-templates?${searchParams}`)
+      if (!res.ok) throw new Error('Gagal mengambil data template opname')
+      return res.json()
+    }
+  })
+
+  return {
+    page, setPage,
+    search, setSearch,
+    warehouseId, setWarehouseId,
+    data: query.data,
+    isLoading: query.isLoading,
+    pageSize: PAGE_SIZE,
+  }
+}
+
+export function useStockOpnameTemplate(id: string) {
+  return useQuery<{ data: StockOpnameTemplate }>({
+    queryKey: ['stock-opname-template', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/stock-opname-templates/${id}`)
+      if (!res.ok) throw new Error('Gagal mengambil data template opname')
+      return res.json()
+    },
+    enabled: !!id
+  })
 }

@@ -20,27 +20,34 @@ export async function GET(
 
   // Admin role check
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') {
+  if (profile?.role !== 'admin' && profile?.role !== 'general_affair') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   try {
-    // 1. Fetch all active items
-    const { data: items, error: itemsError } = await supabase
-      .from('items')
-      .select('id, name')
-      .eq('status', 'active')
+    // 1. Fetch group with template
+    const { data: group, error: groupError } = await supabase
+      .from('stock_opname_groups')
+      .select('template_id, template:stock_opname_templates(warehouse_id, warehouse:warehouses(id, name), items:stock_opname_template_items(item_id, item:items(id, name)))')
+      .eq('id', groupId)
+      .single()
 
-    if (itemsError) throw itemsError
+    if (groupError) throw groupError
 
-    // 2. Fetch all warehouses
-    const { data: warehouses, error: warehousesError } = await supabase
-      .from('warehouses')
-      .select('id, name')
+    const template = group?.template as any
+    const warehouseId: string | null = template?.warehouse_id ?? null
+    const warehouseName: string = template?.warehouse?.name ?? '—'
 
-    if (warehousesError) throw warehousesError
+    // Template items as source of truth; fallback to all active items if no template
+    let itemsList: { id: string; name: string }[] = []
+    if (template?.items?.length) {
+      itemsList = template.items.map((ti: any) => ({ id: ti.item_id, name: ti.item?.name ?? ti.item_id }))
+    } else {
+      const { data: allItems } = await supabase.from('items').select('id, name').eq('status', 'active')
+      itemsList = allItems ?? []
+    }
 
-    // 3. Fetch all recorded stock opname items in this group
+    // 2. Fetch recorded entries for this group
     const { data: recorded, error: recordedError } = await supabase
       .from('stock_opname_group_items')
       .select('item_id, warehouse_id')
@@ -48,31 +55,20 @@ export async function GET(
 
     if (recordedError) throw recordedError
 
-    const itemsList = items || []
-    const warehousesList = warehouses || []
     const recordedList = recorded || []
+    const recordedSet = new Set(recordedList.map(r => r.item_id))
 
-    // Build a lookup set of recorded items: `${item_id}_${warehouse_id}`
-    const recordedKeys = new Set(recordedList.map(r => `${r.item_id}_${r.warehouse_id}`))
-
-    // 4. Generate all unrecorded combinations
+    // 3. Compute unrecorded items scoped to template warehouse
     const unrecordedItems: { item_name: string; warehouse_name: string }[] = []
-    
-    for (const warehouse of warehousesList) {
-      for (const item of itemsList) {
-        const key = `${item.id}_${warehouse.id}`
-        if (!recordedKeys.has(key)) {
-          unrecordedItems.push({
-            item_name: item.name,
-            warehouse_name: warehouse.name
-          })
-        }
+    for (const item of itemsList) {
+      if (!recordedSet.has(item.id)) {
+        unrecordedItems.push({ item_name: item.name, warehouse_name: warehouseName })
       }
     }
 
     const recordedCount = recordedList.length
     const unrecordedCount = unrecordedItems.length
-    const totalCount = itemsList.length * warehousesList.length
+    const totalCount = itemsList.length
 
     return NextResponse.json({
       success: true,

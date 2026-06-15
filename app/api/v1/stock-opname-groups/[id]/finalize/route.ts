@@ -14,9 +14,9 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return authError()
 
-  // Admin role check
+  // Admin & General Affair role check
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (profile?.role !== 'admin' && profile?.role !== 'general_affair') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   // 1. Fetch group and its entries
   const { data: group, error: groupError } = await supabase

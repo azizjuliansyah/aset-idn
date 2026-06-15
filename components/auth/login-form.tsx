@@ -77,7 +77,6 @@ export function LoginForm() {
 
     toast.success('Login berhasil!')
     router.push('/dashboard')
-    router.refresh()
   }
 
   return (

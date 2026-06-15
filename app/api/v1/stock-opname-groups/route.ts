@@ -54,15 +54,26 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return authError()
 
-  // Admin role check
+  // Admin & General Affair role check
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (profile?.role !== 'admin' && profile?.role !== 'general_affair') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const { name, description } = body
+  const { name, description, template_id } = body
 
-  if (!name) {
-    return NextResponse.json({ error: 'Nama group harus diisi' }, { status: 400 })
+  if (!name || !template_id) {
+    return NextResponse.json({ error: 'Nama group dan template harus diisi' }, { status: 400 })
+  }
+
+  // Verify template exists and get its warehouse
+  const { data: template, error: templateError } = await supabase
+    .from('stock_opname_templates')
+    .select('id, warehouse_id, warehouse:warehouses(id, name)')
+    .eq('id', template_id)
+    .single()
+
+  if (templateError || !template) {
+    return NextResponse.json({ error: 'Template tidak ditemukan' }, { status: 404 })
   }
 
   const { data, error } = await supabase
@@ -71,9 +82,10 @@ export async function POST(request: Request) {
       name,
       description,
       status: 'draft',
+      template_id,
       created_by: user.id
     })
-    .select('id, name, description, status, created_by, created_at')
+    .select('id, name, description, status, template_id, created_by, created_at')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -87,9 +99,9 @@ export async function DELETE(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return authError()
 
-  // Admin role check
+  // Admin & General Affair role check
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (profile?.role !== 'admin' && profile?.role !== 'general_affair') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { ids } = await request.json()
   if (!ids || !Array.isArray(ids) || ids.length === 0) {

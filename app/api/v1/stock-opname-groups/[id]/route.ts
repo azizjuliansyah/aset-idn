@@ -23,8 +23,9 @@ export async function GET(
     const { data: groupData, error: groupError } = await supabase
       .from('stock_opname_groups')
       .select(`
-        id, name, description, status, created_by, created_at, 
-        creator:profiles(full_name)
+        id, name, description, status, template_id, created_by, created_at,
+        creator:profiles(full_name),
+        template:stock_opname_templates(id, name, warehouse_id, warehouse:warehouses(id, name))
       `)
       .eq('id', groupId)
       .single()
@@ -35,15 +36,19 @@ export async function GET(
         userId: user.id,
         error: groupError
       })
-      // If group not found, return 404 instead of 500
       if (groupError.code === 'PGRST116') {
         return NextResponse.json({ error: 'Stock opname group not found' }, { status: 404 })
       }
       return serverError(groupError.message)
     }
 
+    const template = groupData.template as any
     return NextResponse.json({
-      data: groupData
+      data: {
+        ...groupData,
+        warehouse_id: template?.warehouse_id ?? null,
+        warehouse: template?.warehouse ?? null,
+      }
     })
   } catch (err: any) {
     console.error('[API] Unexpected Error in GET:', err)
@@ -65,9 +70,9 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
-  // Admin role check
+  // Admin & General Affair role check
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') {
+  if (profile?.role !== 'admin' && profile?.role !== 'general_affair') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -108,9 +113,9 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
-  // Admin role check
+  // Admin & General Affair role check
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') {
+  if (profile?.role !== 'admin' && profile?.role !== 'general_affair') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

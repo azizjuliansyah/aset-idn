@@ -32,16 +32,27 @@ export async function GET(
       return NextResponse.json({ error: 'Gudang harus dipilih' }, { status: 400 })
     }
 
-    // Get group status to check if it's draft or finalized
+    // Get group with template info
     const { data: group } = await supabase
       .from('stock_opname_groups')
-      .select('status')
+      .select('status, template_id')
       .eq('id', groupId)
       .single()
 
     const isDraft = group?.status === 'draft'
+    const templateId = group?.template_id ?? null
 
-    // If draft and filterType is all or unrecorded, we query active items and merge
+    // Fetch template item IDs if group is template-bound
+    let templateItemIds: string[] | null = null
+    if (templateId) {
+      const { data: templateItems } = await supabase
+        .from('stock_opname_template_items')
+        .select('item_id')
+        .eq('template_id', templateId)
+      templateItemIds = templateItems?.map(t => t.item_id) ?? []
+    }
+
+    // If draft and filterType is all or unrecorded, we query items and merge
     if (isDraft && (filterType === 'all' || filterType === 'unrecorded' || !filterType)) {
       // 1. Get recorded item IDs in this group and warehouse
       const { data: recordedEntries } = await supabase
@@ -52,11 +63,18 @@ export async function GET(
 
       const recordedItemIds = recordedEntries?.map(r => r.item_id) || []
 
-      // 2. Query items
+      // 2. Query items — scoped to template items if template-bound, else all active
       let itemsQuery = supabase
         .from('items')
         .select('id, name, item_category_id, category:item_category(name)', { count: 'exact' })
         .eq('status', 'active')
+
+      if (templateItemIds !== null) {
+        if (templateItemIds.length === 0) {
+          return NextResponse.json({ data: [], metadata: { totalCount: 0, page, pageSize, totalPages: 0 } })
+        }
+        itemsQuery = itemsQuery.in('id', templateItemIds)
+      }
 
       if (search) {
         itemsQuery = itemsQuery.ilike('name', `%${search}%`)
@@ -67,7 +85,6 @@ export async function GET(
       }
 
       if (filterType === 'unrecorded' && recordedItemIds.length > 0) {
-        // Exclude recorded items
         itemsQuery = itemsQuery.not('id', 'in', `(${recordedItemIds.join(',')})`)
       }
 

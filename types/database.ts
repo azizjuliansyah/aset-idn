@@ -165,8 +165,35 @@ export interface StockOpnameGroup {
   created_by: string
   created_at: string
   updated_at: string
+  template_id?: string | null
   // joined
   creator?: Profile
+  template?: StockOpnameTemplate | null
+  warehouse_id?: string | null
+  warehouse?: Warehouse | null
+}
+
+export interface StockOpnameTemplate {
+  id: string
+  name: string
+  description: string | null
+  warehouse_id: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  // joined
+  warehouse?: Warehouse
+  creator?: Profile
+  items?: StockOpnameTemplateItem[]
+}
+
+export interface StockOpnameTemplateItem {
+  id: string
+  template_id: string
+  item_id: string
+  created_at: string
+  // joined
+  item?: Item
 }
 
 export interface StockOpnameDiffCategory {

@@ -470,7 +470,7 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
               <Download size={14} className="mr-1.5" /> Export CSV
             </Button>
           )}
-          {isDraft && isAdmin && (
+          {isDraft && (isAdmin || isGA) && (
             <Button size="sm" onClick={() => setIsFinalizeOpen(true)} className="bg-green-600 hover:bg-green-700 text-white cursor-pointer">
               <CheckCircle2 size={14} className="mr-1.5" /> Finalisasi Opname
             </Button>
@@ -669,15 +669,6 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
                             <Pencil size={12} className="mr-2" />
                             Edit Dialog
                           </DropdownMenuItem>
-                          {row.originalId && (
-                            <DropdownMenuItem
-                              onClick={() => setDeleteEntryData({ id: row.originalId, name: (row as any).item?.name })}
-                              className="cursor-pointer text-destructive focus:text-destructive focus:bg-red-50"
-                            >
-                              <Trash2 size={12} className="mr-2" />
-                              Hapus
-                            </DropdownMenuItem>
-                          )}
                         </>
                       )}
                     </DropdownMenuContent>
@@ -715,14 +706,9 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
         emptyText={selectedWarehouse ? `Belum ada item yang di-opname di ${selectedWarehouse.name}` : "Belum ada item yang di-opname"}
         actions={
           canEdit ? (
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setIsImportDialogOpen(true)} className="border-blue-200 hover:bg-blue-50 text-blue-700 hover:text-blue-800 cursor-pointer">
-                <Upload size={14} className="mr-1.5" /> Import CSV
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setIsEntryDialogOpen(true)}>
-                <Plus size={14} className="mr-1.5" /> Tambah Item
-              </Button>
-            </div>
+            <Button size="sm" variant="outline" onClick={() => setIsImportDialogOpen(true)} className="border-blue-200 hover:bg-blue-50 text-blue-700 hover:text-blue-800 cursor-pointer">
+              <Upload size={14} className="mr-1.5" /> Import CSV
+            </Button>
           ) : undefined
         }
       />
