@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -47,6 +47,23 @@ export function LoginForm() {
         }
       })
   }, [])
+
+  // Handle error parameter from redirect
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const error = searchParams.get('error')
+    if (error === 'no_profile') {
+      toast.error('Akun Anda belum terdaftar dalam sistem. Silakan hubungi administrator.')
+      // Clear the error parameter from URL
+      router.replace('/login', { scroll: false })
+      // Sign out the user since they don't have a profile
+      const supabase = createClient()
+      supabase.auth.signOut()
+    } else if (error === 'no_session') {
+      toast.error('Sesi telah berakhir. Silakan login kembali.')
+      router.replace('/login', { scroll: false })
+    }
+  }, [searchParams, router])
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
