@@ -1,29 +1,64 @@
 import { jsPDF } from 'jspdf'
-import QRCode from 'qrcode'
 import type { ItemWithJoins } from '@/hooks/items/use-items-manager'
+
+// Dynamic import for QRCode to avoid SSR issues
+async function getQRCode() {
+  if (typeof window === 'undefined') {
+    throw new Error('QRCode generation is only available in browser context')
+  }
+  // Dynamic import to ensure proper browser bundling
+  const qrcodeModule = await import('qrcode')
+  // The library exports named exports, use default fallback
+  const QRCode = qrcodeModule.default || qrcodeModule
+  // Return the toDataURL function directly
+  return QRCode.toDataURL?.bind(QRCode) || QRCode.toDataURL
+}
+
+/**
+ * Convert a Blob to a Data URL
+ */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
 
 /**
  * Generates a PDF containing QR codes for the provided items.
  * Each item gets its own QR code on the provided template background.
  */
-function arrayBufferToBase64(buffer: ArrayBuffer) {
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
   let binary = ''
   const bytes = new Uint8Array(buffer)
   const len = bytes.byteLength
   for (let i = 0; i < len; i++) {
     binary += String.fromCharCode(bytes[i])
   }
-  return window.btoa(binary)
+  // Use Buffer for Node.js environment, fallback to btoa for browser
+  if (typeof window !== 'undefined' && window.btoa) {
+    return window.btoa(binary)
+  }
+  // Node.js environment
+  return Buffer.from(binary).toString('base64')
 }
 
 export async function generateItemQRCodePDF(items: ItemWithJoins[]) {
   if (!items || items.length === 0) return
 
-  // Create a new PDF document in A4 Portrait
+  // Ensure we're in browser context
+  if (typeof window === 'undefined') {
+    console.error('QR Code PDF generation must be run in browser context')
+    return
+  }
+
+  // Create a new PDF document in A6 Portrait
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4',
+    format: 'a6',
   })
 
   // 1. Load Montserrat Black Font (The boldest weight)
@@ -49,47 +84,64 @@ export async function generateItemQRCodePDF(items: ItemWithJoins[]) {
     console.error('Error loading font:', err)
   }
 
-  const templatePath = '/images/default/bg-qrcode-item-template.png'
-  
-  // Pre-load the template image
-  const img = new Image()
-  img.src = templatePath
-  
-  await new Promise((resolve, reject) => {
-    img.onload = resolve
-    img.onerror = reject
-  })
+  // Load the template image and convert to data URL
+  let templateDataUrl: string | null = null
+  try {
+    const templateRes = await fetch('/images/default/bg-qrcode-item-template.png')
+    if (templateRes.ok) {
+      const templateBlob = await templateRes.blob()
+      templateDataUrl = await blobToDataUrl(templateBlob)
+    }
+  } catch (err) {
+    console.error('Error loading template image:', err)
+  }
 
-  // Settings for the grid
-  const margin = 10
-  const stickerWidth = 90
-  const stickerHeight = 36
-  const gapX = 10
-  const gapY = 5
-  const stickersPerPage = 14 // 2 columns x 7 rows
-  const cols = 2
+  // Settings for the grid (A6: 105mm x 148mm, 1 column x 5 rows)
+  const pageWidth = 105
+  const pageHeight = 148
+  const stickerWidth = 60
+  const stickerHeight = 24
+  const gapY = 4
+  const stickersPerPage = 5 // 1 column x 5 rows
+  const cols = 1
+
+  // Calculate vertical centering
+  const totalContentHeight = (stickersPerPage * stickerHeight) + ((stickersPerPage - 1) * gapY)
+  const startY = (pageHeight - totalContentHeight) / 2
 
   // Function to add a single sticker to the PDF
   const addSticker = async (item: ItemWithJoins, index: number) => {
     const pageIndex = Math.floor(index / stickersPerPage)
     const itemIndexInPage = index % stickersPerPage
-    
+
     if (index > 0 && itemIndexInPage === 0) {
       pdf.addPage()
     }
 
-    const col = itemIndexInPage % cols
-    const row = Math.floor(itemIndexInPage / cols)
+    const row = itemIndexInPage // Single column, row = index
 
-    const x = margin + (col * (stickerWidth + gapX))
-    const y = margin + (row * (stickerHeight + gapY))
+    // Horizontal centering
+    const x = (pageWidth - stickerWidth) / 2
+    // Vertical position with start offset for centering
+    const y = startY + (row * (stickerHeight + gapY))
 
     // 1. Add background template with JPEG compression
-    pdf.addImage(img, 'JPEG', x, y, stickerWidth, stickerHeight, undefined, 'FAST')
+    if (templateDataUrl) {
+      pdf.addImage(templateDataUrl, 'PNG', x, y, stickerWidth, stickerHeight, undefined, 'FAST')
+    }
 
     // 2. Generate and add QR code
     try {
-      const qrDataUrl = await QRCode.toDataURL(item.id, {
+      // Validate item ID - accept both string and number
+      if (!item.id) {
+        throw new Error(`Invalid item ID: ${item.id}`)
+      }
+
+      // Convert ID to string for QR code generation
+      const qrId = String(item.id)
+
+      const toDataURL = await getQRCode()
+      const qrDataUrl = await toDataURL(qrId, {
         margin: 1,
         width: 200,
         color: {
@@ -97,31 +149,32 @@ export async function generateItemQRCodePDF(items: ItemWithJoins[]) {
           light: '#ffffff',
         },
       })
-      const qrSize = stickerHeight * 0.75
-      const qrX = x + (stickerWidth * 0.06)
+      const qrSize = stickerHeight * 0.7
+      const qrX = x + (stickerWidth * 0.05)
       const qrY = y + (stickerHeight - qrSize) / 2
       pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
     } catch (err) {
       console.error('Error generating QR code:', err)
+      console.error('Item data:', { id: item.id, name: item.name })
     }
 
     // 3. Add item name
     const fontList = pdf.getFontList()
     const isMontserratAvailable = fontList['Montserrat'] !== undefined
-    
+
     pdf.setFont(isMontserratAvailable ? 'Montserrat' : 'helvetica', 'bold')
-    pdf.setFontSize(15) // Slightly increased for more impact
+    pdf.setFontSize(12) // Larger font for bigger stickers
     pdf.setTextColor(125, 32, 31) // Maroon (#7D201F)
-    
+
     const rightBoxCenterX = x + (stickerWidth * 0.68)
     const rightBoxCenterY = y + (stickerHeight * 0.55)
-    
+
     const splitName = pdf.splitTextToSize(item.name, stickerWidth * 0.5)
-    
-    const lineHeight = 6 
+
+    const lineHeight = 5
     const totalHeight = splitName.length * lineHeight
-    const centeredY = rightBoxCenterY - (totalHeight / 2) + 3
-    
+    const centeredY = rightBoxCenterY - (totalHeight / 2) + 2
+
     pdf.text(splitName, rightBoxCenterX, centeredY, { align: 'center' })
   }
 
