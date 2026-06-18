@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { LoginErrorHandler } from './login-error-handler'
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -48,23 +49,6 @@ export function LoginForm() {
       })
   }, [])
 
-  // Handle error parameter from redirect
-  const searchParams = useSearchParams()
-  useEffect(() => {
-    const error = searchParams.get('error')
-    if (error === 'no_profile') {
-      toast.error('Akun Anda belum terdaftar dalam sistem. Silakan hubungi administrator.')
-      // Clear the error parameter from URL
-      router.replace('/login', { scroll: false })
-      // Sign out the user since they don't have a profile
-      const supabase = createClient()
-      supabase.auth.signOut()
-    } else if (error === 'no_session') {
-      toast.error('Sesi telah berakhir. Silakan login kembali.')
-      router.replace('/login', { scroll: false })
-    }
-  }, [searchParams, router])
-
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '', rememberMe: false },
@@ -97,7 +81,11 @@ export function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex bg-white font-sans">
+    <>
+      <Suspense fallback={null}>
+        <LoginErrorHandler />
+      </Suspense>
+      <div className="min-h-screen flex bg-white font-sans">
       {/* Left side - Red Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-red-600 to-red-700 items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full opacity-10">
@@ -240,5 +228,6 @@ export function LoginForm() {
         </div>
       </div>
     </div>
+    </>
   )
 }
