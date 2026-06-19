@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,10 +56,10 @@ export function ItemsDialogs({
         item_category_id: editItem.item_category_id ?? '',
         item_status_id: editItem.item_status_id ?? '',
         item_condition_id: editItem.item_condition_id ?? '',
-        price: editItem.price,
+        price: editItem.price ?? 0,
         status: editItem.status,
         description: editItem.description ?? '',
-        minimum_stock: editItem.minimum_stock,
+        minimum_stock: editItem.minimum_stock ?? 0,
       })
     } else if (dialogOpen) {
       form.reset({ name: '', price: 0, status: 'active', minimum_stock: 0, description: '', item_category_id: '', item_status_id: '', item_condition_id: '' })
@@ -70,7 +71,15 @@ export function ItemsDialogs({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editItem ? 'Edit Barang' : 'Tambah Barang'}</DialogTitle></DialogHeader>
-          <form onSubmit={form.handleSubmit(onSave)} className="space-y-4 min-w-0">
+          <form onSubmit={form.handleSubmit(onSave, (errors) => {
+            console.error('Validation errors:', errors)
+            const firstError = Object.values(errors)[0] as any
+            if (firstError?.message) {
+              toast.error(`Gagal menyimpan: ${firstError.message}`)
+            } else {
+              toast.error('Gagal menyimpan: Periksa kembali data yang dimasukkan')
+            }
+          })} className="space-y-4 min-w-0">
             <div className="space-y-1.5">
               <Label htmlFor="i-name">Nama Barang *</Label>
               <Input id="i-name" {...form.register('name')} />
@@ -83,9 +92,9 @@ export function ItemsDialogs({
                 <Controller name="item_category_id" control={form.control}
                   render={({ field }) => (
                     <Combobox 
-                      value={field.value} 
+                      value={field.value !== null && field.value !== undefined ? String(field.value) : undefined} 
                       onValueChange={field.onChange}
-                      options={categories?.map((c) => ({ value: c.id, label: c.name })) ?? []}
+                      options={categories?.map((c) => ({ value: String(c.id), label: c.name })) ?? []}
                       placeholder="Pilih kategori"
                       searchPlaceholder="Cari kategori..."
                       disabled={isLoadingCategories && !categories}
@@ -142,10 +151,12 @@ export function ItemsDialogs({
               <div className="space-y-1.5">
                 <Label htmlFor="i-price">Harga (Rp)</Label>
                 <Input id="i-price" type="number" min={0} {...form.register('price', { valueAsNumber: true })} />
+                {form.formState.errors.price && <p className="text-destructive text-xs">{form.formState.errors.price.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="i-minstock">Stok Minimum</Label>
                 <Input id="i-minstock" type="number" min={0} {...form.register('minimum_stock', { valueAsNumber: true })} />
+                {form.formState.errors.minimum_stock && <p className="text-destructive text-xs">{form.formState.errors.minimum_stock.message}</p>}
               </div>
             </div>
 
