@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import type { CompanySettings } from '@/types/database'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { 
   Tabs, 
@@ -729,22 +730,22 @@ export function WhatsappSettings() {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="wa_api_key" className="text-xs">API Key</Label>
-                  <input 
+                  <Input 
                     id="wa_api_key"
                     type="password" 
                     placeholder="Masukkan API Key"
-                    className="w-full h-10 bg-background border rounded-md px-3 text-sm focus:ring-1 focus:ring-primary outline-none font-mono"
+                    className="w-full h-10 bg-background border rounded-md text-sm focus-visible:ring-primary outline-none font-mono"
                     {...form.register('wa_api_key')}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="wa_number_key" className="text-xs">Number Key</Label>
-                  <input 
+                  <Input 
                     id="wa_number_key"
                     type="password" 
                     placeholder="Masukkan Number Key"
-                    className="w-full h-10 bg-background border rounded-md px-3 text-sm focus:ring-1 focus:ring-primary outline-none font-mono"
+                    className="w-full h-10 bg-background border rounded-md text-sm focus-visible:ring-primary outline-none font-mono"
                     {...form.register('wa_number_key')}
                   />
                 </div>

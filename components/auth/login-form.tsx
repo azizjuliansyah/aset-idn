@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Loader2, Warehouse } from 'lucide-react'
+import { Loader2, Warehouse } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -26,7 +26,6 @@ type LoginFormValues = z.infer<typeof loginSchema>
 
 export function LoginForm() {
   const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [settings, setSettings] = useState<{ logo_url: string | null; name: string | null }>({
     logo_url: null,
@@ -171,23 +170,14 @@ export function LoginForm() {
                   Lupa password?
                 </Link>
               </div>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  className="h-12 border-slate-200 bg-white text-slate-900 focus-visible:ring-primary pr-12 shadow-sm"
-                  {...form.register('password')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className="h-12 border-slate-200 bg-white text-slate-900 focus-visible:ring-primary shadow-sm"
+                {...form.register('password')}
+              />
               {form.formState.errors.password && (
                 <p className="text-red-500 text-xs font-medium mt-1">{form.formState.errors.password.message}</p>
               )}

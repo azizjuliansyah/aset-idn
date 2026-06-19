@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Loader2, KeyRound, Warehouse } from 'lucide-react'
+import { Loader2, KeyRound, Warehouse } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,6 @@ type ResetPasswordValues = z.infer<typeof resetPasswordSchema>
 
 export function ResetPasswordForm() {
   const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [settings, setSettings] = useState<{ logo_url: string | null; name: string | null }>({
     logo_url: null,
@@ -90,22 +89,13 @@ export function ResetPasswordForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-2">
           <Label className="text-slate-700 font-semibold" htmlFor="password">Password Baru</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
-              className="h-12 border-slate-200 bg-white text-slate-900 focus-visible:ring-primary pr-12 shadow-sm"
-              {...form.register('password')}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            className="h-12 border-slate-200 bg-white text-slate-900 focus-visible:ring-primary shadow-sm"
+            {...form.register('password')}
+          />
           {form.formState.errors.password && (
             <p className="text-red-500 text-xs font-medium mt-1">{form.formState.errors.password.message}</p>
           )}
@@ -115,7 +105,7 @@ export function ResetPasswordForm() {
           <Label className="text-slate-700 font-semibold" htmlFor="confirmPassword">Konfirmasi Password Baru</Label>
           <Input
             id="confirmPassword"
-            type={showPassword ? 'text' : 'password'}
+            type="password"
             placeholder="••••••••"
             className="h-12 border-slate-200 bg-white text-slate-900 focus-visible:ring-primary shadow-sm"
             {...form.register('confirmPassword')}
