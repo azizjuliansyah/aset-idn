@@ -4,10 +4,9 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useDebounce } from '@/hooks/use-debounce'
 
-const PAGE_SIZE = 15
-
 export function useLogsManager() {
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   const [actionFilter, setActionFilter] = useState('all')
@@ -17,12 +16,17 @@ export function useLogsManager() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setPage(1)
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: ['activity-logs', page, debouncedSearch, actionFilter, entityFilter, userFilter, datePreset, startDate, endDate],
+    queryKey: ['activity-logs', page, pageSize, debouncedSearch, actionFilter, entityFilter, userFilter, datePreset, startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
-        pageSize: String(PAGE_SIZE),
+        pageSize: String(pageSize),
         search: debouncedSearch,
         action: actionFilter,
         entity_type: entityFilter,
@@ -48,7 +52,7 @@ export function useLogsManager() {
       datePreset,
       startDate,
       endDate,
-      PAGE_SIZE,
+      pageSize,
     },
     handlers: {
       setPage,
@@ -59,6 +63,7 @@ export function useLogsManager() {
       setDatePreset,
       setStartDate,
       setEndDate,
+      setPageSize: handlePageSizeChange,
     },
     queries: {
       data,

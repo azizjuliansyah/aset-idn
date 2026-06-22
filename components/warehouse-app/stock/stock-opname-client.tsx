@@ -57,7 +57,8 @@ export function StockOpnameClient() {
     warehouseId: groupWarehouseId, setWarehouseId: setGroupWarehouseId,
     categoryId: groupCategoryId, setCategoryId: setGroupCategoryId,
     dateRange: groupDateRange, setDateRange: setGroupDateRange,
-    data: groupData, isLoading: isGroupLoading, pageSize: groupPageSize
+    data: groupData, isLoading: isGroupLoading,
+    pageSize: groupPageSize, setPageSize: setGroupPageSize
   } = useStockOpnameGroups()
 
   const [datePreset, setDatePreset] = useState('all')
@@ -67,7 +68,8 @@ export function StockOpnameClient() {
     page: templatePage, setPage: setTemplatePage,
     search: templateSearch, setSearch: setTemplateSearch,
     warehouseId: templateWarehouseId, setWarehouseId: setTemplateWarehouseId,
-    data: templateData, isLoading: isTemplateLoading, pageSize: templatePageSize
+    data: templateData, isLoading: isTemplateLoading,
+    pageSize: templatePageSize, setPageSize: setTemplatePageSize
   } = useStockOpnameTemplates()
 
   const { deleteGroup, bulkDeleteGroups, deleteTemplate } = useStockOpnameMutations()
@@ -168,6 +170,7 @@ export function StockOpnameClient() {
             isLoading={isGroupLoading}
             page={groupPage}
             pageSize={groupPageSize}
+            onPageSizeChange={setGroupPageSize}
             totalCount={groupData?.count ?? 0}
             onPageChange={setGroupPage}
             searchValue={groupSearch}
@@ -275,6 +278,7 @@ export function StockOpnameClient() {
             isLoading={isTemplateLoading}
             page={templatePage}
             pageSize={templatePageSize}
+            onPageSizeChange={setTemplatePageSize}
             totalCount={templateData?.count ?? 0}
             onPageChange={setTemplatePage}
             searchValue={templateSearch}

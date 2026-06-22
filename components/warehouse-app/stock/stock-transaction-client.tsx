@@ -37,7 +37,7 @@ export function StockTransactionClient({ type }: StockClientProps) {
     datePreset, setDatePreset,
     customStartDate, setCustomStartDate,
     customEndDate, setCustomEndDate,
-    data, isLoading, pageSize,
+    data, isLoading, pageSize, setPageSize,
     deleteMutation, bulkDeleteMutation
   } = useStockTransactions(type)
 
@@ -115,6 +115,7 @@ export function StockTransactionClient({ type }: StockClientProps) {
         isLoading={isLoading}
         page={page}
         pageSize={pageSize}
+        onPageSizeChange={setPageSize}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
         onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}

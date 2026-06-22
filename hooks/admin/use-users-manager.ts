@@ -6,21 +6,25 @@ import { toast } from 'sonner'
 import type { Profile } from '@/types/database'
 import { useDebounce } from '@/hooks/use-debounce'
 
-const PAGE_SIZE = 10
-
 export function useUsersManager() {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   const [roleFilter, setRoleFilter] = useState<string>('all')
 
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setPage(1)
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: ['users', page, debouncedSearch, roleFilter],
+    queryKey: ['users', page, pageSize, debouncedSearch, roleFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
-        pageSize: String(PAGE_SIZE),
+        pageSize: String(pageSize),
         search: debouncedSearch,
         role: roleFilter,
       })
@@ -107,12 +111,13 @@ export function useUsersManager() {
       page,
       search,
       roleFilter,
-      PAGE_SIZE,
+      pageSize,
     },
     handlers: {
       setPage,
       setSearch,
       setRoleFilter,
+      setPageSize: handlePageSizeChange,
     },
     queries: {
       data,

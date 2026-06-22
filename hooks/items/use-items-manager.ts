@@ -18,13 +18,13 @@ export type ItemWithJoins = Item & {
   condition_name?: string
 }
 
-const PAGE_SIZE = 10
 
 export function useItemsManager() {
   const supabase = createClient()
   const qc = useQueryClient()
   
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   const [warehouseId, setWarehouseId] = useState<string>('all')
@@ -33,7 +33,7 @@ export function useItemsManager() {
   const [stockStatus, setStockStatus] = useState<string>('all')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['items', page, debouncedSearch, warehouseId, categoryId, conditionId, stockStatus],
+    queryKey: ['items', page, pageSize, debouncedSearch, warehouseId, categoryId, conditionId, stockStatus],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_items_with_stats', {
         p_search: debouncedSearch,
@@ -41,8 +41,8 @@ export function useItemsManager() {
         p_category_id: categoryId === 'all' ? null : categoryId,
         p_condition_id: conditionId === 'all' ? null : conditionId,
         p_stock_status: stockStatus,
-        p_limit: PAGE_SIZE,
-        p_offset: (page - 1) * PAGE_SIZE,
+        p_limit: pageSize,
+        p_offset: (page - 1) * pageSize,
       })
       if (error) throw error
       const count = data?.[0]?.total_count ?? 0
@@ -107,7 +107,7 @@ export function useItemsManager() {
       categoryId,
       conditionId,
       stockStatus,
-      PAGE_SIZE,
+      pageSize,
     },
     handlers: {
       setPage,
@@ -116,6 +116,10 @@ export function useItemsManager() {
       setCategoryId,
       setConditionId,
       setStockStatus,
+      setPageSize: (size: number) => {
+        setPageSize(size)
+        setPage(1)
+      },
     },
     queries: {
       data,

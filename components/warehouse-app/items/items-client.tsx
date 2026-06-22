@@ -146,7 +146,8 @@ export function ItemsClient() {
         data={queries.data?.data ?? []}
         isLoading={queries.isLoading}
         page={state.page}
-        pageSize={state.PAGE_SIZE}
+        pageSize={state.pageSize}
+        onPageSizeChange={handlers.setPageSize}
         totalCount={queries.data?.count ?? 0}
         onPageChange={handlers.setPage}
         onBulkDelete={(ids) => mutations.bulkDelete.mutate(ids)}

@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { StockOpnameGroup, StockOpname, PaginatedResponse, StockOpnameTemplate } from '@/types/database'
 import { toast } from 'sonner'
 
-const PAGE_SIZE = 10
+
 
 export function useStockOpnameGroups() {
   // State
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const [warehouseId, setWarehouseId] = useState<string>('all')
   const [categoryId, setCategoryId] = useState<string>('all')
@@ -15,11 +16,11 @@ export function useStockOpnameGroups() {
 
   // Query
   const query = useQuery<PaginatedResponse<StockOpnameGroup>>({
-    queryKey: ['stock-opname-groups', page, search, warehouseId, categoryId, dateRange],
+    queryKey: ['stock-opname-groups', page, pageSize, search, warehouseId, categoryId, dateRange],
     queryFn: async () => {
       const searchParams = new URLSearchParams({
         page: page.toString(),
-        pageSize: PAGE_SIZE.toString(),
+        pageSize: pageSize.toString(),
         search: search || '',
       })
       if (warehouseId && warehouseId !== 'all') searchParams.append('warehouse_id', warehouseId)
@@ -44,7 +45,11 @@ export function useStockOpnameGroups() {
     // Data
     data: query.data,
     isLoading: query.isLoading,
-    pageSize: PAGE_SIZE,
+    pageSize,
+    setPageSize: (size: number) => {
+      setPageSize(size)
+      setPage(1)
+    },
   }
 }
 
@@ -359,15 +364,16 @@ export function useStockOpnameMutations() {
 
 export function useStockOpnameTemplates() {
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const [warehouseId, setWarehouseId] = useState<string>('all')
 
   const query = useQuery<PaginatedResponse<StockOpnameTemplate>>({
-    queryKey: ['stock-opname-templates', page, search, warehouseId],
+    queryKey: ['stock-opname-templates', page, pageSize, search, warehouseId],
     queryFn: async () => {
       const searchParams = new URLSearchParams({
         page: page.toString(),
-        pageSize: PAGE_SIZE.toString(),
+        pageSize: pageSize.toString(),
         search: search || '',
       })
       if (warehouseId && warehouseId !== 'all') searchParams.append('warehouse_id', warehouseId)
@@ -384,7 +390,11 @@ export function useStockOpnameTemplates() {
     warehouseId, setWarehouseId,
     data: query.data,
     isLoading: query.isLoading,
-    pageSize: PAGE_SIZE,
+    pageSize,
+    setPageSize: (size: number) => {
+      setPageSize(size)
+      setPage(1)
+    },
   }
 }
 

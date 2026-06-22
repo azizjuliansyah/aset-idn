@@ -28,7 +28,6 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { formatDate } from '@/lib/utils'
 
-const PAGE_SIZE = 10
 const schema = z.object({
   name: z.string().min(1, 'Nama gudang wajib diisi'),
   note: z.string().optional(),
@@ -40,6 +39,7 @@ export function WarehouseClient() {
   const supabase = createClient()
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -47,12 +47,17 @@ export function WarehouseClient() {
   const [deleteItem, setDeleteItem] = useState<Warehouse | null>(null)
   const [viewItem, setViewItem] = useState<Warehouse | null>(null)
 
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setPage(1)
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: ['warehouses', page, debouncedSearch],
+    queryKey: ['warehouses', page, pageSize, debouncedSearch],
     queryFn: async () => {
       let q = supabase.from('warehouses').select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+        .range((page - 1) * pageSize, page * pageSize - 1)
       if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
       const { data, count, error } = await q
       if (error) throw error
@@ -204,9 +209,10 @@ export function WarehouseClient() {
         data={data?.data ?? []}
         isLoading={isLoading}
         page={page}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
         onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1) }}

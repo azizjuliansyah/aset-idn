@@ -7,7 +7,6 @@ import { endOfDay, startOfDay, subDays, parseISO } from 'date-fns'
 import { apiService } from '@/lib/api-service'
 import type { StockIn, Item, Warehouse } from '@/types/database'
 
-const PAGE_SIZE = 10
 
 export type StockInWithJoins = StockIn & { 
   item?: Item & { item_category?: { name: string } }; 
@@ -24,6 +23,7 @@ export function useStockTransactions(type: 'in' | 'out') {
   
   // State
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const [warehouseId, setWarehouseId] = useState<string>('all')
   const [categoryId, setCategoryId] = useState<string>('all')
@@ -33,13 +33,13 @@ export function useStockTransactions(type: 'in' | 'out') {
 
   // Query
   const query = useQuery({
-    queryKey: [queryKey, page, search, warehouseId, categoryId, datePreset, customStartDate, customEndDate],
+    queryKey: [queryKey, page, pageSize, search, warehouseId, categoryId, datePreset, customStartDate, customEndDate],
     queryFn: async () => {
       let q = supabase
         .from(table)
         .select('*, item:items!inner(id,name,item_category_id,item_category:item_category(name)), warehouse:warehouses(id,name), creator:profiles!created_by(full_name)', { count: 'planned' })
         .order('date', { ascending: false })
-        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+        .range((page - 1) * pageSize, page * pageSize - 1)
 
       if (warehouseId !== 'all') q = q.eq('warehouse_id', warehouseId)
       if (categoryId !== 'all') q = q.eq('item.item_category_id', categoryId)
@@ -101,7 +101,11 @@ export function useStockTransactions(type: 'in' | 'out') {
     // Data
     data: query.data,
     isLoading: query.isLoading,
-    pageSize: PAGE_SIZE,
+    pageSize,
+    setPageSize: (size: number) => {
+      setPageSize(size)
+      setPage(1)
+    },
     
     // Actions
     deleteMutation,

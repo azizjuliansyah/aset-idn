@@ -291,7 +291,7 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
 
   // Pagination State
   const [page, setPage] = useState(1)
-  const pageSize = 10
+  const [pageSize, setPageSize] = useState(10)
 
   const { data: entriesRes, isLoading: isLoadingEntries } = useStockOpnameEntries(id, {
     page,
@@ -684,6 +684,10 @@ export function StockOpnameDetailClient({ id }: StockOpnameDetailClientProps) {
         pageSize={pageSize}
         totalCount={totalCount}
         onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size)
+          setPage(1)
+        }}
         searchValue={searchTerm}
         onSearchChange={(v) => {
           setSearchTerm(v)

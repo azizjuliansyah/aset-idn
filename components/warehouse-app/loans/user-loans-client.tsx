@@ -30,10 +30,6 @@ import { LoanStatusBadge } from './loan-status-badge'
 import { LoanDetailModal } from './loan-detail-modal'
 import { formatDateTime } from '@/lib/utils'
 
-const PAGE_SIZE = 10
-
-
-
 interface UserLoansClientProps {
   isHistory?: boolean
 }
@@ -41,6 +37,7 @@ interface UserLoansClientProps {
 export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   
@@ -55,8 +52,13 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
 
   const { data: warehouses } = useWarehouses()
 
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setPage(1)
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: ['loans', page, debouncedSearch, statusFilter, isHistory, datePreset, customStartDate, customEndDate],
+    queryKey: ['loans', page, pageSize, debouncedSearch, statusFilter, isHistory, datePreset, customStartDate, customEndDate],
     queryFn: async () => {
       let finalStatus = statusFilter
       if (statusFilter === 'all') {
@@ -65,7 +67,7 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
 
       const params = new URLSearchParams({
         page: String(page),
-        pageSize: String(PAGE_SIZE),
+        pageSize: String(pageSize),
         search: debouncedSearch,
         status: finalStatus,
       })
@@ -346,9 +348,10 @@ export function UserLoansClient({ isHistory = false }: UserLoansClientProps) {
         data={data?.data ?? []}
         isLoading={isLoading}
         page={page}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Cari peminjaman..."

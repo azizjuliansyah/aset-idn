@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { apiService } from '@/lib/api-service'
 import type { StockTransfer, PaginatedResponse } from '@/types/database'
 
-const PAGE_SIZE = 10
 
 export function useStockTransfers() {
   const supabase = createClient()
@@ -14,6 +13,7 @@ export function useStockTransfers() {
   
   // State
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const [itemId, setItemId] = useState<string>('all')
   const [fromWarehouseId, setFromWarehouseId] = useState<string>('all')
@@ -23,11 +23,11 @@ export function useStockTransfers() {
 
   // Query
   const query = useQuery({
-    queryKey: ['stock_transfer', page, search, itemId, fromWarehouseId, toWarehouseId, categoryId, dateRange],
+    queryKey: ['stock_transfer', page, pageSize, search, itemId, fromWarehouseId, toWarehouseId, categoryId, dateRange],
     queryFn: async () => {
       const url = new URL('/api/v1/stock-transfer', window.location.origin)
       url.searchParams.append('page', page.toString())
-      url.searchParams.append('pageSize', PAGE_SIZE.toString())
+      url.searchParams.append('pageSize', pageSize.toString())
       if (search) url.searchParams.append('search', search)
       if (itemId !== 'all') url.searchParams.append('item_id', itemId)
       if (fromWarehouseId !== 'all') url.searchParams.append('from_warehouse_id', fromWarehouseId)
@@ -64,7 +64,11 @@ export function useStockTransfers() {
     // Data
     data: query.data,
     isLoading: query.isLoading,
-    pageSize: PAGE_SIZE,
+    pageSize,
+    setPageSize: (size: number) => {
+      setPageSize(size)
+      setPage(1)
+    },
     
     // Actions
     createMutation,

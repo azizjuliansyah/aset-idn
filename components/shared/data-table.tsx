@@ -15,6 +15,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
 
 export interface Column<T> {
   key: keyof T | string
@@ -31,6 +33,7 @@ interface DataTableProps<T> {
   pageSize: number
   totalCount: number
   onPageChange: (page: number) => void
+  onPageSizeChange?: (pageSize: number) => void
   searchValue?: string
   onSearchChange?: (value: string) => void
   searchPlaceholder?: string
@@ -52,6 +55,7 @@ export function DataTable<T extends { id: string }>({
   pageSize,
   totalCount,
   onPageChange,
+  onPageSizeChange,
   searchValue,
   onSearchChange,
   searchPlaceholder = 'Cari...',
@@ -117,17 +121,42 @@ export function DataTable<T extends { id: string }>({
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      {(onSearchChange || actions || onBulkDelete) && (
+      {(onSearchChange || actions || onBulkDelete || onPageSizeChange) && (
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          {onSearchChange ? (
-            <div className="relative w-full sm:w-72">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={searchPlaceholder}
-                value={localSearch}
-                onChange={(e) => setLocalSearch(e.target.value)}
-                className="pl-9 h-9"
-              />
+          {(onSearchChange || onPageSizeChange) ? (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {onPageSizeChange && (
+                <div className="flex items-center shrink-0">
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(val) => {
+                      onPageSizeChange(Number(val))
+                    }}
+                  >
+                    <SelectTrigger className="h-9 w-[110px] bg-background border-border text-foreground text-sm">
+                      <SelectValue>{pageSize} Baris</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((size) => (
+                        <SelectItem key={size} value={String(size)} className="text-xs">
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {onSearchChange && (
+                <div className="relative flex-1 sm:flex-initial sm:w-72">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder={searchPlaceholder}
+                    value={localSearch}
+                    onChange={(e) => setLocalSearch(e.target.value)}
+                    className="pl-9 h-9 w-full"
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div />
@@ -250,11 +279,12 @@ export function DataTable<T extends { id: string }>({
 
       {/* Pagination */}
       {totalCount > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground border-t border-border pt-4">
           <p>
             Menampilkan <span className="font-medium text-foreground">{from}–{to}</span> dari{' '}
             <span className="font-medium text-foreground">{totalCount}</span> data
           </p>
+
           <div className="flex items-center gap-1">
             <Button
               variant="outline"

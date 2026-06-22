@@ -168,9 +168,10 @@ export function LogsClient() {
         data={queries.data?.data ?? []}
         isLoading={queries.isLoading}
         page={state.page}
-        pageSize={state.PAGE_SIZE}
+        pageSize={state.pageSize}
         totalCount={queries.data?.count ?? 0}
         onPageChange={handlers.setPage}
+        onPageSizeChange={handlers.setPageSize}
         searchValue={state.search}
         onSearchChange={(v) => { handlers.setSearch(v); handlers.setPage(1) }}
         searchPlaceholder="Cari log..."

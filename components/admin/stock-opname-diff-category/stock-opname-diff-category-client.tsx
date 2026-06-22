@@ -32,8 +32,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 
-const PAGE_SIZE = 10
-
 const schema = z.object({
   name: z.string().min(1, 'Nama wajib diisi'),
   note: z.string().optional(),
@@ -45,6 +43,7 @@ export function StockOpnameDiffCategoryClient() {
   const qc = useQueryClient()
 
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
 
@@ -53,14 +52,19 @@ export function StockOpnameDiffCategoryClient() {
   const [deleteItem, setDeleteItem] = useState<StockOpnameDiffCategory | null>(null)
   const [viewItem, setViewItem] = useState<StockOpnameDiffCategory | null>(null)
 
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(1)
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: ['stock_opname_diff_categories', page, debouncedSearch],
+    queryKey: ['stock_opname_diff_categories', page, pageSize, debouncedSearch],
     queryFn: async () => {
       let q = supabase
         .from('stock_opname_diff_categories')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+        .range((page - 1) * pageSize, page * pageSize - 1)
 
       if (debouncedSearch) q = q.ilike('name', `%${debouncedSearch}%`)
 
@@ -192,7 +196,8 @@ export function StockOpnameDiffCategoryClient() {
         data={data?.data ?? []}
         isLoading={isLoading}
         page={page}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
+        onPageSizeChange={handlePageSizeChange}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
         onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}

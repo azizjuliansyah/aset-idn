@@ -21,7 +21,7 @@ export function StockTransferClient() {
     toWarehouseId, setToWarehouseId,
     categoryId, setCategoryId,
     dateRange, setDateRange,
-    data, isLoading, pageSize,
+    data, isLoading, pageSize, setPageSize,
   } = useStockTransfers()
 
   const [datePreset, setDatePreset] = useState('all')
@@ -57,6 +57,7 @@ export function StockTransferClient() {
         isLoading={isLoading}
         page={page}
         pageSize={pageSize}
+        onPageSizeChange={setPageSize}
         totalCount={data?.count ?? 0}
         onPageChange={setPage}
         searchValue={search}

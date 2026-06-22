@@ -10,7 +10,6 @@ export type { LoanWithJoins }
 
 
 
-const PAGE_SIZE = 10
 const EMPTY_ARRAY: string[] = []
 
 export type GaLoanMode = 'requests' | 'manage' | 'history'
@@ -18,6 +17,7 @@ export type GaLoanMode = 'requests' | 'manage' | 'history'
 export function useGaLoans(mode: GaLoanMode, selectedIds: string[] = EMPTY_ARRAY) {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   
@@ -78,7 +78,7 @@ export function useGaLoans(mode: GaLoanMode, selectedIds: string[] = EMPTY_ARRAY
   })
 
   const { data, isLoading } = useQuery({
-    queryKey: ['loans_ga', page, debouncedSearch, statusFilter, actionedByFilter, mode, warehouseId, datePreset, customStartDate, customEndDate, returnDatePreset, returnCustomStartDate, returnCustomEndDate, dueFilter],
+    queryKey: ['loans_ga', page, pageSize, debouncedSearch, statusFilter, actionedByFilter, mode, warehouseId, datePreset, customStartDate, customEndDate, returnDatePreset, returnCustomStartDate, returnCustomEndDate, dueFilter],
     queryFn: async () => {
       let finalStatus = statusFilter
       if (statusFilter === 'all') {
@@ -89,7 +89,7 @@ export function useGaLoans(mode: GaLoanMode, selectedIds: string[] = EMPTY_ARRAY
 
       const params = new URLSearchParams({
         page: String(page),
-        pageSize: String(PAGE_SIZE),
+        pageSize: String(pageSize),
         search: debouncedSearch,
         status: finalStatus,
         actioned_by: actionedByFilter,
@@ -222,7 +222,7 @@ export function useGaLoans(mode: GaLoanMode, selectedIds: string[] = EMPTY_ARRAY
       returnCustomStartDate,
       returnCustomEndDate,
       dueFilter,
-      PAGE_SIZE,
+      pageSize,
     },
     handlers: {
       setPage,
@@ -237,6 +237,10 @@ export function useGaLoans(mode: GaLoanMode, selectedIds: string[] = EMPTY_ARRAY
       setReturnCustomStartDate,
       setReturnCustomEndDate,
       setDueFilter,
+      setPageSize: (size: number) => {
+        setPageSize(size)
+        setPage(1)
+      },
     },
     queries: {
       data,
