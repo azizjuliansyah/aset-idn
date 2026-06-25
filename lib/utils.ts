@@ -16,21 +16,28 @@ export function formatCurrency(amount: number): string {
 export function formatDate(date: string): string {
   return new Date(date).toLocaleDateString('id-ID', {
     day: '2-digit',
-    month: 'short',
+    month: 'long',
     year: 'numeric',
     timeZone: 'Asia/Jakarta',
   })
 }
 
 export function formatDateTime(date: string): string {
-  return new Date(date).toLocaleString('id-ID', {
+  const d = new Date(date)
+  const dateStr = d.toLocaleDateString('id-ID', {
     day: '2-digit',
-    month: 'short',
+    month: 'long',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
     timeZone: 'Asia/Jakarta',
   })
+  const timeStr = d.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Asia/Jakarta',
+    hour12: false,
+  }).replace(/\./g, ':')
+  return `${dateStr}, ${timeStr}`
 }
 
 export function getInitials(name: string | null | undefined): string {
